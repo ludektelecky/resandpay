@@ -1,10 +1,10 @@
-# ResAndPay
+# ReserveAndPay WP plugin
 
-**Rezervace a platby pro WordPress** – vlastní plugin pro web [slehkouhlavou.cz](https://slehkouhlavou.cz) (projekt „S lehkou hlavou…“, Hanka Vildomcová).
+**Rezervace a platby pro WordPress.** První nasazení: web [slehkouhlavou.cz](https://slehkouhlavou.cz) (projekt „S lehkou hlavou…“). Plugin je navržen tak, aby ho bylo možné ve fázi 2 zobecnit pro libovolný WordPress web.
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz UniCredit Bank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> Zdrojové zadání: **SWD EasyShop – Analytické zadání, verze 1.4** (21. 10. 2026).
+> Zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 1.5** (21. 10. 2026) – viz `docs/`.
 
 ---
 
@@ -45,6 +45,24 @@ Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a 
 
 ---
 
+## Fáze vývoje a univerzálnost
+
+**Fáze 1 – plugin pro slehkouhlavou.cz**, psaný podle pravidel připravenosti na zobecnění:
+
+- identifikace provozovatele (jméno, IČ, adresa, IBAN, logo) v nastavení, ne v kódu
+- bankovní schránka a přístupy v nastavení
+- čtení avíz přes rozhraní **bankovní adaptér** (fáze 1: UniCredit Bank)
+- měna ukládána u akcí, rezervací i avíz od začátku (výchozí CZK)
+- vzhled přes CSS proměnné, výchozí hodnoty dle grafického manuálu SLH
+- všechny texty přeložitelné (textdomain `reserveandpay`, výchozí čeština)
+- obecné služby a typy akcí – konkrétní obsah jsou data v administraci
+- Ultimate Member a MailerLite jako volitelné moduly
+- jednotný prefix `resandpay_` a vlastní hooky pro rozšíření
+
+**Fáze 2 – zobecnění:** formulář identifikace společnosti, další bankovní adaptéry, nastavitelný vzhled a přepsatelné šablony, test připojení ke schránce, správa služeb, volba měny (EUR → QR EPC/SEPA), průvodce nastavením, automatické aktualizace z GitHub Releases.
+
+---
+
 ## Technologie
 
 | Oblast | Řešení |
@@ -62,8 +80,9 @@ Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a 
 
 ```
 resandpay/
-├── resandpay.php          # hlavní soubor pluginu
+├── reserveandpay.php      # hlavní soubor pluginu
 ├── includes/              # jádro: akce, rezervace, kapacita, stavy, platby
+│   └── banks/             # bankovní adaptéry (UniCredit, …)
 ├── admin/                 # administrace, nastavení, generátor termínů
 ├── public/                # kalendář, výpis akcí, rezervační formulář
 ├── templates/             # šablony e-mailů a PDF
@@ -89,6 +108,7 @@ resandpay/
 | E5 | Kontrola plateb (IMAP, párování, ruční/automatický režim, CRON) | ⏳ |
 | E6 | Expirace, platba na místě, Ultimate Member, MailerLite | ⏳ |
 | E7 | Testování dle akceptačních kritérií a nasazení | ⏳ |
+| F2 | Fáze 2 – zobecnění pluginu | ⏳ |
 
 Po etapách E1 a E2 lze rezervace spustit s ručním potvrzováním plateb.
 
@@ -115,4 +135,4 @@ Po etapách E1 a E2 lze rezervace spustit s ručním potvrzováním plateb.
 
 ## Licence
 
-Soukromý projekt – všechna práva vyhrazena. Kód není určen k veřejnému šíření.
+Soukromý projekt – všechna práva vyhrazena. Kód není určen k veřejnému šíření bez souhlasu vlastníka.
