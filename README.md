@@ -101,7 +101,7 @@ resandpay/
 | Etapa | Obsah | Stav |
 |---|---|---|
 | E0 | Doprecizování otázek, vzorek bankovního avíza, ověření hostingu Active24 | ⏳ |
-| E1 | Jádro rezervací: akce, kapacita, formulář, stavy, administrace, e-maily, testovací režim | ⏳ |
+| E1 | Jádro rezervací: akce, kapacita, formulář, stavy, administrace, e-maily, testovací režim | ✅ 0.1.0 (testuje se) |
 | E2 | Kalendář a výpis akcí na webu, styling dle grafického manuálu | ⏳ |
 | E3 | Služby a individuální termíny, generátor termínů | ⏳ |
 | E4 | QR platební pokyn (SPD), variabilní symbol, PDF | ⏳ |
@@ -130,6 +130,22 @@ Po etapách E1 a E2 lze rezervace spustit s ručním potvrzováním plateb.
 2. WordPress → **Pluginy → Přidat nový → Nahrát plugin** → vybrat `.zip` → Instalovat → Aktivovat.
 3. Na vývojovém webu zapnout **testovací režim** v nastavení pluginu.
 4. Před každou instalací nové verze vytvořit zálohu webu (Duplicator).
+
+---
+
+## Použití (shortcody)
+
+| Shortcode | Popis |
+|---|---|
+| `[reserveandpay_events limit="20" category="slug"]` | Výpis nadcházejících akcí (bez individuálních termínů) |
+| `[reserveandpay_booking id="123"]` | Detail a rezervační formulář akce (na stránce akce se vkládá automaticky) |
+
+## Testy
+
+```bash
+wp eval-file wp-content/plugins/reserveandpay/tests/run-tests.php   # jen na testovacím WordPressu!
+bash wp-content/plugins/reserveandpay/tests/concurrency.sh 12
+```
 
 ---
 
