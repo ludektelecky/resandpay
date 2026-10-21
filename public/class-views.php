@@ -303,4 +303,59 @@ class Resandpay_Views {
 		$out .= 'calendar' === $view ? self::render_calendar( $args ) : self::render_list( $args );
 		return $out . '</div>';
 	}
+
+	/**
+	 * Volné termíny služby: dny s časy jako tlačítka (odkaz na detail termínu s formulářem).
+	 *
+	 * @param array $args service (ID/slug), days (počet dní dopředu na stránku).
+	 */
+	public static function render_slots( array $args ) {
+		$svc = Resandpay_Services::find( $args['service'] );
+		if ( ! $svc ) {
+			return current_user_can( 'edit_posts' ) ? '<p class="rap-notice">' . esc_html__( 'Shortcode [reserveandpay_slots]: služba nenalezena.', 'reserveandpay' ) . '</p>' : '';
+		}
+		$tz    = wp_timezone();
+		$days  = max( 7, min( 90, (int) $args['days'] ) );
+		$param = isset( $_GET['rap_from'] ) ? sanitize_text_field( wp_unslash( $_GET['rap_from'] ) ) : '';
+		$today = new DateTimeImmutable( 'today', $tz );
+		$from  = preg_match( '/^\d{4}-\d{2}-\d{2}$/', $param ) ? date_create_immutable( $param . ' 00:00:00', $tz ) : $today;
+		if ( ! $from || $from < $today ) {
+			$from = $today;
+		}
+		$to    = $from->modify( '+' . $days . ' days' );
+		$slots = Resandpay_Services::free_slots( $svc['id'], $from > $today ? $from : new DateTimeImmutable( 'now', $tz ), $to );
+		$wd    = self::weekdays_short();
+		$by    = array();
+		foreach ( $slots as $ev ) {
+			$by[ substr( $ev['start'], 0, 10 ) ][] = $ev;
+		}
+		$base = remove_query_arg( array( 'rap_from' ) );
+		ob_start();
+		echo '<div class="rap-program-view rap-slots" id="rap-slots">';
+		echo '<p class="rap-slots__info"><span class="rap-eyebrow">' . esc_html( $svc['title'] ) . '</span> ';
+		echo esc_html( sprintf( /* translators: 1: délka, 2: cena */ __( '%1$d min · %2$s', 'reserveandpay' ), $svc['duration'], Resandpay_Events::format_price( $svc['price'], $svc['currency'] ) ) ) . '</p>';
+		if ( ! $by ) {
+			echo '<p class="rap-empty">' . esc_html__( 'V tomto období nejsou volné termíny. Zkuste další týdny, nebo mi napište – rádi se domluvíme.', 'reserveandpay' ) . '</p>';
+		}
+		foreach ( $by as $day => $items ) {
+			$d = date_create_immutable( $day . ' 00:00:00', $tz );
+			echo '<div class="rap-slots__day"><p class="rap-slots__date">' . esc_html( $wd[ (int) $d->format( 'w' ) ] . ' ' . $d->format( 'j. n.' ) ) . '</p><div class="rap-slots__times">';
+			foreach ( $items as $ev ) {
+				$t = date_create_immutable( $ev['start'], $tz )->format( 'G:i' );
+				echo '<a class="rap-chip rap-slot" href="' . esc_url( get_permalink( $ev['id'] ) . '#rap-booking' ) . '" aria-label="' . esc_attr( sprintf( /* translators: 1: den, 2: čas */ __( 'Rezervovat %1$s v %2$s', 'reserveandpay' ), $d->format( 'j. n.' ), $t ) ) . '">' . esc_html( $t ) . '</a>';
+			}
+			echo '</div></div>';
+		}
+		echo '<p class="rap-slots__nav">';
+		if ( $from > $today ) {
+			$prev = $from->modify( '-' . $days . ' days' );
+			echo '<a class="rap-button rap-button--ghost" rel="nofollow" href="' . esc_url( add_query_arg( 'rap_from', ( $prev < $today ? $today : $prev )->format( 'Y-m-d' ), $base ) . '#rap-slots' ) . '">' . esc_html__( '← Předchozí termíny', 'reserveandpay' ) . '</a> ';
+		}
+		$later = Resandpay_Services::free_slots( $svc['id'], $to, $to->modify( '+1 year' ) );
+		if ( $later ) {
+			echo '<a class="rap-button rap-button--ghost" rel="nofollow" href="' . esc_url( add_query_arg( 'rap_from', $to->format( 'Y-m-d' ), $base ) . '#rap-slots' ) . '">' . esc_html__( 'Další termíny →', 'reserveandpay' ) . '</a>';
+		}
+		echo '</p></div>';
+		return ob_get_clean();
+	}
 }

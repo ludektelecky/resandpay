@@ -251,38 +251,7 @@ class Resandpay_Admin_Events {
 
 	/** Uložení údajů akce (sdílené s testy a generátorem termínů). */
 	public static function save_event_meta( $post_id, array $in ) {
-		$to_local = function ( $v ) {
-			$v = sanitize_text_field( (string) $v );
-			if ( '' === $v ) {
-				return '';
-			}
-			$dt = date_create_immutable( str_replace( 'T', ' ', $v ), wp_timezone() );
-			return $dt ? $dt->format( 'Y-m-d H:i:s' ) : '';
-		};
-		$type  = in_array( $in['rap_type'] ?? '', Resandpay_Events::TYPES, true ) ? $in['rap_type'] : 'single';
-		$start = $to_local( $in['rap_start'] ?? '' );
-		$end   = $to_local( $in['rap_end'] ?? '' );
-		if ( $start && ( ! $end || Resandpay_Events::ts( $end ) < Resandpay_Events::ts( $start ) ) ) {
-			$end = $start;
-		}
-		$capacity = max( 0, (int) ( $in['rap_capacity'] ?? 0 ) );
-		if ( 'slot' === $type ) {
-			$capacity = 1;
-		}
-		$currency = strtoupper( preg_replace( '/[^A-Za-z]/', '', (string) ( $in['rap_currency'] ?? '' ) ) );
-		update_post_meta( $post_id, '_rap_type', $type );
-		update_post_meta( $post_id, '_rap_start', $start );
-		update_post_meta( $post_id, '_rap_end', $end );
-		update_post_meta( $post_id, '_rap_location', absint( $in['rap_location'] ?? 0 ) );
-		update_post_meta( $post_id, '_rap_capacity', $capacity );
-		update_post_meta( $post_id, '_rap_price', round( max( 0, (float) str_replace( ',', '.', (string) ( $in['rap_price'] ?? 0 ) ) ), 2 ) );
-		update_post_meta( $post_id, '_rap_currency', strlen( $currency ) === 3 ? $currency : Resandpay_Settings::get( 'currency' ) );
-		$due = (string) ( $in['rap_due_days'] ?? '' );
-		update_post_meta( $post_id, '_rap_due_days', '' === trim( $due ) ? '' : max( 0, (int) $due ) );
-		update_post_meta( $post_id, '_rap_close_hours', max( 0, (float) str_replace( ',', '.', (string) ( $in['rap_close_hours'] ?? 0 ) ) ) );
-		update_post_meta( $post_id, '_rap_members_only', empty( $in['rap_members_only'] ) ? 0 : 1 );
-		update_post_meta( $post_id, '_rap_cancelled', empty( $in['rap_cancelled'] ) ? 0 : 1 );
-		update_post_meta( $post_id, '_rap_program', wp_kses_post( (string) ( $in['rap_program'] ?? '' ) ) );
+		Resandpay_Events::save_meta( $post_id, $in );
 	}
 
 	public static function save_location( $post_id ) {

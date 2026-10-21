@@ -16,6 +16,7 @@ class Resandpay_Frontend {
 		add_shortcode( 'reserveandpay_events', array( __CLASS__, 'shortcode_events' ) );
 		add_shortcode( 'reserveandpay_calendar', array( __CLASS__, 'shortcode_calendar' ) );
 		add_shortcode( 'reserveandpay_program', array( __CLASS__, 'shortcode_program' ) );
+		add_shortcode( 'reserveandpay_slots', array( __CLASS__, 'shortcode_slots' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'assets' ) );
 		add_action( 'template_redirect', array( __CLASS__, 'redirect_archives' ), 5 );
 	}
@@ -103,7 +104,16 @@ class Resandpay_Frontend {
 		if ( ! is_singular( Resandpay_Post_Types::EVENT ) || ! in_the_loop() || ! is_main_query() ) {
 			return $content;
 		}
-		$id = get_the_ID();
+		$id  = get_the_ID();
+		$sid = (int) get_post_meta( $id, '_rap_service', true );
+		if ( $sid && '' === trim( wp_strip_all_tags( $content ) ) ) {
+			$svc_post = get_post( $sid );
+			if ( $svc_post ) {
+				remove_filter( 'the_content', array( __CLASS__, 'event_content' ), 20 );
+				$content = apply_filters( 'the_content', $svc_post->post_content );
+				add_filter( 'the_content', array( __CLASS__, 'event_content' ), 20 );
+			}
+		}
 		return self::render_details( $id ) . $content . self::render_booking( $id );
 	}
 
@@ -141,6 +151,19 @@ class Resandpay_Frontend {
 		$a = self::list_atts( $atts, 'reserveandpay_calendar' );
 		wp_enqueue_style( 'reserveandpay' );
 		return '<div class="rap-program-view">' . Resandpay_Views::render_calendar( $a ) . '</div>';
+	}
+
+	public static function shortcode_slots( $atts ) {
+		$a = shortcode_atts(
+			array(
+				'service' => '',
+				'days'    => 21,
+			),
+			$atts,
+			'reserveandpay_slots'
+		);
+		wp_enqueue_style( 'reserveandpay' );
+		return Resandpay_Views::render_slots( $a );
 	}
 
 	public static function shortcode_program( $atts ) {
@@ -193,7 +216,11 @@ class Resandpay_Frontend {
 			echo '</dd>';
 		}
 		echo '<dt>' . esc_html__( 'Cena', 'reserveandpay' ) . '</dt><dd>' . esc_html( Resandpay_Events::format_price( $ev['price'], $ev['currency'] ) ) . ( 'multiday' === $ev['type'] ? ' <small>' . esc_html__( '(za celou akci)', 'reserveandpay' ) . '</small>' : '' ) . '</dd>';
-		echo '<dt>' . esc_html__( 'Volná místa', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev['cancelled'] ? __( 'akce zrušena', 'reserveandpay' ) : ( $free > 0 ? sprintf( /* translators: 1: volno, 2: kapacita */ __( '%1$d z %2$d', 'reserveandpay' ), $free, $ev['capacity'] ) : __( 'obsazeno', 'reserveandpay' ) ) ) . '</dd>';
+		if ( 'slot' === $ev['type'] ) {
+			echo '<dt>' . esc_html__( 'Termín', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev['cancelled'] ? __( 'zrušen', 'reserveandpay' ) : ( $free > 0 ? __( 'volný', 'reserveandpay' ) : __( 'obsazený', 'reserveandpay' ) ) ) . '</dd>';
+		} else {
+			echo '<dt>' . esc_html__( 'Volná místa', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev['cancelled'] ? __( 'akce zrušena', 'reserveandpay' ) : ( $free > 0 ? sprintf( /* translators: 1: volno, 2: kapacita */ __( '%1$d z %2$d', 'reserveandpay' ), $free, $ev['capacity'] ) : __( 'obsazeno', 'reserveandpay' ) ) ) . '</dd>';
+		}
 		echo '</dl>';
 		if ( ! $ev['cancelled'] && $free > 0 && ! is_wp_error( Resandpay_Events::check_bookable( $event_id ) ) ) {
 			echo '<p class="rap-details__cta"><a class="rap-button" href="#rap-booking">' . esc_html__( 'Rezervovat termín →', 'reserveandpay' ) . '</a></p>';
@@ -201,7 +228,10 @@ class Resandpay_Frontend {
 		if ( 'multiday' === $ev['type'] && $ev['program'] ) {
 			echo '<div class="rap-program"><p class="rap-eyebrow">' . esc_html__( 'Program', 'reserveandpay' ) . '</p>' . wp_kses_post( wpautop( $ev['program'] ) ) . '</div>';
 		}
-		if ( $page && is_singular( Resandpay_Post_Types::EVENT ) ) {
+		$svc = 'slot' === $ev['type'] ? Resandpay_Services::get( (int) get_post_meta( $event_id, '_rap_service', true ) ) : null;
+		if ( $svc && $svc['page_id'] && is_singular( Resandpay_Post_Types::EVENT ) ) {
+			echo '<p class="rap-back"><a href="' . esc_url( get_permalink( $svc['page_id'] ) . '#rap-slots' ) . '">← ' . esc_html__( 'Jiný termín', 'reserveandpay' ) . '</a></p>';
+		} elseif ( $page && is_singular( Resandpay_Post_Types::EVENT ) && 'slot' !== $ev['type'] ) {
 			echo '<p class="rap-back"><a href="' . esc_url( get_permalink( $page ) ) . '">← ' . esc_html__( 'Všechny termíny', 'reserveandpay' ) . '</a></p>';
 		}
 		echo '</div>';

@@ -25,3 +25,8 @@
 .rap-more summary { cursor: pointer; font-weight: 600; margin-bottom: 10px; }
 .rap-missing { background: #fcf0f1; border-left: 3px solid #d63638; padding: 6px 10px; margin: 0 0 12px; }
 .rap-box input[readonly] { background: #f0f0f1; }
+.rap-day { display: inline-flex; gap: 4px; align-items: center; margin-right: 12px; }
+.rap-warn { color: #996800; }
+.rap-muted { color: #8c8f94; }
+.rap-preview { max-width: 760px; }
+.rap-preview td, .rap-preview th { vertical-align: middle; }

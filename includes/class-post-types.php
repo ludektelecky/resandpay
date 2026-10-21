@@ -9,6 +9,7 @@ class Resandpay_Post_Types {
 	const EVENT    = 'resandpay_event';
 	const LOCATION = 'resandpay_location';
 	const CATEGORY = 'resandpay_category';
+	const SERVICE  = 'resandpay_service';
 
 	public static function init() {
 		add_action( 'init', array( __CLASS__, 'register' ) );
@@ -59,9 +60,29 @@ class Resandpay_Post_Types {
 			)
 		);
 
+		register_post_type(
+			self::SERVICE,
+			array(
+				'labels'       => array(
+					'name'          => __( 'Služby', 'reserveandpay' ),
+					'singular_name' => __( 'Služba', 'reserveandpay' ),
+					'add_new'       => __( 'Přidat službu', 'reserveandpay' ),
+					'add_new_item'  => __( 'Přidat službu', 'reserveandpay' ),
+					'edit_item'     => __( 'Upravit službu', 'reserveandpay' ),
+					'all_items'     => __( 'Služby', 'reserveandpay' ),
+					'not_found'     => __( 'Žádné služby', 'reserveandpay' ),
+				),
+				'public'       => false,
+				'show_ui'      => true,
+				'supports'     => array( 'title', 'editor' ),
+				'show_in_rest' => false,
+				'show_in_menu' => 'reserveandpay',
+			)
+		);
+
 		register_taxonomy(
 			self::CATEGORY,
-			self::EVENT,
+			array( self::EVENT, self::SERVICE ),
 			array(
 				'labels'            => array(
 					'name'          => __( 'Kategorie akcí', 'reserveandpay' ),

@@ -87,6 +87,16 @@
 .rap-agenda__ev span { font-family: var(--rap-font-heading); font-size: 19px; }
 .rap-agenda__ev small { display: block; color: var(--rap-ink-soft); font-size: 14px; }
 
+/* Volné termíny služby */
+.rap-slots__info { margin: 0 0 1.25rem; color: var(--rap-ink-soft); }
+.rap-slots__info .rap-eyebrow { display: inline; margin-right: .5rem; }
+.rap-slots__day { display: grid; grid-template-columns: 110px 1fr; gap: 1rem; align-items: baseline; padding: 1rem 0; border-top: 1px solid var(--rap-line); }
+.rap-slots__day:last-of-type { border-bottom: 1px solid var(--rap-line); }
+.rap-slots__date { margin: 0; font-family: var(--rap-font-heading); font-size: 19px; color: var(--rap-accent-2); }
+.rap-slots__times { display: flex; flex-wrap: wrap; gap: .5rem; }
+.rap-slot { min-width: 64px; text-align: center; font-weight: 600; }
+.rap-slots__nav { display: flex; gap: .75rem; flex-wrap: wrap; margin-top: 1.25rem; }
+
 /* Detail akce */
 .rap-details { background: var(--rap-bg-alt); border: 1px solid var(--rap-line); border-radius: var(--rap-radius); padding: 1.5rem 1.75rem; margin: 0 0 2rem; }
 .rap-details__when { font-family: var(--rap-font-heading); font-size: 22px; color: var(--rap-accent-2); margin: 0 0 1rem; }
@@ -137,5 +147,6 @@
 	.rap-toolbar { flex-direction: column; align-items: flex-start; }
 	.rap-details { padding: 1.25rem; }
 	.rap-field--half { flex-basis: 100% !important; }
+	.rap-slots__day { grid-template-columns: 1fr; gap: .5rem; }
 }
 @media (prefers-reduced-motion: reduce) { .rap-button, .rap-chip { transition: none; } }

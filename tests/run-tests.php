@@ -57,7 +57,7 @@ function rap_person( $n ) {
 	);
 }
 
-foreach ( array( 'class-admin-events.php', 'class-admin-settings.php' ) as $f ) {
+foreach ( array( 'class-admin-events.php', 'class-admin-settings.php', 'class-admin-services.php' ) as $f ) {
 	require_once RESANDPAY_DIR . 'admin/' . $f;
 }
 
@@ -74,7 +74,7 @@ add_filter(
 
 echo "== Příprava\n";
 Resandpay_Reservations::delete_all();
-foreach ( get_posts( array( 'post_type' => array( Resandpay_Post_Types::EVENT, Resandpay_Post_Types::LOCATION ), 'posts_per_page' => -1, 'post_status' => 'any', 'fields' => 'ids' ) ) as $pid ) {
+foreach ( get_posts( array( 'post_type' => array( Resandpay_Post_Types::EVENT, Resandpay_Post_Types::LOCATION, Resandpay_Post_Types::SERVICE ), 'posts_per_page' => -1, 'post_status' => 'any', 'fields' => 'ids' ) ) as $pid ) {
 	wp_delete_post( $pid, true );
 }
 Resandpay_Settings::update(
@@ -231,6 +231,55 @@ rap_t( ! is_wp_error( $dup ) && 'draft' === $dev['status'] && $dev['start'] === 
 rap_t( 0 === Resandpay_Reservations::count_active( $dup ), 'duplikát nemá žádné rezervace' );
 rap_t( in_array( $tid, wp_get_object_terms( $dup, Resandpay_Post_Types::CATEGORY, array( 'fields' => 'ids' ) ), true ), 'duplikát převezme kategorii' );
 rap_t( array( 'začátek', 'konec', 'kapacita' ) === Resandpay_Admin_Events::missing( array( 'start' => '', 'end' => '', 'capacity' => 0 ) ), 'kontrola chybějících údajů akce' );
+
+echo "== E3: služby a generátor termínů\n";
+$svc_id = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::SERVICE, 'post_status' => 'publish', 'post_title' => 'Bukální masáž', 'post_content' => 'Uvolnění obličejových svalů zevnitř i zvenku.' ) );
+Resandpay_Admin_Services::save_service_meta( $svc_id, array( 'rap_duration' => 60, 'rap_pause' => 15, 'rap_price' => '1200', 'rap_currency' => 'CZK', 'rap_location' => $loc ) );
+wp_set_object_terms( $svc_id, array( $tid ), Resandpay_Post_Types::CATEGORY );
+$gen = array( 'weekdays' => array( 2, 4 ), 'time_from' => '09:00', 'time_to' => '12:00', 'date_from' => '2027-03-01', 'date_to' => '2027-03-14' );
+$pv  = Resandpay_Services::preview( $svc_id, $gen );
+rap_t( is_array( $pv ) && 8 === count( $pv ), 'náhled: út+čt 9–12 h, 60+15 min, 2 týdny = 8 termínů (' . ( is_array( $pv ) ? count( $pv ) : 'chyba' ) . ')' );
+rap_t( is_array( $pv ) && '2027-03-02 09:00:00' === $pv[0]['start'] && '2027-03-02 10:15:00' === $pv[1]['start'], 'termíny respektují délku a pauzu (9:00, 10:15)' );
+$blocker = rap_event( 'Workshop v úterý', Resandpay_Events::ts( '2027-03-02 09:30:00' ), Resandpay_Events::ts( '2027-03-02 10:00:00' ), 5 );
+$pv  = Resandpay_Services::preview( $svc_id, $gen );
+rap_t( ! empty( $pv[0]['overlaps'] ) && empty( $pv[1]['overlaps'] ), 'náhled označí termín překrývající se s jinou akcí' );
+$cr  = Resandpay_Services::create_slots( $svc_id, wp_list_pluck( $pv, 'start' ) );
+rap_t( 8 === $cr['created'] && 0 === $cr['skipped'], 'vytvořeno 8 termínů i s překryvem (překryv nebrání)' );
+$cr2 = Resandpay_Services::create_slots( $svc_id, wp_list_pluck( $pv, 'start' ) );
+rap_t( 0 === $cr2['created'] && 8 === $cr2['skipped'], 'opakované generování duplicitní termíny přeskočí' );
+$pv2 = Resandpay_Services::preview( $svc_id, $gen );
+rap_t( 8 === count( array_filter( $pv2, fn( $x ) => $x['exists'] ) ), 'náhled ukazuje existující termíny' );
+$tzz   = wp_timezone();
+$slots = Resandpay_Services::slots( $svc_id, date_create_immutable( '2027-03-01 00:00:00', $tzz ), date_create_immutable( '2027-03-15 00:00:00', $tzz ) );
+$s0    = reset( $slots );
+rap_t( 8 === count( $slots ) && 'slot' === $s0['type'] && 1 === $s0['capacity'] && 1200.0 === $s0['price'] && $loc === $s0['location_id'], 'termín: typ slot, kapacita 1, cena a místo ze služby' );
+rap_t( '2027-03-02 10:00:00' === $s0['end'], 'konec termínu = začátek + 60 min' );
+rap_t( in_array( $tid, wp_get_object_terms( $s0['id'], Resandpay_Post_Types::CATEGORY, array( 'fields' => 'ids' ) ), true ), 'termín převezme kategorii služby' );
+Resandpay_Admin_Services::save_service_meta( $svc_id, array( 'rap_duration' => 90, 'rap_pause' => 15, 'rap_price' => '1500', 'rap_currency' => 'CZK', 'rap_location' => $loc ) );
+rap_t( '2027-03-02 10:00:00' === Resandpay_Events::get( $s0['id'] )['end'] && 1200.0 === Resandpay_Events::get( $s0['id'] )['price'], 'změna délky a ceny služby nemění existující termíny' );
+$pv3 = Resandpay_Services::preview( $svc_id, array_merge( $gen, array( 'date_from' => '2027-03-15', 'date_to' => '2027-03-21' ) ) );
+rap_t( 2 === count( $pv3 ) && '2027-03-16 10:30:00' === $pv3[0]['end'], 'nové termíny už mají délku 90 min (1 denně v okně 9–12)' );
+$free = Resandpay_Services::free_slots( $svc_id, date_create_immutable( '2027-03-01 00:00:00', $tzz ), date_create_immutable( '2027-03-15 00:00:00', $tzz ) );
+rap_t( 8 === count( $free ), 'volných termínů 8' );
+$bk = Resandpay_Reservations::create( $s0['id'], rap_person( 20 ) );
+rap_t( is_array( $bk ) && 0 === Resandpay_Events::free_places( $s0['id'] ), 'rezervace termínu ho obsadí' );
+rap_t( is_wp_error( Resandpay_Reservations::create( $s0['id'], rap_person( 21 ) ) ), 'obsazený termín nelze rezervovat podruhé' );
+$_GET['rap_from'] = '2027-03-01';
+$html = Resandpay_Views::render_slots( array( 'service' => $svc_id, 'days' => 14 ) );
+unset( $_GET['rap_from'] );
+rap_t( false !== strpos( $html, '10:15' ) && false !== strpos( $html, 'út 2. 3.' ), 'stránka volných termínů ukazuje dny a časy' );
+rap_t( 7 === substr_count( $html, 'rap-chip rap-slot' ), 'obsazený termín se mezi volnými nezobrazuje (7 z 8)' );
+rap_t( false !== strpos( Resandpay_Views::render_slots( array( 'service' => 'bukalni-masaz', 'days' => 21 ) ), 'Bukální masáž' ), 'shortcode najde službu i podle slugu' );
+$list = Resandpay_Views::render_list( array( 'limit' => 100, 'category' => '' ) );
+rap_t( false === strpos( $list, 'Bukální masáž' ), 'termíny služby nejsou v přehledu skupinových akcí' );
+$GLOBALS['rap_mails'] = array();
+$dry = Resandpay_Services::bulk_cancel( $svc_id, date_create_immutable( '2027-03-01 00:00:00', $tzz ), date_create_immutable( '2027-03-05 23:59:59', $tzz ), true, 'nemoc', true );
+rap_t( 3 === count( $dry['free'] ) && 1 === count( $dry['booked'] ), 'hromadné rušení – náhled: 3 volné, 1 obsazený' );
+rap_t( 8 === count( Resandpay_Services::slots( $svc_id, date_create_immutable( '2027-03-01 00:00:00', $tzz ), date_create_immutable( '2027-03-15 00:00:00', $tzz ) ) ), 'náhled nic nezmění' );
+Resandpay_Services::bulk_cancel( $svc_id, date_create_immutable( '2027-03-01 00:00:00', $tzz ), date_create_immutable( '2027-03-05 23:59:59', $tzz ), true, 'nemoc' );
+rap_t( 5 === count( Resandpay_Services::slots( $svc_id, date_create_immutable( '2027-03-01 00:00:00', $tzz ), date_create_immutable( '2027-03-15 00:00:00', $tzz ) ) ), 'volné termíny v období odstraněny (zbývá 5)' );
+rap_t( Resandpay_Events::get( $s0['id'] )['cancelled'] && 'cancelled' === Resandpay_Reservations::get( $bk['id'] )['status'], 'obsazený termín zrušen včetně rezervace' );
+rap_t( (bool) array_filter( $GLOBALS['rap_mails'], fn( $m ) => false !== strpos( $m['subject'], 'Rezervace zrušena' ) && false !== strpos( $m['message'], 'nemoc' ) ), 'zákaznice dostane e-mail o zrušení s důvodem' );
 
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 

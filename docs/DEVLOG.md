@@ -1,5 +1,15 @@
 # Vývojový deník ReserveAndPay
 
+## 0.3.0 – Etapa E3 (21. 10. 2026)
+
+- Nový typ obsahu **Služby** (menu Rezervace → Služby): pevná délka termínu a pauza jako nastavitelné parametry (výchozí 60 + 15 min), cena, měna, místo, splatnost, kategorie, stránka s volnými termíny; popis služby se zobrazí u každého termínu
+- **Generátor termínů** (Rezervace → Generátor termínů): dny v týdnu, časové okno, období (max. půl roku) → náhled s možností termíny odškrtnout; existující termíny se přeskočí; překryvy s jinými akcemi jen označí (nebrání)
+- Termín = akce typu „individuální termín“ s kapacitou 1; údaje (délka, cena, místo, kategorie) se při generování zkopírují – pozdější změna služby se týká jen nových termínů
+- **Hromadné zrušení** v období (nemoc, dovolená): náhled; volné termíny do koše, obsazené označeny jako zrušené a rezervace zrušeny s e-mailem a důvodem
+- Shortcode `[reserveandpay_slots service="slug|ID" days="21"]` – volné termíny po dnech jako tlačítka s časem, stránkování „Další termíny →“
+- Detail termínu: popis služby, „Termín: volný/obsazený“, odkaz „← Jiný termín“
+- Seznam akcí v administraci: filtr Akce / Individuální termíny / Vše (výchozí bez individuálních termínů)
+
 ## 0.2.1 (21. 10. 2026)
 
 - Přehled akcí a kalendář se roztáhnou až na 1120 px i v úzkém textovém sloupci šablony (bez vodorovného posuvníku)

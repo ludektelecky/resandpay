@@ -103,7 +103,7 @@ resandpay/
 | E0 | Doprecizování otázek, vzorek bankovního avíza, ověření hostingu Active24 | ⏳ |
 | E1 | Jádro rezervací: akce, kapacita, formulář, stavy, administrace, e-maily, testovací režim | ✅ 0.1.0 (testuje se) |
 | E2 | Kalendář a výpis akcí na webu, styling dle grafického manuálu | ✅ 0.2.0 (testuje se) |
-| E3 | Služby a individuální termíny, generátor termínů | ⏳ |
+| E3 | Služby a individuální termíny, generátor termínů | ✅ 0.3.0 (testuje se) |
 | E4 | QR platební pokyn (SPD), variabilní symbol, PDF | ⏳ |
 | E5 | Kontrola plateb (IMAP, párování, ruční/automatický režim, CRON) | ⏳ |
 | E6 | Expirace, platba na místě, Ultimate Member, MailerLite | ⏳ |
@@ -140,6 +140,7 @@ Po etapách E1 a E2 lze rezervace spustit s ručním potvrzováním plateb.
 | `[reserveandpay_program]` | Přehled akcí s přepínačem Seznam / Kalendář a filtrem kategorií (doporučeno pro stránku „Termíny“) |
 | `[reserveandpay_events limit="50" category="slug" filter="yes"]` | Seznam nadcházejících akcí (bez individuálních termínů) |
 | `[reserveandpay_calendar category="slug"]` | Samotný měsíční kalendář |
+| `[reserveandpay_slots service="bukalni-masaz" days="21"]` | Volné termíny služby (např. masáže) po dnech |
 | `[reserveandpay_booking id="123"]` | Detail a rezervační formulář akce (na stránce akce se vkládá automaticky) |
 
 ## Testy
