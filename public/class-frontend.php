@@ -140,7 +140,7 @@ class Resandpay_Frontend {
 	public static function shortcode_calendar( $atts ) {
 		$a = self::list_atts( $atts, 'reserveandpay_calendar' );
 		wp_enqueue_style( 'reserveandpay' );
-		return Resandpay_Views::render_calendar( $a );
+		return '<div class="rap-program-view">' . Resandpay_Views::render_calendar( $a ) . '</div>';
 	}
 
 	public static function shortcode_program( $atts ) {

@@ -1,5 +1,10 @@
 # Vývojový deník ReserveAndPay
 
+## 0.2.1 (21. 10. 2026)
+
+- Přehled akcí a kalendář se roztáhnou až na 1120 px i v úzkém textovém sloupci šablony (bez vodorovného posuvníku)
+- Názvy akcí v kalendáři na dva řádky místo zkrácení
+
 ## 0.2.0 – Etapa E2 (21. 10. 2026)
 
 - Vzhled dle grafického manuálu v1 (krémový podklad, vlasové linky, gold-deep tlačítka „sloveso + šipka“, data akcí ve švestkové, Fraunces/Work Sans, rohy 2 px)
