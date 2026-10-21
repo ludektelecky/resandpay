@@ -1,0 +1,555 @@
+Return-Path: <info@rb.cz>
+Delivered-To: bankovni.transakce@slehkouhlavou.cz
+Received: from m1-u112-backend.m1.websupport.sk
+	by m1-u112-backend with LMTP
+	id 8ItbGUse2Wq1GwIAUef4eA
+	(envelope-from <info@rb.cz>)
+	for <bankovni.transakce@slehkouhlavou.cz>; Wed, 21 Oct 2026 22:19:23 +0200
+X-Original-To: bankovni.transakce@slehkouhlavou.cz
+Received: from m1-u7-mx.websupport.sk (unknown [10.30.7.3])
+	by m1-u112-backend.m1.websupport.sk (Postfix) with ESMTP id 4j90xR2y97z1R5yY
+	for <bankovni.transakce@slehkouhlavou.cz>; Wed, 21 Oct 2026 22:19:23 +0200 (CEST)
+Received-SPF: Pass (mailfrom) identity=mailfrom; client-ip=62.168.7.100; helo=smtp2.rb.cz; envelope-from=info@rb.cz; receiver=slehkouhlavou.cz 
+Received: from smtp2.rb.cz (smtp2.rb.cz [62.168.7.100])
+	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
+	(No client certificate requested)
+	by m1-u7-mx.websupport.sk (Postfix) with ESMTPS id 4j90xQ6s8Qz11Qh
+	for <bankovni.transakce@slehkouhlavou.cz>; Wed, 21 Oct 2026 22:19:22 +0200 (CEST)
+Date: Wed, 21 Oct 2026 22:19:22 +0200
+DKIM-Filter: OpenDKIM Filter v2.11.0 smtp2.rb.cz 9980F10045D4
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=rb.cz; s=post;
+	t=1792613962; bh=x6LH8ralsu7QzmIax9E6QesoAZnLoUJkpfnwKSxJpnI=;
+	h=Date:From:To:Subject:From;
+	b=f3e2ZYrH15DK+vLLzioMyK/XuyfZiFUFSCEfCWuKzz+SyG37Cn6a9I6dN4u00QXaw
+	 RFMNZcOPeU2o1HayqxulXsQsH26kuE6RtBw8T3XZkFbxiIUa+qaznf4sPTjpYq8F4i
+	 HUZNB7W0wQ0G6L3N2uxZyYjjfjhWTnRpeb4JDXWexN3M/+IOIQc5fQW8s1xvCW6e03
+	 CFmFf07XFT3yNaEmMJY2D0uJnZs9AFOuHGwnij0dGKGIPQ2GQmC3AWTYCRJoAe4tO4
+	 KlijINfntzcZkErC3KNM9YCAXV+ZOQBGWNn5AykWNGVIOdyeZSc6wOAge5h59M0baK
+	 EfyeFbLDhJ5rg==
+From: Raiffeisenbank a.s. <info@rb.cz>
+To: <bankovni.transakce@slehkouhlavou.cz>
+Message-ID: <1983301034.29395.1792613962452@rb.cz>
+Subject: =?UTF-8?Q?Pohyb_na_=C3=BA=C4=8Dt=C4=9B?=
+MIME-Version: 1.0
+Content-Type: multipart/related;
+	boundary="----=_Part_29394_389646850.1792613962452"
+X-purgate-type: clean
+X-purgate-Ad: Categorized by eleven eXpurgate (R) https://www.eleven.de
+X-purgate: This mail is considered clean (visit https://www.eleven.de for further information)
+X-purgate: clean
+X-purgate-size: 18446
+X-purgate-ID: 155907::1792613962-75D781F3-73415CE9/0/0
+X-Rspamd-Queue-Id: 4j90xQ6s8Qz11Qh
+X-Spamd-Result: default: False [-1.73 / 1000.00];
+	R_DKIM_ALLOW(-1.13)[rb.cz:s=post];
+	DMARC_POLICY_ALLOW(-0.50)[rb.cz,reject];
+	R_SPF_ALLOW(-0.20)[+ip4:62.168.7.100:c];
+	MIME_HTML_ONLY(0.20)[];
+	MIME_GOOD(-0.10)[multipart/related];
+	ONCE_RECEIVED(0.10)[];
+	MX_GOOD(-0.10)[rbinternational-com.mail.protection.outlook.com];
+	RCPT_COUNT_ONE(0.00)[1];
+	ASN(0.00)[asn:13036, ipnet:62.168.0.0/18, country:CZ];
+	MIME_TRACE(0.00)[0:+,1:~,2:~];
+	MISSING_XM_UA(0.00)[];
+	GENERIC_REPUTATION(0.00)[-0.50237210052874];
+	DKIM_REPUTATION(0.00)[-0.50203597171515];
+	ARC_NA(0.00)[];
+	IP_REPUTATION_HAM(0.00)[asn: 13036(-0.20), country: CZ(-0.00), ip: 62.168.7.100(-0.50)];
+	SPF_REPUTATION_HAM(0.00)[-0.50238549406332];
+	FROM_EQ_ENVFROM(0.00)[];
+	FROM_HAS_DN(0.00)[];
+	RCVD_COUNT_ZERO(0.00)[0];
+	BAYES_HAM(0.00)[31.44%];
+	TO_MATCH_ENVRCPT_ALL(0.00)[];
+	TO_DN_NONE(0.00)[];
+	MID_RHS_MATCH_FROM(0.00)[];
+	DKIM_TRACE(0.00)[rb.cz:+]
+X-Rspamd-Action: no action
+X-Rspamd-Server: m1-rspamd-in-1
+
+------=_Part_29394_389646850.1792613962452
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+Content-Disposition: inline
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.=
+w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns=3D"http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3DUTF-8">
+<meta name=3D"viewport" content=3D"initial-scale=3D1.0">
+<meta name=3D"format-detection" content=3D"telephone=3Dno">
+<title>Pohyb na =C3=BA=C4=8Dt=C4=9B</title>
+<style type=3D"text/css">
+
+.socialLinks a {
+display: inline-block;
+}
+
+
+table.vb-row.fullwidth {
+border-spacing: 0;
+padding: 0;
+}
+</style>
+<style type=3D"text/css">
+/* yahoo, hotmail */
+
+.ExternalClass p,
+.ExternalClass span,
+.ExternalClass font,
+.ExternalClass td,
+.ExternalClass div {
+line-height: 100%;
+}
+
+.yshortcuts a {
+border-bottom: none !important;
+}
+
+.vb-outer {
+min-width: 0 !important;
+}
+
+/* outlook */
+
+table {
+mso-table-rspace: 0pt;
+mso-table-lspace: 0pt;
+}
+
+#outlook a {
+padding: 0;
+}
+
+img {
+outline: none;
+text-decoration: none;
+border: none;
+-ms-interpolation-mode: bicubic;
+}
+
+a img {
+border: none;
+}
+
+@media screen and (max-device-width: 640px),
+screen and (max-width: 640px) {
+table.vb-container,
+table.vb-row {
+width: 95% !important;
+}
+.mobile-full {
+float: none !important;
+width: 100% !important;
+max-width: none !important;
+padding-right: 0 !important;
+padding-left: 0 !important;
+}
+        img.mobile-full {
+            width: 100% !important;
+            max-width: none !important;
+            height: auto !important;
+        }
+        .label {
+            width: 45%;
+        }
+}
+</style>
+<style type=3D"text/css">
+#ko_textBlock_6 .links-color a:visited,
+#ko_textBlock_6 .links-color a:hover {
+color: #3f3f3f;
+color: #3f3f3f;
+text-decoration: underline;
+}
+
+#ko_textBlock_8 .links-color a:visited,
+#ko_textBlock_8 .links-color a:hover {
+color: #3f3f3f;
+color: #3f3f3f;
+text-decoration: underline;
+}
+
+#ko_footerBlock_2 .links-color a:visited,
+#ko_footerBlock_2 .links-color a:hover {
+color: #ccc;
+color: #ccc;
+text-decoration: underline;
+}
+
+#ko_doubleImageBlock_7 a,
+#ko_doubleImageBlock_7 a:link,
+#ko_doubleImageBlock_7 a:visited,
+#ko_doubleImageBlock_7 a:hover {
+color: #3f3f3f;
+color: #3f3f3f;
+text-decoration: underline;
+}
+</style>
+</head>
+<body bgcolor=3D"white" text=3D"#919191" alink=3D"#cccccc" vlink=3D"#cccccc=
+" style=3D"margin: 0;padding: 0;background-color: white;color: #919191;">
+<center>
+<!-- preheaderBlock -->
+<table class=3D"vb-outer" width=3D"100%" cellpadding=3D"0" border=3D"0" cel=
+lspacing=3D"0" bgcolor=3D"#3f3f3f" style=3D"background-color: transparent;"=
+ id=3D"ko_preheaderBlock_1">
+<tbody>
+<tr>
+<td class=3D"vb-outer" align=3D"center" valign=3D"top" bgcolor=3D"#3f3f3f" =
+style=3D"padding-left: 9px;padding-right: 9px;background-color: transparent=
+;">
+<div style=3D"display: none; font-size: 1px; color: #333333; line-height: 1=
+px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden;"></div>
+<!--><table align=3D"center" border=3D"0" cellspacing=3D"0" cellpadding=3D"=
+0" width=3D"640"><tr><td align=3D"center" valign=3D"top"><!-->
+<div class=3D"oldwebkit" style=3D"max-width: 640px;">
+<table width=3D"640" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" class=
+=3D"vb-row halfpad" bgcolor=3D"#3f3f3f" style=3D"border-spacing: 0px;border=
+-collapse: collapse;border-spacing: 0;padding-left: 0px;padding-right: 9px;=
+width: 100%;max-width: 640px;background-color: transparent;">
+<tbody>
+<tr>
+<td align=3D"center" valign=3D"top" bgcolor=3D"#3f3f3f" style=3D"font-size:=
+ 0; background-color: transparent;">
+<!--><table align=3D"center" border=3D"0" cellspacing=3D"0" cellpadding=3D"=
+0" width=3D"552"><tr><!-->
+<!--><td align=3D"left" valign=3D"top" width=3D"276"><!-->
+<div style=3D"display: inline-block; max-width: 276px; vertical-align: top;=
+ width: 100%;float:left" class=3D"mobile-full">
+<table class=3D"vb-content" border=3D"0" cellspacing=3D"" cellpadding=3D"0"=
+ width=3D"276" style=3D"border-collapse: collapse;width: 100%;" align=3D"le=
+ft">
+<tbody>
+<tr>
+                                                <td width=3D"100%" valign=
+=3D"top" align=3D"left" style=3D"font-weight: normal; text-align: left; fon=
+t-size: 13px;      font-family: Arial, Helvetica, sans-serif; color: transp=
+arent;">
+                                                    <p style=3D"text-decora=
+tion: underline; color: transparent; height:auto; width:120px; display:bloc=
+k; margin: 0">
+<img src=3D"cid:logoRB.png" alt=3D"" style=3D"padding:20px; background:#fff=
+30a"/></p>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--></td></tr></table><!-->
+</td>
+</tr>
+</tbody>
+</table>
+<!-- /preheaderBlock -->
+        <table class=3D"vb-outer" width=3D"100%" cellpadding=3D"0" border=
+=3D"0" cellspacing=3D"0" bgcolor=3D"#bfbfbf" style=3D"background-color: tra=
+nsparent;" id=3D"ko_titleBlock_5">
+<tbody>
+<tr>
+                <td class=3D"vb-outer" align=3D"center" valign=3D"top" bgco=
+lor=3D"#bfbfbf" style=3D"padding-left: 9px;padding-right: 9px;background-co=
+lor: transparent;">
+<!--><table align=3D"center" border=3D"0" cellspacing=3D"0" cellpadding=3D"=
+0" width=3D"640"><tr><td align=3D"center" valign=3D"top"><!-->
+<div class=3D"oldwebkit" style=3D"max-width: 640px;">
+<table width=3D"640" border=3D"0" cellpadding=3D"0" cellspacing=3D"9" class=
+=3D"vb-container halfpad" bgcolor=3D"transparent" style=3D"border-collapse:=
+ separate;border-spacing: 9px;padding-left: 9px;padding-right: 9px;width: 1=
+00%;max-width: 640px;background-color: transparent;">
+<tbody>
+<tr>
+<td bgcolor=3D"transparent" align=3D"left" style=3D"background-color: trans=
+parent; font-size: 22px; font-family: Arial, Helvetica, sans-serif; color: =
+#3f3f3f; text-align: left;">
+<span style=3D"display: block; margin-top: 25px">Pohyb na =C3=BA=C4=8Dt=C4=
+=9B</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--></td></tr></table><!-->
+</td>
+</tr>
+</tbody>
+</table>
+        <table class=3D"vb-outer" width=3D"100%" cellpadding=3D"0" border=
+=3D"0" cellspacing=3D"0" bgcolor=3D"#bfbfbf" style=3D"background-color: tra=
+nsparent;" id=3D"ko_textBlock_6">
+<tbody>
+<tr>
+                <td class=3D"vb-outer" align=3D"center" valign=3D"top" bgco=
+lor=3D"#bfbfbf" style=3D"padding-left: 9px;padding-right: 9px;background-co=
+lor: transparent;">
+<!--><table align=3D"center" border=3D"0" cellspacing=3D"0" cellpadding=3D"=
+0" width=3D"640"><tr><td align=3D"center" valign=3D"top"><!-->
+<div class=3D"oldwebkit" style=3D"max-width: 640px;">
+<table width=3D"640" border=3D"0" cellpadding=3D"0" cellspacing=3D"18" clas=
+s=3D"vb-container fullpad" bgcolor=3D"transparent" style=3D"border-collapse=
+: separate;border-spacing: 18px;padding-left: 0;padding-right: 0;width: 100=
+%;max-width: 640px;background-color: transparent;">
+<tbody>
+<tr>
+<td align=3D"left" class=3D"long-text links-color" style=3D"text-align: lef=
+t; font-size: 13px;      font-family: Arial, Helvetica, sans-serif; color: =
+#3f3f3f;">
+<p style=3D"margin: 0em 0px;margin-top: 0px;">V=C3=A1=C5=BEen=C3=A1 klientk=
+o, v=C3=A1=C5=BEen=C3=BD kliente,<br> na =C3=BA=C4=8Dt=C4=9B byla provedena=
+ n=C3=A1sleduj=C3=ADc=C3=AD p=C5=99=C3=ADchoz=C3=AD platba:</p>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--></td></tr></table><!-->
+</td>
+</tr>
+</tbody>
+</table>
+        <table class=3D"vb-outer" width=3D"100%" cellpadding=3D"0" border=
+=3D"0" cellspacing=3D"0" bgcolor=3D"#bfbfbf" style=3D"background-color: tra=
+nsparent;" id=3D"ko_hrBlock_9">
+<tbody>
+<tr>
+                <td class=3D"vb-outer" align=3D"center" valign=3D"top" bgco=
+lor=3D"#bfbfbf" style=3D"padding-left: 9px;padding-right: 9px;background-co=
+lor: transparent;">
+<!--><table align=3D"center" border=3D"0" cellspacing=3D"0" cellpadding=3D"=
+0" width=3D"640"><tr><td align=3D"center" valign=3D"top"><!-->
+<div class=3D"oldwebkit" style=3D"max-width: 640px;">
+=09=09=09=09=09=09=09=09=09=09=09=09=09=09<table width=3D"640" border=3D"0"=
+ cellpadding=3D"0" cellspacing=3D"18" class=3D"vb-container fullpad" bgcolo=
+r=3D"transparent" style=3D"border-collapse: separate;border-spacing: 18px;p=
+adding-left: 0;padding-right: 0;width: 100%;max-width: 640px;background-col=
+or: transparent;">
+<tbody>
+<tr>
+<td align=3D"left" class=3D"long-text links-color label" style=3D"text-alig=
+n: left; font-size: 13px;      font-family: Arial, Helvetica, sans-serif; c=
+olor: #3f3f3f;">
+<p style=3D"margin: 0em 0px;margin-top: 0px;">Datum a =C4=8Das</p>
+</td>
+<td align=3D"left" class=3D"long-text links-color" style=3D"text-align: rig=
+ht; font-weight:bold; font-size: 13px;      font-family: Arial, Helvetica, =
+sans-serif; color: #3f3f3f;">
+<p style=3D"margin: 0em 0px;margin-top: 0px;">21. 10. 2026 22:18</p>
+</td>
+</tr>
+<tr>
+<td align=3D"left" class=3D"long-text links-color label" style=3D"text-alig=
+n: left; font-size: 13px;      font-family: Arial, Helvetica, sans-serif; c=
+olor: #3f3f3f;">
+<p style=3D"margin: 0em 0px;margin-top: 0px;">Na =C3=BA=C4=8Det</p>
+</td>
+<td align=3D"left" class=3D"long-text links-color" style=3D"text-align: rig=
+ht; font-weight:bold; font-size: 13px;      font-family: Arial, Helvetica, =
+sans-serif; color: #3f3f3f;">
+<p style=3D"margin: 0em 0px;margin-top: 0px;">8032378004/5500<br>INSYSTEMS =
+CZ s.r.o.</p>
+</td>
+</tr>
+<br>
+<tr>
+<td align=3D"left" class=3D"long-text links-color label" style=3D"text-alig=
+n: left; font-size: 13px;      font-family: Arial, Helvetica, sans-serif; c=
+olor: #3f3f3f;">
+<p style=3D"margin: 0em 0px;margin-top: 0px;">=C4=8C=C3=A1stka v m=C4=9Bn=
+=C4=9B =C3=BA=C4=8Dtu</p>
+</td>
+<td align=3D"left" class=3D"long-text links-color" style=3D"text-align: rig=
+ht; font-weight:bold; font-size: 13px;      font-family: Arial, Helvetica, =
+sans-serif; color: #3f3f3f;">
+<p style=3D"margin: 0em 0px;margin-top: 0px;">+5.000,00 CZK</p>
+</td>
+</tr>
+
+
+<tr>
+<td align=3D"left" class=3D"long-text links-color label" style=3D"text-alig=
+n: left; font-size: 13px;      font-family: Arial, Helvetica, sans-serif; c=
+olor: #3f3f3f;">
+<p style=3D"margin: 0em 0px;margin-top: 0px;">Kategorie pohybu</p>
+</td>
+<td align=3D"left" class=3D"long-text links-color" style=3D"text-align: rig=
+ht; font-weight:bold; font-size: 13px;      font-family: Arial, Helvetica, =
+sans-serif; color: #3f3f3f;">
+=09=09=09=09=09=09=09=09=09=09=09=09=09=09=09=09=09=09=09=09=09<p style=3D"=
+margin: 0em 0px;margin-top: 0px;">Platba</p>
+</td>
+</tr>
+<tr>
+<td align=3D"left" class=3D"long-text links-color label" style=3D"text-alig=
+n: left; font-size: 13px;      font-family: Arial, Helvetica, sans-serif; c=
+olor: #3f3f3f;">
+<p style=3D"margin: 0em 0px;margin-top: 0px;">Typ pohybu</p>
+</td>
+<td align=3D"left" class=3D"long-text links-color" style=3D"text-align: rig=
+ht; font-weight:bold; font-size: 13px;      font-family: Arial, Helvetica, =
+sans-serif; color: #3f3f3f;">
+=09=09=09=09=09=09=09=09=09=09=09=09=09=09=09=09=09=09=09=09=09<p style=3D"=
+margin: 0em 0px;margin-top: 0px;">P=C5=99=C3=ADchoz=C3=AD okam=C5=BEit=C3=
+=A1 =C3=BAhrada</p>
+</td>
+</tr>
+<tr>
+<td align=3D"left" class=3D"long-text links-color label" style=3D"text-alig=
+n: left; font-size: 13px;      font-family: Arial, Helvetica, sans-serif; c=
+olor: #3f3f3f;">
+<p style=3D"margin: 0em 0px;margin-top: 0px;">Z =C3=BA=C4=8Dtu</p>
+</td>
+<td align=3D"left" class=3D"long-text links-color" style=3D"text-align: rig=
+ht; font-weight:bold; font-size: 13px;      font-family: Arial, Helvetica, =
+sans-serif; color: #3f3f3f;">
+<p style=3D"margin: 0em 0px;margin-top: 0px;">2108880408/2700<br>INSYSTEMS =
+CZ s.r.o.</p>
+</td>
+</tr>
+
+
+
+<tr>
+<td align=3D"left" class=3D"long-text links-color label" style=3D"text-alig=
+n: left; font-size: 13px;      font-family: Arial, Helvetica, sans-serif; c=
+olor: #3f3f3f;">
+<p style=3D"margin: 0em 0px;margin-top: 0px;">Variabiln=C3=AD symbol</p>
+</td>
+<td align=3D"left" class=3D"long-text links-color" style=3D"text-align: rig=
+ht; font-weight:bold; font-size: 13px;      font-family: Arial, Helvetica, =
+sans-serif; color: #3f3f3f;">
+<p style=3D"margin: 0em 0px;margin-top: 0px;">01919555</p>
+</td>
+</tr>
+<tr>
+<td align=3D"left" class=3D"long-text links-color label" style=3D"text-alig=
+n: left; font-size: 13px;      font-family: Arial, Helvetica, sans-serif; c=
+olor: #3f3f3f;">
+<p style=3D"margin: 0em 0px;margin-top: 0px;">Konstantn=C3=AD symbol</p>
+</td>
+<td align=3D"left" class=3D"long-text links-color" style=3D"text-align: rig=
+ht; font-weight:bold; font-size: 13px;      font-family: Arial, Helvetica, =
+sans-serif; color: #3f3f3f;">
+<p style=3D"margin: 0em 0px;margin-top: 0px;">0308</p>
+</td>
+</tr>
+
+<tr>
+<td align=3D"left" class=3D"long-text links-color label" style=3D"text-alig=
+n: left; font-size: 13px;      font-family: Arial, Helvetica, sans-serif; c=
+olor: #3f3f3f;">
+<p style=3D"margin: 0em 0px;margin-top: 0px;">Zpr=C3=A1va pro p=C5=99=C3=AD=
+jemce</p>
+</td>
+<td align=3D"left" class=3D"long-text links-color" style=3D"text-align: rig=
+ht; font-weight:bold; font-size: 13px;      font-family: Arial, Helvetica, =
+sans-serif; color: #3f3f3f;">
+<p style=3D"margin: 0em 0px;margin-top: 0px;">Prevod z vlastniho uctu UCB</=
+p>
+</td>
+</tr>
+
+</tbody>
+</table>
+</div>
+<!--></td></tr></table><!-->
+</td>
+</tr>
+</tbody>
+</table>
+<table class=3D"vb-outer" width=3D"100%" cellpadding=3D"0" border=3D"0" cel=
+lspacing=3D"0" bgcolor=3D"transparent" style=3D"background-color: transpare=
+nt;" id=3D"ko_textBlock_8">
+<tbody>
+<tr>
+                <td class=3D"vb-outer" align=3D"center" valign=3D"top" bgco=
+lor=3D"#bfbfbf" style=3D"padding-left: 9px;padding-right: 9px;background-co=
+lor: transparent;">
+<!--><table align=3D"center" border=3D"0" cellspacing=3D"0" cellpadding=3D"=
+0" width=3D"640"><tr><td align=3D"center" valign=3D"top"><!-->
+<div class=3D"oldwebkit" style=3D"max-width: 640px;">
+<table width=3D"640" border=3D"0" cellpadding=3D"0" cellspacing=3D"18" clas=
+s=3D"vb-container fullpad" bgcolor=3D"transparent" style=3D"border-collapse=
+: separate;border-spacing: 18px;padding-left: 0;padding-right: 0;width: 100=
+%;max-width: 640px;background-color: transparent;">
+<tbody>
+<tr>
+<td align=3D"left" class=3D"long-text links-color" style=3D"text-align: jus=
+tify; font-size: 13px;      font-family: Arial, Helvetica, sans-serif; colo=
+r: #3f3f3f;">
+<p style=3D"margin: 0em 0px;margin-top: 0px;">Tento e-mail byl vygenerov=C3=
+=A1n v r=C3=A1mci slu=C5=BEby Informuj m=C4=9B od Raiffeisenbank a.s.</p>
+<p style=3D"margin-bottom: 0px;">V p=C5=99=C3=ADpad=C4=9B dotaz=C5=AF volej=
+te na=C5=A1=C3=AD Klientskou linku +420 412 440 000 (ka=C5=BEd=C3=BD den od=
+ 7 do 22 hodin) nebo kontaktujte sv=C3=A9ho bank=C3=A9=C5=99e =C4=8Di pobo=
+=C4=8Dku, p=C5=99=C3=ADpadn=C4=9B n=C3=A1s kontaktujte e-mailem na info@rb.=
+cz.</p>
+<p>Va=C5=A1e Raiffeisenbank a.s.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!--></td></tr></table><!-->
+</td>
+</tr>
+</tbody>
+</table>
+<!-- footerBlock -->
+<!-- /footerBlock -->
+</center>
+</body>
+</html>
+
+------=_Part_29394_389646850.1792613962452
+Content-Type: image/png; name="logoRB.png"
+Content-Transfer-Encoding: base64
+Content-Disposition: inline; filename="logoRB.png"
+Content-ID: <logoRB.png>
+
+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
+
+------=_Part_29394_389646850.1792613962452--

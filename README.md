@@ -2,9 +2,9 @@
 
 **Rezervace a platby pro WordPress.** První nasazení: web [slehkouhlavou.cz](https://slehkouhlavou.cz) (projekt „S lehkou hlavou…“). Plugin je navržen tak, aby ho bylo možné ve fázi 2 zobecnit pro libovolný WordPress web.
 
-Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz UniCredit Bank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
+Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> Zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 1.7** (21. 10. 2026) – viz `docs/`.
+> Zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 1.8** (21. 10. 2026) – viz `docs/`.
 
 ---
 
@@ -51,7 +51,7 @@ Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a 
 
 - identifikace provozovatele (jméno, IČ, adresa, IBAN, logo) v nastavení, ne v kódu
 - bankovní schránka a přístupy v nastavení
-- čtení avíz přes rozhraní **bankovní adaptér** (fáze 1: UniCredit Bank)
+- čtení avíz přes rozhraní **bankovní adaptér** (fáze 1: Raiffeisenbank)
 - měna ukládána u akcí, rezervací i avíz od začátku (výchozí CZK)
 - vzhled přes CSS proměnné, výchozí hodnoty dle grafického manuálu SLH
 - všechny texty přeložitelné (textdomain `reserveandpay`, výchozí čeština)
@@ -72,7 +72,7 @@ Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a 
 | Hosting | Active24 (sdílený webhosting, serverový CRON) |
 | Data | CPT pro akce, služby a lokace; vlastní DB tabulky pro rezervace, platby, bankovní avíza a log |
 | QR platba | Standard SPD (SPAYD) |
-| Bankovní avíza | IMAP (SSL/TLS), UniCredit Bank |
+| Bankovní avíza | IMAP (SSL/TLS), Raiffeisenbank (služba Informuj mě) |
 
 ---
 
@@ -82,7 +82,7 @@ Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a 
 resandpay/
 ├── reserveandpay.php      # hlavní soubor pluginu
 ├── includes/              # jádro: akce, rezervace, kapacita, stavy, platby
-│   └── banks/             # bankovní adaptéry (UniCredit, …)
+│   └── banks/             # bankovní adaptéry (Raiffeisenbank, …)
 ├── admin/                 # administrace, nastavení, generátor termínů
 ├── public/                # kalendář, výpis akcí, rezervační formulář
 ├── templates/             # šablony e-mailů a PDF

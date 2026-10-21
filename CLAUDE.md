@@ -6,6 +6,7 @@
   Plugin na web nahrává vlastník ručně (.zip přes Pluginy → Nahrát plugin → Nahradit stávající).
 - Testy na lokálním WordPressu: `wp eval-file tests/run-tests.php` a `bash tests/concurrency.sh 12`. Složka `tests/` se do .zip nebalí.
 - Vzhled: grafický manuál „s lehkou hlavou“ v1 (barvy a písma přes CSS proměnné `--rap-*`).
+- Banka pro příjem plateb: Raiffeisenbank (avíza „Pohyb na účtě“ z info@rb.cz). Vzorové avízo: `tests/fixtures/rb-prichozi-okamzita-platba.eml`.
 - Pravidla fáze 1 (SWD kap. 14.1): nic natvrdo – identifikace, schránka, banka, vzhled, texty a měna jsou v nastavení.
 
 ## Ukládání výstupů (požadavek vlastníka)
