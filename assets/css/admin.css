@@ -13,3 +13,15 @@
 .rap-cancel-form { margin-top: 12px; }
 .rap-tag--off { color: #8a2424; font-weight: 600; }
 .rap-event-head { font-size: 14px; }
+/* Editace akce – panel v pravém sloupci editoru */
+.rap-box p { margin: 0 0 12px; }
+.rap-box label { display: block; font-weight: 600; margin-bottom: 4px; }
+.rap-box label.rap-inline { display: flex; gap: 6px; align-items: center; font-weight: 400; margin-bottom: 6px; }
+.rap-box select, .rap-box input[type="datetime-local"], .rap-box input[type="number"], .rap-box input[type="text"] { width: 100%; max-width: 100%; box-sizing: border-box; }
+.rap-row { display: grid; grid-template-columns: 1fr 1fr 64px; gap: 8px; }
+.rap-row p { margin-bottom: 12px; }
+.rap-hint { display: block; color: #646970; font-size: 12px; margin-top: 3px; }
+.rap-more { border-top: 1px solid #dcdcde; padding-top: 8px; margin-top: 4px; }
+.rap-more summary { cursor: pointer; font-weight: 600; margin-bottom: 10px; }
+.rap-missing { background: #fcf0f1; border-left: 3px solid #d63638; padding: 6px 10px; margin: 0 0 12px; }
+.rap-box input[readonly] { background: #f0f0f1; }

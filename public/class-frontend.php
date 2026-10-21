@@ -14,12 +14,17 @@ class Resandpay_Frontend {
 		add_filter( 'the_content', array( __CLASS__, 'event_content' ), 20 );
 		add_shortcode( 'reserveandpay_booking', array( __CLASS__, 'shortcode_booking' ) );
 		add_shortcode( 'reserveandpay_events', array( __CLASS__, 'shortcode_events' ) );
+		add_shortcode( 'reserveandpay_calendar', array( __CLASS__, 'shortcode_calendar' ) );
+		add_shortcode( 'reserveandpay_program', array( __CLASS__, 'shortcode_program' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'assets' ) );
+		add_action( 'template_redirect', array( __CLASS__, 'redirect_archives' ), 5 );
 	}
 
 	public static function assets() {
 		wp_register_style( 'reserveandpay', RESANDPAY_URL . 'assets/css/frontend.css', array(), RESANDPAY_VERSION );
-		if ( is_singular( Resandpay_Post_Types::EVENT ) || is_post_type_archive( Resandpay_Post_Types::EVENT ) ) {
+		$post = get_post();
+		$has  = $post && is_singular() && preg_match( '/\[reserveandpay_/', (string) $post->post_content );
+		if ( $has || is_singular( Resandpay_Post_Types::EVENT ) || is_post_type_archive( Resandpay_Post_Types::EVENT ) ) {
 			wp_enqueue_style( 'reserveandpay' );
 		}
 	}
@@ -109,49 +114,56 @@ class Resandpay_Frontend {
 		return self::render_details( $id ) . self::render_booking( $id );
 	}
 
-	public static function shortcode_events( $atts ) {
-		$atts   = shortcode_atts(
+	private static function list_atts( $atts, $tag ) {
+		return shortcode_atts(
 			array(
-				'limit'    => 20,
-				'category' => '',
+				'limit'         => 50,
+				'category'      => '',
+				'filter'        => 'yes',
+				'view'          => 'list',
+				'include_slots' => '',
 			),
 			$atts,
-			'reserveandpay_events'
+			$tag
 		);
-		$events = Resandpay_Events::upcoming( $atts );
+	}
+
+	public static function shortcode_events( $atts ) {
+		$a = self::list_atts( $atts, 'reserveandpay_events' );
 		wp_enqueue_style( 'reserveandpay' );
-		if ( ! $events ) {
-			return '<p class="rap-empty">' . esc_html__( 'Momentálně nejsou vypsané žádné akce.', 'reserveandpay' ) . '</p>';
+		$cat = isset( $_GET['rap_cat'] ) ? sanitize_title( wp_unslash( $_GET['rap_cat'] ) ) : $a['category'];
+		$out = 'yes' === $a['filter'] ? Resandpay_Views::render_filter( $cat, remove_query_arg( array( 'rap_done', 'rap_again' ) ) ) : '';
+		$a['category'] = $cat;
+		return '<div class="rap-program-view">' . $out . Resandpay_Views::render_list( $a ) . '</div>';
+	}
+
+	public static function shortcode_calendar( $atts ) {
+		$a = self::list_atts( $atts, 'reserveandpay_calendar' );
+		wp_enqueue_style( 'reserveandpay' );
+		return Resandpay_Views::render_calendar( $a );
+	}
+
+	public static function shortcode_program( $atts ) {
+		$a = self::list_atts( $atts, 'reserveandpay_program' );
+		wp_enqueue_style( 'reserveandpay' );
+		return Resandpay_Views::render_program( $a );
+	}
+
+	/** Archiv /akce/ a kategorie přesměruje na stránku s přehledem akcí (je-li nastavena). */
+	public static function redirect_archives() {
+		$page = (int) Resandpay_Settings::get( 'events_page' );
+		if ( ! $page || 'publish' !== get_post_status( $page ) ) {
+			return;
 		}
-		ob_start();
-		echo '<div class="rap-events">';
-		foreach ( $events as $ev ) {
-			$free = Resandpay_Events::free_places( $ev['id'] );
-			echo '<article class="rap-event-card">';
-			if ( has_post_thumbnail( $ev['id'] ) ) {
-				echo '<a class="rap-event-card__img" href="' . esc_url( get_permalink( $ev['id'] ) ) . '">' . get_the_post_thumbnail( $ev['id'], 'medium_large' ) . '</a>';
-			}
-			echo '<div class="rap-event-card__body">';
-			echo '<h3 class="rap-event-card__title"><a href="' . esc_url( get_permalink( $ev['id'] ) ) . '">' . esc_html( $ev['title'] ) . '</a></h3>';
-			echo '<p class="rap-event-card__meta">' . esc_html( Resandpay_Events::format_date( $ev ) );
-			if ( $ev['location'] ) {
-				echo ' · ' . esc_html( $ev['location'] );
-			}
-			echo '</p>';
-			echo '<p class="rap-event-card__price">' . esc_html( Resandpay_Events::format_price( $ev['price'], $ev['currency'] ) ) . '</p>';
-			if ( $ev['cancelled'] ) {
-				echo '<p class="rap-badge rap-badge--off">' . esc_html__( 'Zrušeno', 'reserveandpay' ) . '</p>';
-			} elseif ( $free < 1 ) {
-				echo '<p class="rap-badge rap-badge--off">' . esc_html__( 'Obsazeno', 'reserveandpay' ) . '</p>';
-			} else {
-				/* translators: %d: počet volných míst */
-				echo '<p class="rap-badge">' . esc_html( sprintf( _n( 'Volné %d místo', 'Volných míst: %d', $free, 'reserveandpay' ), $free ) ) . '</p>';
-			}
-			echo '<a class="rap-button" href="' . esc_url( get_permalink( $ev['id'] ) ) . '">' . esc_html__( 'Detail a rezervace', 'reserveandpay' ) . '</a>';
-			echo '</div></article>';
+		if ( is_post_type_archive( Resandpay_Post_Types::EVENT ) ) {
+			wp_safe_redirect( get_permalink( $page ), 302 );
+			exit;
 		}
-		echo '</div>';
-		return ob_get_clean();
+		if ( is_tax( Resandpay_Post_Types::CATEGORY ) ) {
+			$term = get_queried_object();
+			wp_safe_redirect( add_query_arg( 'rap_cat', $term->slug, get_permalink( $page ) ), 302 );
+			exit;
+		}
 	}
 
 	public static function render_details( $event_id ) {
@@ -160,25 +172,37 @@ class Resandpay_Frontend {
 			return '';
 		}
 		$free = Resandpay_Events::free_places( $event_id );
+		$page = (int) Resandpay_Settings::get( 'events_page' );
+		$cats = get_the_terms( $event_id, Resandpay_Post_Types::CATEGORY );
+		$brow = ( $cats && ! is_wp_error( $cats ) ) ? implode( ' · ', wp_list_pluck( $cats, 'name' ) ) : ( Resandpay_Events::type_labels()[ $ev['type'] ] ?? '' );
 		ob_start();
 		echo '<div class="rap-details">';
+		if ( $brow ) {
+			echo '<p class="rap-eyebrow">' . esc_html( $brow ) . '</p>';
+		}
+		echo '<p class="rap-details__when">' . esc_html( Resandpay_Views::when_line( $ev ) ) . '</p>';
 		echo '<dl>';
-		echo '<dt>' . esc_html__( 'Termín', 'reserveandpay' ) . '</dt><dd>' . esc_html( Resandpay_Events::format_date( $ev ) ) . '</dd>';
 		if ( $ev['location'] ) {
 			echo '<dt>' . esc_html__( 'Místo', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev['location'] );
 			if ( $ev['location_addr'] ) {
 				echo ', ' . esc_html( $ev['location_addr'] );
 			}
 			if ( $ev['location_map'] ) {
-				echo ' <a href="' . esc_url( $ev['location_map'] ) . '" target="_blank" rel="noopener">' . esc_html__( 'mapa', 'reserveandpay' ) . '</a>';
+				echo ' · <a href="' . esc_url( $ev['location_map'] ) . '" target="_blank" rel="noopener">' . esc_html__( 'mapa', 'reserveandpay' ) . '</a>';
 			}
 			echo '</dd>';
 		}
-		echo '<dt>' . esc_html__( 'Cena', 'reserveandpay' ) . '</dt><dd>' . esc_html( Resandpay_Events::format_price( $ev['price'], $ev['currency'] ) ) . '</dd>';
-		echo '<dt>' . esc_html__( 'Volná místa', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev['cancelled'] ? __( 'akce zrušena', 'reserveandpay' ) : ( $free > 0 ? $free . ' / ' . $ev['capacity'] : __( 'obsazeno', 'reserveandpay' ) ) ) . '</dd>';
+		echo '<dt>' . esc_html__( 'Cena', 'reserveandpay' ) . '</dt><dd>' . esc_html( Resandpay_Events::format_price( $ev['price'], $ev['currency'] ) ) . ( 'multiday' === $ev['type'] ? ' <small>' . esc_html__( '(za celou akci)', 'reserveandpay' ) . '</small>' : '' ) . '</dd>';
+		echo '<dt>' . esc_html__( 'Volná místa', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev['cancelled'] ? __( 'akce zrušena', 'reserveandpay' ) : ( $free > 0 ? sprintf( /* translators: 1: volno, 2: kapacita */ __( '%1$d z %2$d', 'reserveandpay' ), $free, $ev['capacity'] ) : __( 'obsazeno', 'reserveandpay' ) ) ) . '</dd>';
 		echo '</dl>';
+		if ( ! $ev['cancelled'] && $free > 0 && ! is_wp_error( Resandpay_Events::check_bookable( $event_id ) ) ) {
+			echo '<p class="rap-details__cta"><a class="rap-button" href="#rap-booking">' . esc_html__( 'Rezervovat termín →', 'reserveandpay' ) . '</a></p>';
+		}
 		if ( 'multiday' === $ev['type'] && $ev['program'] ) {
-			echo '<div class="rap-program"><h4>' . esc_html__( 'Program', 'reserveandpay' ) . '</h4>' . wp_kses_post( wpautop( $ev['program'] ) ) . '</div>';
+			echo '<div class="rap-program"><p class="rap-eyebrow">' . esc_html__( 'Program', 'reserveandpay' ) . '</p>' . wp_kses_post( wpautop( $ev['program'] ) ) . '</div>';
+		}
+		if ( $page && is_singular( Resandpay_Post_Types::EVENT ) ) {
+			echo '<p class="rap-back"><a href="' . esc_url( get_permalink( $page ) ) . '">← ' . esc_html__( 'Všechny termíny', 'reserveandpay' ) . '</a></p>';
 		}
 		echo '</div>';
 		return ob_get_clean();
@@ -283,7 +307,7 @@ class Resandpay_Frontend {
 			<p class="rap-check"><label><input type="checkbox" name="rap_terms" value="1" <?php checked( ! empty( $values['consent_terms'] ) ); ?> required> <?php echo wp_kses_post( sprintf( /* translators: %s: odkaz */ __( 'Souhlasím s %s *', 'reserveandpay' ), $link( $terms, __( 'obchodními a stornopodmínkami', 'reserveandpay' ) ) ) ); ?></label></p>
 			<p class="rap-check"><label><input type="checkbox" name="rap_newsletter" value="1" <?php checked( ! empty( $values['newsletter'] ) ); ?>> <?php esc_html_e( 'Chci dostávat novinky e-mailem', 'reserveandpay' ); ?></label></p>
 			<p class="rap-summary"><?php echo esc_html( sprintf( /* translators: %s: cena */ __( 'Cena za jedno místo: %s. Platba převodem (QR platba) – platební údaje obdržíte e-mailem.', 'reserveandpay' ), Resandpay_Events::format_price( $ev['price'], $ev['currency'] ) ) ); ?></p>
-			<p><button type="submit" class="rap-button"><?php esc_html_e( 'Závazně rezervovat 1 místo', 'reserveandpay' ); ?></button></p>
+			<p><button type="submit" class="rap-button"><?php esc_html_e( 'Závazně rezervovat místo →', 'reserveandpay' ); ?></button></p>
 		</form>
 		<?php
 		echo '</section>';
@@ -310,7 +334,7 @@ class Resandpay_Frontend {
 		}
 		if ( Resandpay_Events::free_places( $ev['id'] ) > 0 ) {
 			$again = add_query_arg( 'rap_again', rawurlencode( $r['token'] ), get_permalink( $ev['id'] ) ) . '#rap-booking';
-			echo '<p><a class="rap-button rap-button--ghost" href="' . esc_url( $again ) . '">' . esc_html__( 'Rezervovat další místo', 'reserveandpay' ) . '</a></p>';
+			echo '<p><a class="rap-button rap-button--ghost" href="' . esc_url( $again ) . '">' . esc_html__( 'Rezervovat další místo →', 'reserveandpay' ) . '</a></p>';
 			echo '<p class="rap-small">' . esc_html__( 'Každé místo je samostatná rezervace s vlastním variabilním symbolem.', 'reserveandpay' ) . '</p>';
 		}
 		echo '</div>';

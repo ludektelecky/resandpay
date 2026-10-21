@@ -25,6 +25,7 @@ class Resandpay_Settings {
 			'last_minute_hours'   => 24,
 			'gdpr_page'           => 0,
 			'terms_page'          => 0,
+			'events_page'         => 0,
 			'vs_prefix'           => gmdate( 'y' ),
 			'notify_admin'        => 1,
 			// E-maily.

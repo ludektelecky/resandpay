@@ -1,63 +1,140 @@
-/* ReserveAndPay – výchozí vzhled. Barvy a písma jsou CSS proměnné,
-   které lze přepsat v šabloně webu (SWD kap. 14.1). Výchozí hodnoty dle manuálu SLH. */
+/* ReserveAndPay – vzhled dle grafického manuálu „s lehkou hlavou“ (v1, říjen 2026).
+   Vše je řízeno CSS proměnnými – šablona webu je může přepsat (SWD kap. 14.1). */
 :root {
-	--rap-accent: #ae9333;
-	--rap-accent-active: #f3cb33;
+	--rap-bg: #faf6ef;          /* podklad */
+	--rap-bg-alt: #f0e8da;      /* druhý podklad */
+	--rap-ink: #2e2a22;         /* text a nadpisy */
+	--rap-ink-soft: #5c5e52;    /* doplňkový text */
+	--rap-accent: #8c6423;      /* gold-deep – primární tlačítko, odkazy */
+	--rap-accent-hover: #2e2a22;
 	--rap-accent-text: #ffffff;
-	--rap-text: inherit;
-	--rap-muted: #6b6b6b;
-	--rap-bg: #fbf7ef;
-	--rap-border: #e4dccb;
-	--rap-error: #b0413e;
-	--rap-error-bg: #fbeaea;
-	--rap-success-bg: #f3efe2;
-	--rap-radius: 8px;
-	--rap-font: inherit;
-	--rap-font-heading: inherit;
+	--rap-accent-2: #6b3f4b;    /* plum – eyebrow, data akcí */
+	--rap-line: #d6c3a0;        /* vlasové linky */
+	--rap-error: #8a2e2b;
+	--rap-error-bg: #f6e6e2;
+	--rap-radius: 2px;
+	--rap-font: "Work Sans", system-ui, sans-serif;
+	--rap-font-heading: "Fraunces", Georgia, serif;
+	--rap-max: 1120px;
 }
 
-.rap-details, .rap-booking, .rap-events { font-family: var(--rap-font); color: var(--rap-text); }
-.rap-details { background: var(--rap-bg); border: 1px solid var(--rap-border); border-radius: var(--rap-radius); padding: 1rem 1.25rem; margin: 0 0 1.5rem; }
-.rap-details dl, .rap-pay { display: grid; grid-template-columns: max-content 1fr; gap: .35rem 1rem; margin: 0; }
-.rap-details dt, .rap-pay dt { color: var(--rap-muted); }
-.rap-details dd, .rap-pay dd { margin: 0; }
-.rap-program { margin-top: 1rem; }
+.rap-details, .rap-booking, .rap-program-view, .rap-calendar { font-family: var(--rap-font); color: var(--rap-ink); }
+.rap-program-view, .rap-calendar { max-width: var(--rap-max); margin-left: auto; margin-right: auto; }
 
-.rap-booking { margin: 2rem 0; }
-.rap-booking__title, .rap-success h2 { font-family: var(--rap-font-heading); color: var(--rap-accent); }
+/* Eyebrow – verzálky, prostrkání, švestková */
+.rap-eyebrow { font-family: var(--rap-font); font-size: 12.5px; font-weight: 600; letter-spacing: .15em; text-transform: uppercase; color: var(--rap-accent-2); margin: 0 0 .35rem; }
+
+/* Tlačítka: sloveso + šipka, rohy 2 px, hover do ink */
+.rap-button { display: inline-block; background: var(--rap-accent); color: var(--rap-accent-text) !important; border: 1px solid var(--rap-accent); border-radius: var(--rap-radius); padding: .7rem 1.25rem; font-family: var(--rap-font); font-size: 15px; font-weight: 600; line-height: 1.2; cursor: pointer; text-decoration: none !important; transition: background-color .2s, border-color .2s, color .2s; white-space: nowrap; }
+.rap-button:hover, .rap-button:focus-visible { background: var(--rap-accent-hover); border-color: var(--rap-accent-hover); color: var(--rap-accent-text) !important; }
+.rap-button--ghost { background: transparent; color: var(--rap-ink) !important; border-color: var(--rap-line); }
+.rap-button--ghost:hover, .rap-button--ghost:focus-visible { background: transparent; color: var(--rap-accent) !important; border-color: var(--rap-accent); }
+.rap-button:focus-visible, .rap-chip:focus-visible, .rap-switch__btn:focus-visible, .rap-calendar a:focus-visible { outline: 2px solid var(--rap-accent); outline-offset: 2px; }
+
+/* Panel nástrojů: filtr + přepínač */
+.rap-toolbar { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; margin: 0 0 1.5rem; }
+.rap-filter { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0 0 1.25rem; }
+.rap-toolbar .rap-filter { margin: 0; }
+.rap-chip { display: inline-block; padding: .4rem .85rem; border: 1px solid var(--rap-line); border-radius: var(--rap-radius); font-size: 14px; color: var(--rap-ink) !important; text-decoration: none !important; background: transparent; }
+.rap-chip:hover { border-color: var(--rap-accent); color: var(--rap-accent) !important; }
+.rap-chip.is-active { background: var(--rap-accent); border-color: var(--rap-accent); color: var(--rap-accent-text) !important; }
+.rap-switch { display: inline-flex; border: 1px solid var(--rap-line); border-radius: var(--rap-radius); }
+.rap-switch__btn { padding: .4rem 1rem; font-size: 14px; color: var(--rap-ink-soft) !important; text-decoration: none !important; }
+.rap-switch__btn + .rap-switch__btn { border-left: 1px solid var(--rap-line); }
+.rap-switch__btn.is-active { color: var(--rap-ink) !important; background: var(--rap-bg-alt); font-weight: 600; }
+
+/* Seznam akcí – řádky oddělené vlasovou linkou */
+.rap-list { border-top: 1px solid var(--rap-line); }
+.rap-item { display: grid; grid-template-columns: 96px 1fr auto; gap: 1.5rem; align-items: center; padding: 1.5rem 0; border-bottom: 1px solid var(--rap-line); }
+.rap-item__date { display: flex; flex-direction: column; align-items: flex-start; color: var(--rap-accent-2); }
+.rap-item__day { font-family: var(--rap-font-heading); font-weight: 500; font-size: 30px; line-height: 1; }
+.rap-item__month { font-size: 12.5px; font-weight: 600; letter-spacing: .15em; text-transform: uppercase; margin-top: .35rem; }
+.rap-item__title { font-family: var(--rap-font-heading); font-weight: 500; font-size: 24px; line-height: 1.2; margin: 0 0 .3rem; }
+.rap-item__title a { color: var(--rap-ink) !important; text-decoration: none !important; }
+.rap-item__title a:hover { color: var(--rap-accent) !important; }
+.rap-item__meta { margin: 0; color: var(--rap-ink-soft); font-size: 15px; }
+.rap-item__side { display: flex; flex-direction: column; align-items: flex-end; gap: .35rem; text-align: right; }
+.rap-item__price { margin: 0; font-family: var(--rap-font-heading); font-size: 20px; color: var(--rap-ink); }
+.rap-item__free { margin: 0 0 .35rem; font-size: 14px; color: var(--rap-ink-soft); }
+.rap-item__free--off { color: var(--rap-error); font-weight: 600; }
+.rap-item--full .rap-item__title a, .rap-item--cancelled .rap-item__title a { color: var(--rap-ink-soft) !important; }
+.rap-empty { color: var(--rap-ink-soft); padding: 1.5rem 0; }
+
+/* Kalendář */
+.rap-calendar__head { display: flex; align-items: center; justify-content: space-between; margin: 0 0 1rem; }
+.rap-calendar__title { font-family: var(--rap-font-heading); font-weight: 500; font-size: 28px; margin: 0; text-transform: lowercase; }
+.rap-calendar__title em { font-style: italic; color: var(--rap-accent); }
+.rap-calendar__nav { display: inline-flex; width: 40px; height: 40px; align-items: center; justify-content: center; border: 1px solid var(--rap-line); border-radius: var(--rap-radius); color: var(--rap-ink) !important; text-decoration: none !important; font-size: 18px; }
+.rap-calendar__nav:hover { border-color: var(--rap-accent); color: var(--rap-accent) !important; }
+.rap-calendar__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--rap-line); border-left: 1px solid var(--rap-line); }
+.rap-calendar__wd { padding: .5rem; font-size: 12.5px; font-weight: 600; letter-spacing: .15em; text-transform: uppercase; color: var(--rap-ink-soft); border-right: 1px solid var(--rap-line); border-bottom: 1px solid var(--rap-line); }
+.rap-calendar__day { min-height: 104px; padding: .4rem; border-right: 1px solid var(--rap-line); border-bottom: 1px solid var(--rap-line); display: flex; flex-direction: column; gap: .25rem; min-width: 0; }
+.rap-calendar__num { font-size: 14px; color: var(--rap-ink-soft); }
+.rap-calendar__day.is-outside { background: var(--rap-bg-alt); }
+.rap-calendar__day.is-outside .rap-calendar__num { opacity: .5; }
+.rap-calendar__day.is-today .rap-calendar__num { color: var(--rap-accent-text); background: var(--rap-accent); border-radius: var(--rap-radius); padding: 0 .35rem; align-self: flex-start; font-weight: 600; }
+.rap-calendar__ev { display: block; font-size: 13px; line-height: 1.3; color: var(--rap-accent-2) !important; text-decoration: none !important; border-left: 2px solid var(--rap-accent-2); padding: .15rem .35rem; background: var(--rap-bg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rap-calendar__ev:hover { color: var(--rap-accent) !important; border-left-color: var(--rap-accent); }
+.rap-calendar__ev.is-cont { opacity: .75; }
+.rap-calendar__ev.is-off { color: var(--rap-ink-soft) !important; border-left-color: var(--rap-line); text-decoration: line-through !important; }
+.rap-calendar__day.is-past .rap-calendar__ev { opacity: .55; }
+.rap-calendar__agenda { display: none; }
+.rap-calendar__empty { display: block; }
+.rap-agenda__day { padding: 1rem 0; border-bottom: 1px solid var(--rap-line); }
+.rap-agenda__day.is-past { opacity: .6; }
+.rap-agenda__ev { display: block; color: var(--rap-ink) !important; text-decoration: none !important; padding: .2rem 0; }
+.rap-agenda__ev span { font-family: var(--rap-font-heading); font-size: 19px; }
+.rap-agenda__ev small { display: block; color: var(--rap-ink-soft); font-size: 14px; }
+
+/* Detail akce */
+.rap-details { background: var(--rap-bg-alt); border: 1px solid var(--rap-line); border-radius: var(--rap-radius); padding: 1.5rem 1.75rem; margin: 0 0 2rem; }
+.rap-details__when { font-family: var(--rap-font-heading); font-size: 22px; color: var(--rap-accent-2); margin: 0 0 1rem; }
+.rap-details dl, .rap-pay { display: grid; grid-template-columns: max-content 1fr; gap: .45rem 1.25rem; margin: 0; }
+.rap-details dt, .rap-pay dt { color: var(--rap-ink-soft); }
+.rap-details dd, .rap-pay dd { margin: 0; }
+.rap-details small { color: var(--rap-ink-soft); }
+.rap-details__cta { margin: 1.25rem 0 0; }
+.rap-program { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--rap-line); }
+.rap-program p:last-child { margin-bottom: 0; }
+.rap-back { margin: 1.25rem 0 0; font-size: 14px; }
+.rap-back a, .rap-check a { color: var(--rap-accent) !important; }
+
+/* Rezervační formulář */
+.rap-booking { margin: 2.5rem 0; padding-top: 2rem; border-top: 1px solid var(--rap-line); }
+.rap-booking__title, .rap-success h2 { font-family: var(--rap-font-heading); font-weight: 500; color: var(--rap-ink); margin: 0 0 1.25rem; }
 .rap-form { display: flex; flex-wrap: wrap; gap: 0 1rem; max-width: 640px; }
-.rap-form > p, .rap-form > div { flex: 1 1 100%; margin: 0 0 .9rem; }
+.rap-form > p, .rap-form > div { flex: 1 1 100%; margin: 0 0 1rem; }
 .rap-company { display: flex; flex-wrap: wrap; gap: 0 1rem; }
 .rap-company[hidden] { display: none; }
-.rap-company > p { flex: 1 1 100%; margin: 0 0 .9rem; }
+.rap-company > p { flex: 1 1 100%; margin: 0 0 1rem; }
 .rap-field--half { flex: 1 1 calc(50% - .5rem) !important; }
-.rap-field label { display: block; font-weight: 600; margin-bottom: .25rem; }
-.rap-field input, .rap-field textarea { width: 100%; box-sizing: border-box; padding: .6rem .7rem; border: 1px solid var(--rap-border); border-radius: var(--rap-radius); font: inherit; background: #fff; }
-.rap-field input:focus, .rap-field textarea:focus { outline: 2px solid var(--rap-accent); outline-offset: 1px; border-color: var(--rap-accent); }
-.rap-field small, .rap-small { color: var(--rap-muted); font-size: .85em; }
-.rap-check label { display: flex; gap: .5rem; align-items: flex-start; }
-.rap-check input { margin-top: .3em; accent-color: var(--rap-accent); }
-.rap-check a { color: var(--rap-accent); }
+.rap-field label { display: block; font-weight: 600; font-size: 15px; margin-bottom: .3rem; }
+.rap-field input, .rap-field textarea { width: 100%; box-sizing: border-box; padding: .65rem .75rem; border: 1px solid var(--rap-line); border-radius: var(--rap-radius); font: inherit; color: var(--rap-ink); background: var(--rap-bg); box-shadow: none; }
+.rap-field input:focus, .rap-field textarea:focus { outline: 2px solid var(--rap-accent); outline-offset: 0; border-color: var(--rap-accent); }
+.rap-field small, .rap-small { color: var(--rap-ink-soft); font-size: 14px; }
+.rap-check label { display: flex; gap: .55rem; align-items: flex-start; font-size: 15px; }
+.rap-check input { margin-top: .25em; accent-color: var(--rap-accent); }
 .rap-hp { position: absolute !important; left: -9999px !important; width: 1px; height: 1px; overflow: hidden; }
-.rap-summary { color: var(--rap-muted); }
+.rap-summary { color: var(--rap-ink-soft); font-size: 15px; }
 
-.rap-button { display: inline-block; background: var(--rap-accent); color: var(--rap-accent-text) !important; border: 0; border-radius: var(--rap-radius); padding: .75rem 1.4rem; font: inherit; font-weight: 600; cursor: pointer; text-decoration: none; transition: background .15s; }
-.rap-button:hover, .rap-button:focus { background: var(--rap-accent-active); color: #3a3220 !important; }
-.rap-button--ghost { background: transparent; color: var(--rap-accent) !important; box-shadow: inset 0 0 0 2px var(--rap-accent); }
-
-.rap-errors { background: var(--rap-error-bg); border-left: 4px solid var(--rap-error); padding: .75rem 1rem; margin-bottom: 1rem; border-radius: 4px; }
+.rap-errors { background: var(--rap-error-bg); border-left: 2px solid var(--rap-error); padding: .85rem 1rem; margin-bottom: 1.25rem; color: var(--rap-ink); }
 .rap-errors ul { margin: 0; padding-left: 1.1rem; }
-.rap-notice { background: var(--rap-bg); border-left: 4px solid var(--rap-accent); padding: .75rem 1rem; }
-.rap-success { background: var(--rap-success-bg); border-radius: var(--rap-radius); padding: 1.25rem 1.5rem; }
+.rap-notice { background: var(--rap-bg-alt); border-left: 2px solid var(--rap-accent-2); padding: .85rem 1rem; }
+.rap-success { background: var(--rap-bg-alt); border: 1px solid var(--rap-line); border-radius: var(--rap-radius); padding: 1.5rem 1.75rem; }
+.rap-success .rap-pay { margin: 1rem 0; }
 
-.rap-events { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem; }
-.rap-event-card { border: 1px solid var(--rap-border); border-radius: var(--rap-radius); overflow: hidden; background: #fff; display: flex; flex-direction: column; }
-.rap-event-card__img img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
-.rap-event-card__body { padding: 1rem; display: flex; flex-direction: column; gap: .4rem; flex: 1; }
-.rap-event-card__title { margin: 0; font-family: var(--rap-font-heading); font-size: 1.15rem; }
-.rap-event-card__title a { color: inherit; text-decoration: none; }
-.rap-event-card__meta, .rap-event-card__price { margin: 0; }
-.rap-event-card__price { color: var(--rap-accent); font-weight: 600; }
-.rap-event-card .rap-button { margin-top: auto; align-self: flex-start; }
-.rap-badge { display: inline-block; margin: 0; font-size: .85em; color: var(--rap-muted); }
-.rap-badge--off { color: var(--rap-error); font-weight: 600; }
+/* Pod 860 px vše do jednoho sloupce, kalendář jako seznam dnů */
+@media (max-width: 860px) {
+	.rap-item { grid-template-columns: 72px 1fr; gap: 1rem; }
+	.rap-item__side { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; text-align: left; }
+	.rap-item__free { margin: 0; }
+	.rap-item__day { font-size: 24px; }
+	.rap-item__title { font-size: 21px; }
+	.rap-calendar__grid { display: none; }
+	.rap-calendar__agenda { display: block; border-top: 1px solid var(--rap-line); }
+	.rap-calendar__empty { display: none; }
+	.rap-toolbar { flex-direction: column; align-items: flex-start; }
+	.rap-details { padding: 1.25rem; }
+	.rap-field--half { flex-basis: 100% !important; }
+}
+@media (prefers-reduced-motion: reduce) { .rap-button, .rap-chip { transition: none; } }

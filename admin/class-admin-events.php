@@ -15,11 +15,14 @@ class Resandpay_Admin_Events {
 		add_filter( 'manage_edit-' . Resandpay_Post_Types::EVENT . '_sortable_columns', array( __CLASS__, 'sortable' ) );
 		add_action( 'pre_get_posts', array( __CLASS__, 'sort_query' ) );
 		add_action( 'admin_notices', array( __CLASS__, 'overlap_notice' ) );
+		add_filter( 'post_row_actions', array( __CLASS__, 'row_actions' ), 10, 2 );
+		add_action( 'admin_post_resandpay_duplicate', array( __CLASS__, 'handle_duplicate' ) );
 	}
 
 	public static function meta_boxes() {
-		add_meta_box( 'rap_event', __( 'Termín, kapacita a cena', 'reserveandpay' ), array( __CLASS__, 'box_event' ), Resandpay_Post_Types::EVENT, 'normal', 'high' );
-		add_meta_box( 'rap_occupancy', __( 'Obsazenost', 'reserveandpay' ), array( __CLASS__, 'box_occupancy' ), Resandpay_Post_Types::EVENT, 'side', 'high' );
+		add_meta_box( 'rap_event', __( 'Termín, kapacita a cena', 'reserveandpay' ), array( __CLASS__, 'box_event' ), Resandpay_Post_Types::EVENT, 'side', 'high' );
+		add_meta_box( 'rap_occupancy', __( 'Obsazenost', 'reserveandpay' ), array( __CLASS__, 'box_occupancy' ), Resandpay_Post_Types::EVENT, 'side', 'default' );
+		add_meta_box( 'rap_program_box', __( 'Program po dnech (vícedenní akce)', 'reserveandpay' ), array( __CLASS__, 'box_program' ), Resandpay_Post_Types::EVENT, 'normal', 'default' );
 		add_meta_box( 'rap_location', __( 'Adresa lokace', 'reserveandpay' ), array( __CLASS__, 'box_location' ), Resandpay_Post_Types::LOCATION, 'normal', 'high' );
 	}
 
@@ -29,6 +32,21 @@ class Resandpay_Admin_Events {
 		}
 		$ts = Resandpay_Events::ts( $local );
 		return $ts ? wp_date( 'Y-m-d\TH:i', $ts ) : '';
+	}
+
+	/** Chybějící povinné údaje akce (pro upozornění v editoru a v seznamu). */
+	public static function missing( array $ev ) {
+		$m = array();
+		if ( ! $ev['start'] ) {
+			$m[] = __( 'začátek', 'reserveandpay' );
+		}
+		if ( ! $ev['end'] ) {
+			$m[] = __( 'konec', 'reserveandpay' );
+		}
+		if ( $ev['capacity'] < 1 ) {
+			$m[] = __( 'kapacita', 'reserveandpay' );
+		}
+		return $m;
 	}
 
 	public static function box_event( $post ) {
@@ -43,55 +61,151 @@ class Resandpay_Admin_Events {
 			)
 		);
 		$raw_due   = get_post_meta( $post->ID, '_rap_due_days', true );
+		$missing   = 'auto-draft' === $post->post_status ? array() : self::missing( $ev );
+		if ( $missing ) {
+			echo '<p class="rap-missing">' . esc_html( sprintf( /* translators: %s: seznam polí */ __( 'Doplňte: %s – bez nich nelze rezervovat.', 'reserveandpay' ), implode( ', ', $missing ) ) ) . '</p>';
+		}
 		?>
-		<table class="form-table rap-form-table">
-			<tr><th><label for="rap_type"><?php esc_html_e( 'Typ akce', 'reserveandpay' ); ?></label></th>
-				<td><select id="rap_type" name="rap_type">
+		<div class="rap-box">
+			<p><label for="rap_type"><?php esc_html_e( 'Typ akce', 'reserveandpay' ); ?></label>
+				<select id="rap_type" name="rap_type">
 					<?php foreach ( Resandpay_Events::type_labels() as $k => $l ) : ?>
 						<option value="<?php echo esc_attr( $k ); ?>" <?php selected( $ev['type'], $k ); ?>><?php echo esc_html( $l ); ?></option>
 					<?php endforeach; ?>
-				</select>
-				<p class="description"><?php esc_html_e( 'Vícedenní akce se rezervuje vždy celá. Individuální termín (např. masáž) má kapacitu 1.', 'reserveandpay' ); ?></p></td></tr>
-			<tr><th><label for="rap_start"><?php esc_html_e( 'Začátek', 'reserveandpay' ); ?> *</label></th>
-				<td><input type="datetime-local" id="rap_start" name="rap_start" value="<?php echo esc_attr( self::dt_input( $ev['start'] ) ); ?>" required></td></tr>
-			<tr><th><label for="rap_end"><?php esc_html_e( 'Konec', 'reserveandpay' ); ?> *</label></th>
-				<td><input type="datetime-local" id="rap_end" name="rap_end" value="<?php echo esc_attr( self::dt_input( $ev['end'] ) ); ?>" required></td></tr>
-			<tr><th><label for="rap_location"><?php esc_html_e( 'Místo konání', 'reserveandpay' ); ?></label></th>
-				<td><select id="rap_location" name="rap_location">
+				</select></p>
+			<p><label for="rap_start"><?php esc_html_e( 'Začátek', 'reserveandpay' ); ?> *</label>
+				<input type="datetime-local" id="rap_start" name="rap_start" value="<?php echo esc_attr( self::dt_input( $ev['start'] ) ); ?>"></p>
+			<p><label for="rap_end"><?php esc_html_e( 'Konec', 'reserveandpay' ); ?> *</label>
+				<input type="datetime-local" id="rap_end" name="rap_end" value="<?php echo esc_attr( self::dt_input( $ev['end'] ) ); ?>">
+				<span class="rap-hint" id="rap_end_hint"></span></p>
+			<p><label for="rap_location"><?php esc_html_e( 'Místo konání', 'reserveandpay' ); ?></label>
+				<select id="rap_location" name="rap_location">
 					<option value="0">— <?php esc_html_e( 'nevybráno', 'reserveandpay' ); ?> —</option>
 					<?php foreach ( $locations as $loc ) : ?>
 						<option value="<?php echo (int) $loc->ID; ?>" <?php selected( $ev['location_id'], $loc->ID ); ?>><?php echo esc_html( $loc->post_title ); ?></option>
 					<?php endforeach; ?>
 				</select>
-				<a href="<?php echo esc_url( admin_url( 'post-new.php?post_type=' . Resandpay_Post_Types::LOCATION ) ); ?>" target="_blank"><?php esc_html_e( 'Přidat lokaci', 'reserveandpay' ); ?></a></td></tr>
-			<tr><th><label for="rap_capacity"><?php esc_html_e( 'Kapacita (míst)', 'reserveandpay' ); ?> *</label></th>
-				<td><input type="number" min="1" step="1" id="rap_capacity" name="rap_capacity" value="<?php echo esc_attr( $ev['capacity'] ?: '' ); ?>" class="small-text" required></td></tr>
-			<tr><th><label for="rap_price"><?php esc_html_e( 'Cena za jedno místo', 'reserveandpay' ); ?></label></th>
-				<td><input type="number" min="0" step="0.01" id="rap_price" name="rap_price" value="<?php echo esc_attr( $ev['price'] ); ?>" class="regular-text" style="width:10em">
-					<input type="text" name="rap_currency" value="<?php echo esc_attr( $ev['currency'] ); ?>" class="small-text" maxlength="3" aria-label="<?php esc_attr_e( 'Měna', 'reserveandpay' ); ?>">
-					<p class="description"><?php esc_html_e( 'U vícedenní akce cena za celou akci.', 'reserveandpay' ); ?></p></td></tr>
-			<tr><th><label for="rap_due_days"><?php esc_html_e( 'Splatnost (dní)', 'reserveandpay' ); ?></label></th>
-				<td><input type="number" min="0" step="1" id="rap_due_days" name="rap_due_days" value="<?php echo esc_attr( $raw_due ); ?>" class="small-text" placeholder="<?php echo esc_attr( Resandpay_Settings::get( 'due_days' ) ); ?>">
-					<p class="description"><?php esc_html_e( 'Prázdné = výchozí hodnota z nastavení. Splatnost nikdy nepřesáhne začátek akce.', 'reserveandpay' ); ?></p></td></tr>
-			<tr><th><label for="rap_close_hours"><?php esc_html_e( 'Uzávěrka rezervací', 'reserveandpay' ); ?></label></th>
-				<td><input type="number" min="0" step="0.5" id="rap_close_hours" name="rap_close_hours" value="<?php echo esc_attr( $ev['close_hours'] ?: '' ); ?>" class="small-text" placeholder="0"> <?php esc_html_e( 'hodin před začátkem', 'reserveandpay' ); ?>
-					<p class="description"><?php esc_html_e( 'Prázdné nebo 0 = rezervovat lze až do začátku akce.', 'reserveandpay' ); ?></p></td></tr>
-			<tr><th><?php esc_html_e( 'Další volby', 'reserveandpay' ); ?></th>
-				<td><label><input type="checkbox" name="rap_members_only" value="1" <?php checked( $ev['members_only'] ); ?>> <?php esc_html_e( 'Rezervace jen pro přihlášené uživatele', 'reserveandpay' ); ?></label><br>
-					<label><input type="checkbox" name="rap_cancelled" value="1" <?php checked( $ev['cancelled'] ); ?>> <?php esc_html_e( 'Akce je zrušena (rezervace nejsou možné)', 'reserveandpay' ); ?></label></td></tr>
-			<tr class="rap-program-row"><th><label for="rap_program"><?php esc_html_e( 'Program po dnech', 'reserveandpay' ); ?></label></th>
-				<td><textarea id="rap_program" name="rap_program" rows="5" class="large-text"><?php echo esc_textarea( $ev['program'] ); ?></textarea>
-					<p class="description"><?php esc_html_e( 'Informativní text pro vícedenní akce (např. Den 1: příjezd od 15:00…).', 'reserveandpay' ); ?></p></td></tr>
-		</table>
+				<a class="rap-hint" href="<?php echo esc_url( admin_url( 'post-new.php?post_type=' . Resandpay_Post_Types::LOCATION ) ); ?>" target="_blank"><?php esc_html_e( '+ nové místo', 'reserveandpay' ); ?></a></p>
+			<div class="rap-row">
+				<p id="rap_capacity_wrap"><label for="rap_capacity"><?php esc_html_e( 'Kapacita', 'reserveandpay' ); ?> *</label>
+					<input type="number" min="1" step="1" id="rap_capacity" name="rap_capacity" value="<?php echo esc_attr( $ev['capacity'] ?: '' ); ?>"></p>
+				<p><label for="rap_price"><?php esc_html_e( 'Cena za místo', 'reserveandpay' ); ?></label>
+					<input type="number" min="0" step="any" id="rap_price" name="rap_price" value="<?php echo esc_attr( $ev['price'] ); ?>"></p>
+				<p class="rap-row__cur"><label for="rap_currency"><?php esc_html_e( 'Měna', 'reserveandpay' ); ?></label>
+					<input type="text" id="rap_currency" name="rap_currency" value="<?php echo esc_attr( $ev['currency'] ); ?>" maxlength="3"></p>
+			</div>
+			<details class="rap-more" <?php echo ( '' !== $raw_due || $ev['close_hours'] || $ev['members_only'] || $ev['cancelled'] ) ? 'open' : ''; ?>>
+				<summary><?php esc_html_e( 'Další nastavení', 'reserveandpay' ); ?></summary>
+				<p><label for="rap_due_days"><?php esc_html_e( 'Splatnost (dní)', 'reserveandpay' ); ?></label>
+					<input type="number" min="0" step="1" id="rap_due_days" name="rap_due_days" value="<?php echo esc_attr( $raw_due ); ?>" placeholder="<?php echo esc_attr( Resandpay_Settings::get( 'due_days' ) ); ?>">
+					<span class="rap-hint"><?php esc_html_e( 'Prázdné = výchozí z nastavení; nikdy po začátku akce.', 'reserveandpay' ); ?></span></p>
+				<p><label for="rap_close_hours"><?php esc_html_e( 'Uzávěrka rezervací (hodin před začátkem)', 'reserveandpay' ); ?></label>
+					<input type="number" min="0" step="0.5" id="rap_close_hours" name="rap_close_hours" value="<?php echo esc_attr( $ev['close_hours'] ?: '' ); ?>" placeholder="0">
+					<span class="rap-hint"><?php esc_html_e( 'Prázdné = rezervovat lze až do začátku.', 'reserveandpay' ); ?></span></p>
+				<p><label class="rap-inline"><input type="checkbox" name="rap_members_only" value="1" <?php checked( $ev['members_only'] ); ?>> <?php esc_html_e( 'Jen pro přihlášené uživatele', 'reserveandpay' ); ?></label>
+					<label class="rap-inline"><input type="checkbox" name="rap_cancelled" value="1" <?php checked( $ev['cancelled'] ); ?>> <?php esc_html_e( 'Akce je zrušena', 'reserveandpay' ); ?></label></p>
+			</details>
+		</div>
 		<?php
 		$overlaps = $ev['start'] ? Resandpay_Events::overlaps( $post->ID ) : array();
 		if ( $overlaps ) {
-			echo '<div class="rap-overlap"><strong>' . esc_html__( 'Upozornění: akce se časově překrývá s:', 'reserveandpay' ) . '</strong><ul>';
+			echo '<div class="rap-overlap"><strong>' . esc_html__( 'Překrývá se s:', 'reserveandpay' ) . '</strong><ul>';
 			foreach ( $overlaps as $o ) {
 				echo '<li><a href="' . esc_url( get_edit_post_link( $o['id'] ) ) . '">' . esc_html( $o['title'] ) . '</a> – ' . esc_html( Resandpay_Events::format_date( $o ) ) . '</li>';
 			}
-			echo '</ul><p class="description">' . esc_html__( 'Překrývání je povoleno, jde jen o informaci.', 'reserveandpay' ) . '</p></div>';
+			echo '</ul><span class="rap-hint">' . esc_html__( 'Překrývání je povoleno, jde jen o informaci.', 'reserveandpay' ) . '</span></div>';
 		}
+		?>
+		<script>
+		( function () {
+			var type = document.getElementById( 'rap_type' ), s = document.getElementById( 'rap_start' ), e = document.getElementById( 'rap_end' ),
+				cap = document.getElementById( 'rap_capacity' ), hint = document.getElementById( 'rap_end_hint' );
+			function pad( n ) { return ( n < 10 ? '0' : '' ) + n; }
+			function fmt( d ) { return d.getFullYear() + '-' + pad( d.getMonth() + 1 ) + '-' + pad( d.getDate() ) + 'T' + pad( d.getHours() ) + ':' + pad( d.getMinutes() ); }
+			function onType() {
+				var slot = type.value === 'slot';
+				if ( slot ) { cap.value = 1; }
+				cap.readOnly = slot;
+			}
+			s.addEventListener( 'change', function () {
+				if ( ! s.value ) { return; }
+				var start = new Date( s.value ), end = e.value ? new Date( e.value ) : null;
+				if ( ! end || end <= start ) {
+					var add = type.value === 'multiday' ? 24 * 3 : ( type.value === 'single' ? 7 : 2 );
+					e.value = fmt( new Date( start.getTime() + add * 3600000 ) );
+					hint.textContent = '<?php echo esc_js( __( 'Konec doplněn automaticky – zkontrolujte ho.', 'reserveandpay' ) ); ?>';
+				}
+			} );
+			type.addEventListener( 'change', onType );
+			onType();
+		} )();
+		</script>
+		<?php
+	}
+
+	public static function box_program( $post ) {
+		$ev = Resandpay_Events::get( $post->ID );
+		echo '<textarea id="rap_program" name="rap_program" rows="6" class="large-text">' . esc_textarea( $ev['program'] ) . '</textarea>';
+		echo '<p class="description">' . esc_html__( 'Zobrazí se u vícedenních akcí. Např. „Den 1: příjezd od 15:00, večerní relaxace“.', 'reserveandpay' ) . '</p>';
+	}
+
+	public static function row_actions( $actions, $post ) {
+		if ( Resandpay_Post_Types::EVENT === $post->post_type && current_user_can( 'edit_posts' ) ) {
+			$actions['rap_duplicate'] = '<a href="' . esc_url( self::duplicate_url( $post->ID ) ) . '">' . esc_html__( 'Duplikovat', 'reserveandpay' ) . '</a>';
+		}
+		return $actions;
+	}
+
+	public static function duplicate_url( $post_id ) {
+		return wp_nonce_url( admin_url( 'admin-post.php?action=resandpay_duplicate&post=' . (int) $post_id ), 'resandpay_duplicate_' . (int) $post_id );
+	}
+
+	/** Vytvoří kopii akce jako koncept (bez rezervací). */
+	public static function duplicate( $post_id ) {
+		$src = get_post( $post_id );
+		if ( ! $src || Resandpay_Post_Types::EVENT !== $src->post_type ) {
+			return new WP_Error( 'not_found', __( 'Akce nenalezena.', 'reserveandpay' ) );
+		}
+		$new = wp_insert_post(
+			array(
+				'post_type'    => $src->post_type,
+				'post_status'  => 'draft',
+				/* translators: %s: název akce */
+				'post_title'   => sprintf( __( '%s (kopie)', 'reserveandpay' ), $src->post_title ),
+				'post_content' => $src->post_content,
+				'post_excerpt' => $src->post_excerpt,
+				'post_author'  => get_current_user_id() ?: $src->post_author,
+			),
+			true
+		);
+		if ( is_wp_error( $new ) ) {
+			return $new;
+		}
+		foreach ( get_post_meta( $post_id ) as $key => $values ) {
+			if ( 0 === strpos( $key, '_rap_' ) || '_thumbnail_id' === $key ) {
+				update_post_meta( $new, $key, maybe_unserialize( $values[0] ) );
+			}
+		}
+		update_post_meta( $new, '_rap_cancelled', 0 );
+		$terms = wp_get_object_terms( $post_id, Resandpay_Post_Types::CATEGORY, array( 'fields' => 'ids' ) );
+		if ( $terms && ! is_wp_error( $terms ) ) {
+			wp_set_object_terms( $new, $terms, Resandpay_Post_Types::CATEGORY );
+		}
+		return $new;
+	}
+
+	public static function handle_duplicate() {
+		$id = absint( $_GET['post'] ?? 0 );
+		check_admin_referer( 'resandpay_duplicate_' . $id );
+		if ( ! current_user_can( 'edit_post', $id ) ) {
+			wp_die( esc_html__( 'Nemáte oprávnění.', 'reserveandpay' ) );
+		}
+		$new = self::duplicate( $id );
+		if ( is_wp_error( $new ) ) {
+			wp_die( esc_html( $new->get_error_message() ) );
+		}
+		wp_safe_redirect( admin_url( 'post.php?post=' . (int) $new . '&action=edit' ) );
+		exit;
 	}
 
 	public static function box_occupancy( $post ) {
@@ -107,7 +221,8 @@ class Resandpay_Admin_Events {
 		if ( $post->post_status !== 'auto-draft' ) {
 			echo '<p><a class="button" href="' . esc_url( admin_url( 'admin.php?page=reserveandpay&event_id=' . $post->ID ) ) . '">' . esc_html__( 'Seznam účastnic', 'reserveandpay' ) . '</a> ';
 			echo '<a class="button" href="' . esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=resandpay_export&event_id=' . $post->ID ), 'resandpay_export' ) ) . '">' . esc_html__( 'Export CSV', 'reserveandpay' ) . '</a></p>';
-			echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=reserveandpay-new&event_id=' . $post->ID ) ) . '">' . esc_html__( '+ Přidat rezervaci ručně', 'reserveandpay' ) . '</a></p>';
+			echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=reserveandpay-new&event_id=' . $post->ID ) ) . '">' . esc_html__( '+ Přidat rezervaci ručně', 'reserveandpay' ) . '</a><br>';
+			echo '<a href="' . esc_url( self::duplicate_url( $post->ID ) ) . '">' . esc_html__( 'Duplikovat akci (nový termín)', 'reserveandpay' ) . '</a></p>';
 		}
 	}
 
@@ -213,6 +328,10 @@ class Resandpay_Admin_Events {
 		}
 		switch ( $col ) {
 			case 'rap_date':
+				$missing = self::missing( $ev );
+				if ( $missing ) {
+					echo '<span class="rap-tag rap-tag--off">' . esc_html( sprintf( /* translators: %s: pole */ __( 'Chybí: %s', 'reserveandpay' ), implode( ', ', $missing ) ) ) . '</span><br>';
+				}
 				echo esc_html( Resandpay_Events::format_date( $ev ) );
 				if ( $ev['cancelled'] ) {
 					echo ' <span class="rap-tag rap-tag--off">' . esc_html__( 'zrušeno', 'reserveandpay' ) . '</span>';

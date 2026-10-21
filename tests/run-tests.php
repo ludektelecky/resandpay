@@ -203,6 +203,35 @@ update_option( Resandpay_Settings::OPTION, Resandpay_Admin_Settings::sanitize( a
 rap_t( $before === Resandpay_Settings::get( 'iban' ) && 5.0 === (float) Resandpay_Settings::get( 'due_days' ), 'uložení části nastavení nesmaže ostatní hodnoty' );
 Resandpay_Settings::update( array( 'due_days' => 7 ) );
 
+echo "== E2: výpis, kalendář, duplikace\n";
+$term = wp_insert_term( 'Jóga eventy', Resandpay_Post_Types::CATEGORY );
+$tid  = is_wp_error( $term ) ? (int) $term->get_error_data() : (int) $term['term_id'];
+wp_set_object_terms( $md, array( $tid ), Resandpay_Post_Types::CATEGORY );
+$list = Resandpay_Views::render_list( array( 'limit' => 50, 'category' => '' ) );
+rap_t( false !== strpos( $list, 'Jógový pobyt Estepona' ) && false !== strpos( $list, 'Rezervovat termín →' ), 'seznam akcí obsahuje akci a tlačítko „Rezervovat termín →“' );
+rap_t( false === strpos( $list, 'Termín masáže' ), 'seznam neobsahuje individuální termíny' );
+rap_t( false === strpos( $list, 'Proběhlá akce' ), 'seznam neobsahuje proběhlé akce' );
+rap_t( false !== strpos( $list, 'Obsazeno' ), 'obsazená akce je označena „Obsazeno“' );
+$flt = Resandpay_Views::render_list( array( 'limit' => 50, 'category' => 'joga-eventy' ) );
+rap_t( false !== strpos( $flt, 'Jógový pobyt Estepona' ) && false === strpos( $flt, 'Sound healing' ), 'filtr kategorie funguje' );
+rap_t( false !== strpos( Resandpay_Views::render_filter( '', home_url( '/' ) ), 'Jóga eventy' ), 'filtr nabízí kategorie' );
+$_GET['rap_m'] = '2027-05';
+$cal = Resandpay_Views::render_calendar( array( 'category' => '' ) );
+unset( $_GET['rap_m'] );
+rap_t( false !== strpos( $cal, 'květen' ) && false !== strpos( $cal, '2027' ), 'kalendář zobrazuje zvolený měsíc' );
+rap_t( substr_count( $cal, 'Jógový pobyt Estepona' ) >= 6, 'vícedenní akce je v kalendáři u každého dne' );
+rap_t( false !== strpos( $cal, '15:00 Jógový pobyt' ), 'první den vícedenní akce má čas začátku' );
+$_GET['rap_view'] = 'calendar';
+rap_t( false !== strpos( Resandpay_Views::render_program( array( 'limit' => 50, 'category' => '', 'filter' => 'yes', 'view' => 'list', 'include_slots' => '' ) ), 'rap-calendar__grid' ), 'přepínač zobrazí kalendář' );
+unset( $_GET['rap_view'] );
+rap_t( 'so 20. 1. 2027 · 16:00–18:00' === Resandpay_Views::when_line( Resandpay_Events::get( $sh ) ) || 'st 20. 1. 2027 · 16:00–18:00' === Resandpay_Views::when_line( Resandpay_Events::get( $sh ) ), 'řádek termínu krátké akce: ' . Resandpay_Views::when_line( Resandpay_Events::get( $sh ) ) );
+$dup = Resandpay_Admin_Events::duplicate( $md );
+$dev = Resandpay_Events::get( $dup );
+rap_t( ! is_wp_error( $dup ) && 'draft' === $dev['status'] && $dev['start'] === Resandpay_Events::get( $md )['start'] && 12 === $dev['capacity'], 'duplikace vytvoří koncept se stejnými údaji' );
+rap_t( 0 === Resandpay_Reservations::count_active( $dup ), 'duplikát nemá žádné rezervace' );
+rap_t( in_array( $tid, wp_get_object_terms( $dup, Resandpay_Post_Types::CATEGORY, array( 'fields' => 'ids' ) ), true ), 'duplikát převezme kategorii' );
+rap_t( array( 'začátek', 'konec', 'kapacita' ) === Resandpay_Admin_Events::missing( array( 'start' => '', 'end' => '', 'capacity' => 0 ) ), 'kontrola chybějících údajů akce' );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );
