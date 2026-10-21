@@ -1,5 +1,12 @@
 # Vývojový deník ReserveAndPay
 
+## 0.3.1 (21. 10. 2026)
+
+- Přehled akcí: služby (např. Bukální masáž) se zobrazí jako jedna souhrnná karta – nejbližší volný termín (den, čas, délka, místo), cena, počet volných termínů a „Vybrat termín →“ na stránku s volnými termíny; karty se řadí podle data spolu s akcemi
+- Filtr kategorie služby tak už nevede na prázdný seznam; v kalendáři se karta služby ukáže nad mřížkou jen při filtru kategorie (jednotlivé termíny v kalendáři nejsou)
+- Shortcody `[reserveandpay_program]` / `[reserveandpay_events]` mají parametr `services="no"` pro vypnutí karet služeb
+- Oprava: hláška po generování/hromadném rušení termínů se zobrazí i na seznamu akcí
+
 ## 0.3.0 – Etapa E3 (21. 10. 2026)
 
 - Nový typ obsahu **Služby** (menu Rezervace → Služby): pevná délka termínu a pauza jako nastavitelné parametry (výchozí 60 + 15 min), cena, měna, místo, splatnost, kategorie, stránka s volnými termíny; popis služby se zobrazí u každého termínu

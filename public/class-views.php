@@ -118,22 +118,99 @@ class Resandpay_Views {
 	}
 
 	/** Seznam nadcházejících akcí. */
+	/**
+	 * Služby s volnými termíny jako souhrnné položky (SWD v1.4, varianta 2):
+	 * v přehledu akcí se služba ukáže jednou kartou s nejbližším volným termínem.
+	 *
+	 * @return array Pole položek: service, next (akce), free (počet), url.
+	 */
+	public static function service_summaries( $category = '' ) {
+		$query = array(
+			'post_type'      => Resandpay_Post_Types::SERVICE,
+			'post_status'    => 'publish',
+			'posts_per_page' => 50,
+			'fields'         => 'ids',
+			'orderby'        => 'title',
+			'order'          => 'ASC',
+		);
+		if ( $category ) {
+			$query['tax_query'] = array(
+				array(
+					'taxonomy' => Resandpay_Post_Types::CATEGORY,
+					'field'    => 'slug',
+					'terms'    => array_map( 'trim', explode( ',', $category ) ),
+				),
+			);
+		}
+		$tz  = wp_timezone();
+		$now = new DateTimeImmutable( 'now', $tz );
+		$out = array();
+		foreach ( get_posts( $query ) as $sid ) {
+			$svc  = Resandpay_Services::get( $sid );
+			$free = $svc ? Resandpay_Services::free_slots( $sid, $now, $now->modify( '+1 year' ) ) : array();
+			if ( ! $free ) {
+				continue;
+			}
+			$next  = $free[0];
+			$url   = $svc['page_id'] && 'publish' === get_post_status( $svc['page_id'] ) ? get_permalink( $svc['page_id'] ) . '#rap-slots' : get_permalink( $next['id'] ) . '#rap-booking';
+			$out[] = array(
+				'service' => $svc,
+				'next'    => $next,
+				'free'    => count( $free ),
+				'url'     => $url,
+			);
+		}
+		return apply_filters( 'resandpay_service_summaries', $out, $category );
+	}
+
+	/** Karta služby v seznamu akcí. */
+	public static function render_service_item( array $it ) {
+		$svc  = $it['service'];
+		$next = $it['next'];
+		$cats = wp_list_pluck( self::categories_of( $svc['id'] ), 'name' );
+		$s    = self::dt( $next['start'] );
+		$wd   = self::weekdays_short();
+		ob_start();
+		?>
+		<article class="rap-item rap-item--service">
+			<?php echo self::date_badge( $next ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř. ?>
+			<div class="rap-item__main">
+				<p class="rap-eyebrow"><?php echo esc_html( $cats ? implode( ' · ', $cats ) : __( 'Individuální termíny', 'reserveandpay' ) ); ?></p>
+				<h3 class="rap-item__title"><a href="<?php echo esc_url( $it['url'] ); ?>"><?php echo esc_html( $svc['title'] ); ?></a></h3>
+				<p class="rap-item__meta"><?php echo esc_html( sprintf( /* translators: 1: den a čas, 2: délka */ __( 'Nejbližší volný termín: %1$s · %2$d min', 'reserveandpay' ), $wd[ (int) $s->format( 'w' ) ] . ' ' . $s->format( 'j. n.' ) . ' ' . $s->format( 'G:i' ), (int) round( ( Resandpay_Events::ts( $next['end'] ) - Resandpay_Events::ts( $next['start'] ) ) / 60 ) ) ); ?><?php if ( $next['location'] ) : ?> · <?php echo esc_html( $next['location'] ); ?><?php endif; ?></p>
+			</div>
+			<div class="rap-item__side">
+				<p class="rap-item__price"><?php echo esc_html( Resandpay_Events::format_price( $next['price'], $next['currency'] ) ); ?></p>
+				<p class="rap-item__free"><?php echo esc_html( sprintf( /* translators: %d: počet */ _n( '%d volný termín', 'Volných termínů: %d', $it['free'], 'reserveandpay' ), $it['free'] ) ); ?></p>
+				<a class="rap-button" href="<?php echo esc_url( $it['url'] ); ?>"><?php esc_html_e( 'Vybrat termín →', 'reserveandpay' ); ?></a>
+			</div>
+		</article>
+		<?php
+		return ob_get_clean();
+	}
+
+	/** Seznam nadcházejících akcí (služby jako souhrnné karty, řazeno podle data). */
 	public static function render_list( array $args ) {
-		$events = Resandpay_Events::upcoming(
+		$events   = Resandpay_Events::upcoming(
 			array(
 				'limit'         => (int) $args['limit'],
 				'category'      => $args['category'],
 				'include_slots' => ! empty( $args['include_slots'] ),
 			)
 		);
-		if ( ! $events ) {
+		$services = ( isset( $args['services'] ) && 'no' === $args['services'] ) ? array() : self::service_summaries( $args['category'] );
+		if ( ! $events && ! $services ) {
 			return '<p class="rap-empty">' . esc_html__( 'Momentálně nejsou vypsané žádné termíny. Sledujte novinky – brzy přibudou.', 'reserveandpay' ) . '</p>';
 		}
-		$out = '<div class="rap-list">';
+		$rows = array();
 		foreach ( $events as $ev ) {
-			$out .= self::render_item( $ev );
+			$rows[] = array( $ev['start'], self::render_item( $ev ) );
 		}
-		return $out . '</div>';
+		foreach ( $services as $it ) {
+			$rows[] = array( $it['next']['start'], self::render_service_item( $it ) );
+		}
+		usort( $rows, fn( $a, $b ) => strcmp( $a[0], $b[0] ) );
+		return '<div class="rap-list">' . implode( '', array_column( $rows, 1 ) ) . '</div>';
 	}
 
 	/** Akce, které zasahují do daného období. */
@@ -213,6 +290,14 @@ class Resandpay_Views {
 		$base = remove_query_arg( array( 'rap_m', 'rap_done', 'rap_again' ) );
 		ob_start();
 		echo '<div class="rap-calendar" id="rap-calendar">';
+		$svc_items = ( $args['category'] && ( ! isset( $args['services'] ) || 'no' !== $args['services'] ) ) ? self::service_summaries( $args['category'] ) : array();
+		if ( $svc_items ) {
+			echo '<div class="rap-list rap-calendar__services">';
+			foreach ( $svc_items as $it ) {
+				echo self::render_service_item( $it ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
+			}
+			echo '</div>';
+		}
 		echo '<div class="rap-calendar__head">';
 		echo '<a class="rap-calendar__nav" rel="nofollow" href="' . esc_url( add_query_arg( 'rap_m', $prev->format( 'Y-m' ), $base ) . '#rap-calendar' ) . '" aria-label="' . esc_attr__( 'Předchozí měsíc', 'reserveandpay' ) . '">←</a>';
 		echo '<h3 class="rap-calendar__title">' . esc_html( $mf[ (int) $first->format( 'n' ) - 1 ] ) . ' <em>' . esc_html( $first->format( 'Y' ) ) . '</em></h3>';

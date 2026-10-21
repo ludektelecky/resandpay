@@ -12,6 +12,7 @@ class Resandpay_Admin {
 		add_action( 'admin_notices', array( __CLASS__, 'test_mode_notice' ) );
 		add_filter( 'parent_file', array( __CLASS__, 'parent_file' ) );
 		add_action( 'admin_head', array( __CLASS__, 'hide_detail_menu' ) );
+		add_action( 'admin_notices', array( __CLASS__, 'cpt_flash' ) );
 	}
 
 	public static function menu() {
@@ -66,6 +67,14 @@ class Resandpay_Admin {
 		/* translators: %s: e-mail */
 		echo esc_html( sprintf( __( 'Všechny e-maily pluginu se odesílají jen na %s.', 'reserveandpay' ), Resandpay_Settings::get( 'test_email' ) ) );
 		echo '</p></div>';
+	}
+
+	/** Zobrazí jednorázovou zprávu i na seznamech akcí/služeb (např. po generování termínů). */
+	public static function cpt_flash() {
+		$screen = get_current_screen();
+		if ( $screen && 'edit' === $screen->base && in_array( $screen->post_type, array( Resandpay_Post_Types::EVENT, Resandpay_Post_Types::SERVICE ), true ) ) {
+			self::render_flash();
+		}
 	}
 
 	/** Uloží jednorázovou zprávu pro další načtení stránky. */

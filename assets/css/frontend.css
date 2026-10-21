@@ -60,6 +60,7 @@
 .rap-item__free--off { color: var(--rap-error); font-weight: 600; }
 .rap-item--full .rap-item__title a, .rap-item--cancelled .rap-item__title a { color: var(--rap-ink-soft) !important; }
 .rap-empty { color: var(--rap-ink-soft); padding: 1.5rem 0; }
+.rap-calendar__services { margin: 0 0 1.5rem; }
 
 /* Kalendář */
 .rap-calendar__head { display: flex; align-items: center; justify-content: space-between; margin: 0 0 1rem; }

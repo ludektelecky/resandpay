@@ -132,6 +132,7 @@ class Resandpay_Frontend {
 				'filter'        => 'yes',
 				'view'          => 'list',
 				'include_slots' => '',
+				'services'      => 'yes',
 			),
 			$atts,
 			$tag
