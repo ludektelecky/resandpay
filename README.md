@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz UniCredit Bank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> Zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 1.5** (21. 10. 2026) – viz `docs/`.
+> Zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 1.6** (21. 10. 2026) – viz `docs/`.
 
 ---
 
@@ -27,7 +27,7 @@ Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a 
 ### Platby
 - Platební pokyn (proforma) s QR kódem dle standardu SPD, PDF ke stažení přes neuhodnutelný odkaz
 - Unikátní, nikdy znovu nepoužitý variabilní symbol pro každou rezervaci
-- Kontrola plateb čtením schránky `bankovnitransakce@slehkouhlavou.cz` přes IMAP
+- Kontrola plateb čtením schránky `bankovni.transakce@slehkouhlavou.cz` přes IMAP
   - režim **ručně** (tlačítko „Zkontrolovat platby nyní“) nebo **automaticky** v intervalu (standardně 60 min, konfigurovatelné)
   - spouštění serverovým CRONem hostingu Active24 (ne WP-Cron)
   - nespárované platby k ručnímu přiřazení, log běhů, upozornění při výpadku
