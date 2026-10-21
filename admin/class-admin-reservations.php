@@ -77,7 +77,10 @@ class Resandpay_Admin_Reservations {
 				if ( ! $r ) {
 					return new WP_Error( 'not_found', __( 'Rezervace nenalezena.', 'reserveandpay' ) );
 				}
-				Resandpay_Mailer::send_template( $r['email'], 'received', $r );
+				if ( ! Resandpay_Mailer::send_template( $r['email'], 'received', $r ) ) {
+					/* translators: %s: chybová zpráva */
+					return new WP_Error( 'mail', sprintf( __( 'E-mail se nepodařilo odeslat: %s', 'reserveandpay' ), Resandpay_Mailer::$last_error ?: '—' ) );
+				}
 				return $r;
 		}
 		return new WP_Error( 'unknown', __( 'Neznámá akce.', 'reserveandpay' ) );

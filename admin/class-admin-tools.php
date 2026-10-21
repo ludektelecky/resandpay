@@ -9,6 +9,7 @@ class Resandpay_Admin_Tools {
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ), 21 );
 		add_action( 'admin_post_resandpay_cleanup', array( __CLASS__, 'handle_cleanup' ) );
+		add_action( 'admin_post_resandpay_test_mail', array( __CLASS__, 'handle_test_mail' ) );
 	}
 
 	public static function menu() {
@@ -19,6 +20,7 @@ class Resandpay_Admin_Tools {
 		$counts = Resandpay_Reservations::counts_by_status();
 		echo '<div class="wrap"><h1>' . esc_html__( 'Nástroje ReserveAndPay', 'reserveandpay' ) . '</h1>';
 		Resandpay_Admin::render_flash();
+		self::render_mail_section();
 		echo '<h2>' . esc_html__( 'Úklid testovacích dat', 'reserveandpay' ) . '</h2>';
 		/* translators: %d: počet */
 		echo '<p>' . esc_html( sprintf( __( 'Smaže všechny rezervace (%d) a vynuluje řadu variabilních symbolů. Akce a lokace zůstanou zachovány.', 'reserveandpay' ), array_sum( $counts ) ) ) . '</p>';
@@ -32,6 +34,60 @@ class Resandpay_Admin_Tools {
 		echo '<p><label>' . esc_html__( 'Pro potvrzení napište SMAZAT:', 'reserveandpay' ) . ' <input type="text" name="confirm" autocomplete="off"></label></p>';
 		submit_button( __( 'Smazat testovací rezervace', 'reserveandpay' ), 'delete' );
 		echo '</form></div>';
+	}
+
+	/** Diagnostika e-mailů: zkušební odeslání, kontrola domény odesílatele, log chyb. */
+	private static function render_mail_section() {
+		$s         = Resandpay_Settings::all();
+		$from      = (string) $s['mail_from_email'];
+		$site_host = preg_replace( '/^www\./', '', (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
+		$from_host = strtolower( substr( strrchr( $from, '@' ), 1 ) );
+		echo '<h2>' . esc_html__( 'Odesílání e-mailů', 'reserveandpay' ) . '</h2>';
+		/* translators: %s: e-mail */
+		echo '<p>' . esc_html( sprintf( __( 'Odesílatel: %s', 'reserveandpay' ), $from ?: '—' ) ) . '</p>';
+		if ( $from_host && $from_host !== $site_host ) {
+			/* translators: 1: doména odesílatele, 2: doména webu */
+			echo '<div class="notice notice-warning inline"><p>' . esc_html( sprintf( __( 'Odesílatel je na doméně %1$s, web běží na %2$s. Hostingy takové e-maily často odmítají nebo končí ve spamu – doporučujeme odesílatele na doméně webu, případně SMTP plugin.', 'reserveandpay' ), $from_host, $site_host ) ) . '</p></div>';
+		}
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		echo '<input type="hidden" name="action" value="resandpay_test_mail">';
+		wp_nonce_field( 'resandpay_test_mail' );
+		echo '<p><label>' . esc_html__( 'Poslat zkušební e-mail na:', 'reserveandpay' ) . ' <input type="email" name="to" class="regular-text" value="' . esc_attr( $s['test_email'] ) . '" required></label> ';
+		submit_button( __( 'Odeslat', 'reserveandpay' ), 'secondary', 'submit', false );
+		echo '</p><p class="description">' . esc_html__( 'Zkušební e-mail se posílá přímo na zadanou adresu (testovací režim ho nepřesměrovává).', 'reserveandpay' ) . '</p></form>';
+		$log = get_option( 'resandpay_mail_log', array() );
+		if ( $log ) {
+			echo '<h3>' . esc_html__( 'Poslední chyby odesílání', 'reserveandpay' ) . '</h3><table class="widefat striped"><thead><tr><th>' . esc_html__( 'Čas', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Příjemce', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Chyba', 'reserveandpay' ) . '</th></tr></thead><tbody>';
+			foreach ( $log as $row ) {
+				echo '<tr><td>' . esc_html( $row['time'] ) . '</td><td>' . esc_html( $row['to'] ) . '</td><td>' . esc_html( $row['error'] ) . '</td></tr>';
+			}
+			echo '</tbody></table>';
+		} else {
+			echo '<p>' . esc_html__( 'Zatím nebyla zaznamenána žádná chyba odesílání.', 'reserveandpay' ) . '</p>';
+		}
+	}
+
+	public static function handle_test_mail() {
+		if ( ! current_user_can( resandpay_cap_settings() ) ) {
+			wp_die( esc_html__( 'Nemáte oprávnění.', 'reserveandpay' ) );
+		}
+		check_admin_referer( 'resandpay_test_mail' );
+		$to = sanitize_email( wp_unslash( $_POST['to'] ?? '' ) );
+		if ( ! is_email( $to ) ) {
+			Resandpay_Admin::flash( __( 'Zadejte platný e-mail.', 'reserveandpay' ), 'error' );
+		} else {
+			add_filter( 'resandpay_bypass_test_redirect', '__return_true' );
+			$res = Resandpay_Mailer::send_test( $to );
+			if ( is_wp_error( $res ) ) {
+				/* translators: %s: chyba */
+				Resandpay_Admin::flash( sprintf( __( 'Odeslání selhalo: %s', 'reserveandpay' ), $res->get_error_message() ), 'error' );
+			} else {
+				/* translators: %s: e-mail */
+				Resandpay_Admin::flash( sprintf( __( 'WordPress e-mail předal k odeslání na %s. Pokud nedorazí ani do spamu, hosting ho zahazuje – bude potřeba SMTP.', 'reserveandpay' ), $to ) );
+			}
+		}
+		wp_safe_redirect( admin_url( 'admin.php?page=reserveandpay-tools' ) );
+		exit;
 	}
 
 	public static function handle_cleanup() {

@@ -1,5 +1,10 @@
 # Vývojový deník ReserveAndPay
 
+## 0.1.1 – Diagnostika e-mailů (21. 10. 2026)
+
+- Nástroje: zkušební e-mail (bez přesměrování), kontrola domény odesílatele, log posledních 20 chyb odesílání
+- „Znovu poslat platební údaje“ hlásí chybu, pokud e-mail selže
+
 ## 0.1.0 – Etapa E1 (21. 10. 2026)
 
 Hotovo:
