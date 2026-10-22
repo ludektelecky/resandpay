@@ -177,7 +177,7 @@ class Resandpay_Admin_Events {
 				<input type="number" min="0" step="1" id="<?php echo esc_attr( $uid ); ?>-days" name="rap_due_days" value="<?php echo esc_attr( (string) $raw['due_days'] ); ?>" placeholder="<?php echo esc_attr( $s['due_days'] ); ?>" class="small-text"></p>
 			<p data-rap-due="event"><label for="<?php echo esc_attr( $uid ); ?>-off"><?php esc_html_e( 'Dní vůči termínu', 'reserveandpay' ); ?></label>
 				<input type="number" min="-365" max="365" step="1" id="<?php echo esc_attr( $uid ); ?>-off" name="rap_due_offset" value="<?php echo esc_attr( (string) $raw['due_offset'] ); ?>" placeholder="<?php echo esc_attr( $s['due_offset'] ); ?>" class="small-text">
-				<span class="rap-hint"><?php esc_html_e( '−1 = den před termínem, 0 = v den termínu, +1 = den po termínu. Splatnost je vždy do konce dne.', 'reserveandpay' ); ?></span></p>
+				<span class="rap-hint"><?php esc_html_e( '−1 = den před termínem, 0 = v den termínu, +1 = den po termínu. Splatnost je vždy do konce dne. Kdo rezervuje až po této splatnosti, platí celou částku do 7 dní (u platby ve dvou částech podle „1. část splatná do“), nejpozději den před akcí.', 'reserveandpay' ); ?></span></p>
 			<p><label for="<?php echo esc_attr( $uid ); ?>-cash"><?php esc_html_e( 'Platba v hotovosti na místě', 'reserveandpay' ); ?></label>
 				<select id="<?php echo esc_attr( $uid ); ?>-cash" name="rap_cash">
 					<option value=""><?php echo esc_html( $s['cash_enabled'] ? __( 'Výchozí z nastavení (povolena)', 'reserveandpay' ) : __( 'Výchozí z nastavení (vypnuta)', 'reserveandpay' ) ); ?></option>
@@ -195,7 +195,7 @@ class Resandpay_Admin_Events {
 				<input type="number" min="0" step="any" id="<?php echo esc_attr( $uid ); ?>-p1v" name="rap_part1_value" value="<?php echo esc_attr( (string) ( $raw['part1_value'] ?? '' ) ); ?>" class="small-text"></p>
 			<p data-rap-p1><label for="<?php echo esc_attr( $uid ); ?>-p1d"><?php esc_html_e( '1. část splatná do (dní od rezervace)', 'reserveandpay' ); ?></label>
 				<input type="number" min="0" step="1" id="<?php echo esc_attr( $uid ); ?>-p1d" name="rap_part1_days" value="<?php echo esc_attr( (string) ( '' === (string) ( $raw['part1_days'] ?? '' ) ? 7 : $raw['part1_days'] ) ); ?>" class="small-text">
-				<span class="rap-hint"><?php esc_html_e( 'Doplatek se řídí splatností výše. Zaplacením 1. části je místo potvrzené; nezaplacený doplatek rezervaci neruší. Nepoužije se u hotovosti a rezervace na poslední chvíli.', 'reserveandpay' ); ?></span></p>
+				<span class="rap-hint"><?php esc_html_e( 'Doplatek se řídí splatností výše. Zaplacením 1. části je místo potvrzené; nezaplacený doplatek rezervaci neruší. Nepoužije se u hotovosti, u rezervace na poslední chvíli a u rezervace až po splatnosti doplatku (pak se platí vše najednou v této lhůtě).', 'reserveandpay' ); ?></span></p>
 		</div>
 		<script>
 		( function () {

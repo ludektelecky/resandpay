@@ -1,5 +1,12 @@
 # Vývojový deník ReserveAndPay
 
+## 0.6.1 (22. 10. 2026)
+
+- **Pozdní rezervace**: rezervuje-li zákazník až po splatnosti podle pravidla (např. splatnost 30 dní před akcí a rezervace 14 dní předem), platí **celou částku do N dní od rezervace** (N = „1. část splatná do“, výchozí 7), nejpozději den před akcí. Platba se nedělí, rezervace po splatnosti normálně expiruje a nepřechází do „Platba na místě“ (dříve se brala jako rezervace na poslední chvíli – splatnost až začátek akce, platba na místě i při vypnuté hotovosti)
+- Rezervace na poslední chvíli zůstává jen pro rezervace méně než „Hranice pro platbu na místě“ (výchozí 24 h) před začátkem
+- Nápověda u splatnosti a platby ve dvou částech v editaci akce a služby
+- Testy: 295 kontrol + souběh; analytické zadání v2.7 (kap. 3.6, 3.9, 13)
+
 ## 0.6.0 – Etapa E6a (22. 10. 2026)
 
 - **Expirace**: nezaplacená rezervace se splatností před termínem po splatnosti přejde do stavu Expirováno, místo se uvolní a zákazník dostane e-mail „Rezervace vypršela“ s odkazem na akci (nová šablona)

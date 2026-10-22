@@ -362,6 +362,19 @@ $lmE = Resandpay_Events::compute_due( array_merge( Resandpay_Events::get( $dE ),
 rap_t( $lmE['last_minute'] && $ts( '2027-06-10 18:00:00' ) === $lmE['due_ts'], 'vůči termínu −1, rezervace v den termínu → poslední chvíle, splatnost = začátek' );
 $lmP = Resandpay_Events::compute_due( array_merge( Resandpay_Events::get( $dE ), array( 'due_mode' => 'event', 'due_offset' => 1 ) ), $ts( '2027-06-10 16:00:00' ) );
 rap_t( ! $lmP['last_minute'] && '2027-06-11 23:59:59' === wp_date( 'Y-m-d H:i:s', $lmP['due_ts'] ), 'platba po termínu (+1): krátce před začátkem není „poslední chvíle“' );
+$lt  = function ( $now_s, $over = array() ) use ( $dE, $ts ) {
+	return Resandpay_Events::compute_due( array_merge( Resandpay_Events::get( $dE ), array( 'due_mode' => 'event', 'due_offset' => -30 ), $over ), $ts( $now_s ) );
+};
+$l1 = $lt( '2027-05-27 10:00:00' );
+rap_t( $l1['late'] && ! $l1['last_minute'] && '2027-06-03 23:59:59' === wp_date( 'Y-m-d H:i:s', $l1['due_ts'] ), 'pozdní rezervace (−30, rezervace 14 dní předem) → celá částka do 7 dní (0.6.1)' );
+$l2 = $lt( '2027-06-06 10:00:00' );
+rap_t( $l2['late'] && '2027-06-09 23:59:59' === wp_date( 'Y-m-d H:i:s', $l2['due_ts'] ), 'pozdní rezervace: nejpozději den před akcí' );
+$l3 = $lt( '2027-05-27 10:00:00', array( 'part1_days' => 3 ) );
+rap_t( '2027-05-30 23:59:59' === wp_date( 'Y-m-d H:i:s', $l3['due_ts'] ), 'pozdní rezervace: lhůta podle „1. část splatná do“' );
+$l4 = $lt( '2027-06-10 10:00:00' );
+rap_t( $l4['last_minute'] && ! $l4['late'], 'méně než 24 h před začátkem zůstává „poslední chvíle“' );
+$l5 = $lt( '2027-06-09 12:00:00' );
+rap_t( ! $l5['last_minute'] && $l5['late'] && '2027-06-09 23:59:59' === wp_date( 'Y-m-d H:i:s', $l5['due_ts'] ), '30 h před začátkem: splatnost do konce dne před akcí' );
 Resandpay_Settings::update( array( 'due_mode' => 'event', 'due_offset' => -2 ) );
 rap_t( 'event' === Resandpay_Events::get( $dE )['due_mode'] && -2 === Resandpay_Events::get( $dE )['due_offset'], 'akce bez vlastního pravidla přebírá výchozí z nastavení' );
 $rD = Resandpay_Reservations::create( $dE, rap_person( 70 ), array( 'now' => $n0 ) );
@@ -804,6 +817,12 @@ rap_t( ! Resandpay_Reservations::is_split( $s4 ), 'hotovost na místě → bez r
 $s5 = Resandpay_Reservations::create( $sp, rap_person( 124 ), array( 'notify' => false ) );
 $s5 = Resandpay_Admin_Reservations::do_action( 'paid_onsite', $s5['id'] );
 rap_t( 'paid' === $s5['status'] && 500.0 === (float) $s5['amount_paid'], 'ruční „zaplaceno hotově“ = uhrazena celá částka' );
+
+$lp = rap_event( 'Pobyt pozdní', $now + 14 * $day, $now + 18 * $day, 10, array( 'rap_due_mode' => 'event', 'rap_due_offset' => '-30', 'rap_cash' => '0', 'rap_part1_mode' => 'fixed', 'rap_part1_value' => '200', 'rap_part1_days' => '7' ) );
+$lr = Resandpay_Reservations::create( $lp, rap_person( 125 ), array( 'notify' => false ) );
+rap_t( 'pending' === $lr['status'] && ! $lr['last_minute'] && ! Resandpay_Reservations::is_split( $lr ) && 0 === strpos( $lr['due_at'], wp_date( 'Y-m-d', $now + 7 * $day ) ), 'rezervace 14 dní před pobytem se splatností −30: vše najednou do 7 dní, neplatí se na místě' );
+Resandpay_Reservations::process_due( $now + 8 * $day );
+rap_t( 'expired' === Resandpay_Reservations::get( $lr['id'] )['status'], '… a po splatnosti normálně expiruje' );
 
 echo "== 0.6.0: expirace, po splatnosti, připomínky\n";
 global $wpdb;

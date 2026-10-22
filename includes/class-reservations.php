@@ -112,7 +112,7 @@ class Resandpay_Reservations {
 			$last_minute = $due['last_minute'];
 			$cash        = 'cash' === ( $data['pay_choice'] ?? '' ) && ( $ev['cash'] || 'admin' === $opts['source'] );
 			// Platba ve dvou částech (SWD v2.6, kap. 3.9): ne u hotovosti a rezervace na poslední chvíli.
-			$part1    = $cash || $last_minute ? 0.0 : Resandpay_Events::part1_amount( $ev );
+			$part1    = $cash || $last_minute || ! empty( $due['late'] ) ? 0.0 : Resandpay_Events::part1_amount( $ev ); // Pozdní rezervace: vše najednou.
 			$part1_ts = 0;
 			if ( $part1 > 0 ) {
 				$p1       = ( new DateTimeImmutable( '@' . $now_ts ) )->setTimezone( wp_timezone() )->modify( '+' . max( 0, (int) $ev['part1_days'] ) . ' days' )->setTime( 23, 59, 59 );

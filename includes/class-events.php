@@ -74,9 +74,11 @@ class Resandpay_Events {
 	 * Vypočte splatnost rezervace podle pravidla akce (SWD v2.0, kap. 3.6).
 	 * Splatnost je vždy konec dne (23:59:59). Vůči termínu se počítá od data začátku.
 	 * Vyjde-li splatnost před začátek termínu a rezervuje se na poslední chvíli
-	 * (nebo by splatnost už uplynula), splatnost = začátek a lze platit na místě.
+	 * (méně než „Hranice pro platbu na místě“ před začátkem), splatnost = začátek a lze platit na místě.
+	 * Uplynula-li splatnost podle pravidla už při rezervaci (např. −30 dní a rezervace 14 dní předem),
+	 * platí se celá částka do N dní od rezervace (N = „1. část splatná do“), nejpozději den před akcí.
 	 *
-	 * @return array{due_ts:int, last_minute:bool}
+	 * @return array{due_ts:int, last_minute:bool, late:bool} late = pozdní rezervace po splatnosti podle pravidla (platí se celá částka najednou).
 	 */
 	public static function compute_due( array $ev, $now_ts ) {
 		$tz       = wp_timezone();
@@ -96,13 +98,24 @@ class Resandpay_Events {
 				$due = min( $by_booking, $start_ts );
 		}
 		$lm_secs     = (int) round( (float) Resandpay_Settings::get( 'last_minute_hours' ) * HOUR_IN_SECONDS );
+		$late        = false;
+		if ( $due < $now_ts && ( $start_ts - $now_ts ) >= $lm_secs ) {
+			// Pozdní rezervace (splatnost podle pravidla už uplynula, ale do začátku zbývá dost času):
+			// celá částka do N dní od rezervace (N = „1. část splatná do“, výchozí 7), nejpozději den před akcí.
+			$late_due   = $now->modify( '+' . max( 0, (int) ( $ev['part1_days'] ?? 7 ) ) . ' days' )->setTime( 23, 59, 59 )->getTimestamp();
+			$day_before = $start_day ? $start_day->modify( '-1 day' )->getTimestamp() : $start_ts;
+			$due        = min( $late_due, $day_before );
+			$late       = $due >= $now_ts;
+		}
 		$last_minute = $due <= $start_ts && ( ( $start_ts - $now_ts ) < $lm_secs || $due < $now_ts );
 		if ( $last_minute ) {
-			$due = $start_ts;
+			$due  = $start_ts;
+			$late = false;
 		}
 		return array(
 			'due_ts'      => (int) $due,
 			'last_minute' => $last_minute,
+			'late'        => $late,
 		);
 	}
 
