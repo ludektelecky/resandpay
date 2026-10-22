@@ -56,7 +56,23 @@ class Resandpay_Payments {
 		return false === $ct ? '' : 'v1:' . base64_encode( $iv . $tag . $ct );
 	}
 
+	/**
+	 * Dešifrování. Opraví i heslo zašifrované omylem vícekrát (chyba verzí 0.5.0–0.5.2):
+	 * dokud výsledek vypadá jako zašifrovaná hodnota, dešifruje se znovu.
+	 */
 	public static function decrypt( $stored ) {
+		$plain = self::decrypt_once( $stored );
+		for ( $i = 0; $i < 3 && 0 === strpos( $plain, 'v1:' ); $i++ ) {
+			$inner = self::decrypt_once( $plain );
+			if ( '' === $inner ) {
+				break;
+			}
+			$plain = $inner;
+		}
+		return $plain;
+	}
+
+	private static function decrypt_once( $stored ) {
 		if ( 0 !== strpos( (string) $stored, 'v1:' ) ) {
 			return '';
 		}

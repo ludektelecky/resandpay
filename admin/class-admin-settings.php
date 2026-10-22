@@ -106,6 +106,9 @@ class Resandpay_Admin_Settings {
 	}
 
 	public static function sanitize( $in ) {
+		if ( Resandpay_Settings::$internal ) {
+			return $in; // Interní zápis pluginu (Resandpay_Settings::update) – hodnoty jsou už připravené.
+		}
 		$in  = is_array( $in ) ? $in : array();
 		$out       = Resandpay_Settings::all();
 		$from_form = ! empty( $in['__form'] );
@@ -127,7 +130,8 @@ class Resandpay_Admin_Settings {
 						$out[ $key ] = max( -365, min( 365, (int) $val ) );
 						break;
 					case 'password':
-						if ( '' !== (string) $val ) {
+						// Nové heslo jen z odeslaného formuláře; už zašifrovanou hodnotu nikdy nešifrovat znovu.
+						if ( $from_form && '' !== (string) $val && 0 !== strpos( (string) $val, 'v1:' ) ) {
 							$out[ $key ] = Resandpay_Payments::encrypt( (string) $val );
 							update_option( 'resandpay_imap_pwd_saved', time(), false );
 						}

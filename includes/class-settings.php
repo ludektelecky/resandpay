@@ -97,9 +97,21 @@ class Resandpay_Settings {
 		return $all[ $key ] ?? null;
 	}
 
+	/** @var bool Interní zápis – obejde kontrolu formuláře nastavení (sanitize_callback). */
+	public static $internal = false;
+
+	/**
+	 * Interní zápis hodnot (bez kontroly formuláře – ta je jen pro odeslaný formulář
+	 * a jinak by např. znovu zašifrovala už zašifrované heslo).
+	 */
 	public static function update( array $values ) {
-		$all = array_merge( self::all(), $values );
-		update_option( self::OPTION, $all, false );
+		$all            = array_merge( self::all(), $values );
+		self::$internal = true;
+		try {
+			update_option( self::OPTION, $all, false );
+		} finally {
+			self::$internal = false;
+		}
 	}
 
 	/** Obnoví výchozí texty e-mailů (klíče tpl_*). */

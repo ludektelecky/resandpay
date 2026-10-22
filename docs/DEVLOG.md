@@ -1,5 +1,11 @@
 # Vývojový deník ReserveAndPay
 
+## 0.5.3 (22. 10. 2026)
+
+- **Oprava: heslo ke schránce se mohlo zašifrovat dvakrát** – každý interní zápis nastavení v administraci (první otevření stránky Platby s vygenerováním klíče CRONu, obnovení výchozích textů e-mailů) prošel kontrolou formuláře znovu a uložené heslo znovu zašifroval; server pak dostal místo hesla zašifrovaný řetězec („[AUTHENTICATIONFAILED]“). Interní zápisy už kontrolou formuláře neprocházejí a heslo se šifruje jen z odeslaného formuláře
+- Již dvakrát zašifrované heslo se po aktualizaci **samo opraví** (dešifruje se správně) – není potřeba ho zadávat znovu
+- Testy rozšířeny na 246 kontrol (zápisy nastavení jako v administraci, celý postup v prohlížeči proti serveru Dovecot)
+
 ## 0.5.2 (22. 10. 2026)
 
 - Přihlášení ke schránce přednostně přes **AUTHENTICATE PLAIN** (funguje i heslo s diakritikou, uvozovkami nebo zpětným lomítkem; i server bez SASL-IR), jinak / při neúspěchu LOGIN
