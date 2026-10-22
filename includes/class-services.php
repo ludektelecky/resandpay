@@ -34,6 +34,9 @@ class Resandpay_Services {
 			'due_mode'    => $m( 'due_mode', '' ),
 			'due_offset'  => $m( 'due_offset', '' ),
 			'cash'        => $m( 'cash', '' ),
+			'part1_mode'  => $m( 'part1_mode', 'none' ),
+			'part1_value' => $m( 'part1_value', 0 ),
+			'part1_days'  => $m( 'part1_days', 7 ),
 			'close_hours' => (float) $m( 'close_hours', 0 ),
 			'page_id'     => (int) $m( 'page', 0 ),
 		);
@@ -215,6 +218,9 @@ class Resandpay_Services {
 					'rap_due_mode'    => $svc['due_mode'],
 					'rap_due_offset'  => $svc['due_offset'],
 					'rap_cash'        => $svc['cash'],
+					'rap_part1_mode'  => $svc['part1_mode'],
+					'rap_part1_value' => $svc['part1_value'],
+					'rap_part1_days'  => $svc['part1_days'],
 					'rap_close_hours' => $svc['close_hours'],
 				)
 			);

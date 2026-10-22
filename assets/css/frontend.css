@@ -175,3 +175,6 @@
 .rap-qr { margin: 0; text-align: center; }
 .rap-qr img { display: block; width: 180px; height: 180px; background: #fff; }
 .rap-qr figcaption { font-size: 12px; color: var(--rap-ink-soft); margin-top: .35rem; }
+.rap-qr-full { flex: 1 1 100%; display: flex; gap: 1rem; align-items: center; border-top: 1px solid var(--rap-line); padding-top: 1rem; }
+.rap-qr-full img { flex: 0 0 auto; background: #fff; }
+.rap-qr-full p { margin: 0; }

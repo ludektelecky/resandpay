@@ -22,8 +22,14 @@ class Resandpay_Install {
 	}
 
 	public static function maybe_upgrade() {
+		$from = (int) get_option( 'resandpay_db_version' );
 		if ( get_option( 'resandpay_db_version' ) !== RESANDPAY_DB_VERSION ) {
 			self::create_tables();
+			if ( $from && $from < 5 ) {
+				// 0.6.0: u dříve zaplacených rezervací doplnit zaplacenou částku.
+				global $wpdb;
+				$wpdb->query( "UPDATE {$wpdb->prefix}resandpay_reservations SET amount_paid = amount WHERE status = 'paid' AND amount_paid = 0" );
+			}
 			update_option( 'resandpay_codes_backfill', 1, false );
 		}
 	}
@@ -61,6 +67,10 @@ class Resandpay_Install {
 			currency varchar(3) NOT NULL DEFAULT 'CZK',
 			last_minute tinyint(1) NOT NULL DEFAULT 0,
 			due_at datetime NULL,
+			part1_amount decimal(12,2) NOT NULL DEFAULT 0,
+			part1_due_at datetime NULL,
+			amount_paid decimal(12,2) NOT NULL DEFAULT 0,
+			reminded_due_at datetime NULL,
 			paid_at datetime NULL,
 			pay_choice varchar(20) NOT NULL DEFAULT 'transfer',
 			paid_method varchar(30) NOT NULL DEFAULT '',

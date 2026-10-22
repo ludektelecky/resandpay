@@ -12,6 +12,7 @@ class Resandpay_Reservations {
 	const ONSITE    = 'onsite';
 	const EXPIRED   = 'expired';
 	const OVERDUE   = 'overdue';
+	const PARTIAL   = 'partial';
 	const CANCELLED = 'cancelled';
 
 	public static function table() {
@@ -24,6 +25,7 @@ class Resandpay_Reservations {
 			self::PENDING   => __( 'Čeká na platbu', 'reserveandpay' ),
 			self::PAID      => __( 'Zaplaceno', 'reserveandpay' ),
 			self::ONSITE    => __( 'Platba na místě', 'reserveandpay' ),
+			self::PARTIAL   => __( 'Částečně zaplaceno', 'reserveandpay' ),
 			self::OVERDUE   => __( 'Po splatnosti', 'reserveandpay' ),
 			self::EXPIRED   => __( 'Expirováno', 'reserveandpay' ),
 			self::CANCELLED => __( 'Zrušeno', 'reserveandpay' ),
@@ -49,7 +51,7 @@ class Resandpay_Reservations {
 
 	/** Stavy, které blokují místo v kapacitě. */
 	public static function active_statuses() {
-		return array( self::PENDING, self::ONSITE, self::OVERDUE, self::PAID );
+		return array( self::PENDING, self::ONSITE, self::PARTIAL, self::OVERDUE, self::PAID );
 	}
 
 	private static function now() {
@@ -109,6 +111,13 @@ class Resandpay_Reservations {
 			$due_ts      = $due['due_ts'];
 			$last_minute = $due['last_minute'];
 			$cash        = 'cash' === ( $data['pay_choice'] ?? '' ) && ( $ev['cash'] || 'admin' === $opts['source'] );
+			// Platba ve dvou částech (SWD v2.6, kap. 3.9): ne u hotovosti a rezervace na poslední chvíli.
+			$part1    = $cash || $last_minute ? 0.0 : Resandpay_Events::part1_amount( $ev );
+			$part1_ts = 0;
+			if ( $part1 > 0 ) {
+				$p1       = ( new DateTimeImmutable( '@' . $now_ts ) )->setTimezone( wp_timezone() )->modify( '+' . max( 0, (int) $ev['part1_days'] ) . ' days' )->setTime( 23, 59, 59 );
+				$part1_ts = min( $p1->getTimestamp(), $due_ts );
+			}
 
 			$now_local = wp_date( 'Y-m-d H:i:s', $now_ts );
 			$row       = array(
@@ -129,6 +138,9 @@ class Resandpay_Reservations {
 				'currency'         => $ev['currency'],
 				'last_minute'      => $last_minute ? 1 : 0,
 				'due_at'           => wp_date( 'Y-m-d H:i:s', $due_ts ),
+				'part1_amount'     => $part1,
+				'part1_due_at'     => $part1 > 0 ? wp_date( 'Y-m-d H:i:s', $part1_ts ) : null,
+				'amount_paid'      => 0,
 				'consent_gdpr_at'  => ! empty( $data['consent_gdpr'] ) ? $now_local : null,
 				'consent_terms_at' => ! empty( $data['consent_terms'] ) ? $now_local : null,
 				'newsletter'       => ! empty( $data['newsletter'] ) ? 1 : 0,
@@ -236,32 +248,160 @@ class Resandpay_Reservations {
 		return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::table() . " WHERE event_id = %d AND status IN ({$in}) ORDER BY customer_name ASC", $event_id ), ARRAY_A );
 	}
 
+	/* ---------------------------------------------------------------------
+	 * Platba ve dvou částech a částečné platby (SWD v2.6, kap. 3.9)
+	 * ------------------------------------------------------------------- */
+
+	/** Zbývá zaplatit (celkem − zaplaceno). */
+	public static function remaining( array $r ) {
+		return round( max( 0, (float) $r['amount'] - (float) $r['amount_paid'] ), 2 );
+	}
+
+	/** Je rezervace rozdělená na 1. část a doplatek? */
+	public static function is_split( array $r ) {
+		return (float) $r['part1_amount'] > 0 && (float) $r['part1_amount'] < (float) $r['amount'];
+	}
+
+	/** Čeká se ještě na (zbytek) 1. části platby? */
+	public static function in_part1( array $r ) {
+		return self::is_split( $r ) && (float) $r['amount_paid'] + 0.009 < (float) $r['part1_amount'];
+	}
+
+	/** Částka, kterou je teď potřeba zaplatit (zbytek 1. části, jinak celý zbytek). */
+	public static function amount_now( array $r ) {
+		return self::in_part1( $r ) ? round( (float) $r['part1_amount'] - (float) $r['amount_paid'], 2 ) : self::remaining( $r );
+	}
+
+	/** Splatnost toho, co je teď potřeba zaplatit. */
+	public static function due_now( array $r ) {
+		return self::in_part1( $r ) && ! empty( $r['part1_due_at'] ) ? $r['part1_due_at'] : $r['due_at'];
+	}
+
 	/**
-	 * Zpracování splatností (spouští plánovač – hodinový WP-Cron, v E5 CRON Active24).
-	 * Rezervace na poslední chvíli bez platby přejde po začátku na „Platba na místě“.
-	 * Nezaplacená rezervace, jejíž splatnost uplynula až po začátku termínu
-	 * (platba v den termínu nebo po něm), přejde do stavu „Po splatnosti“ a zákazník
-	 * dostane jednu připomínku. Místo zůstává obsazené – termín už proběhl.
-	 * Expirace rezervací se splatností před termínem je součástí E6.
+	 * Připíše platbu k rezervaci (převod, ručně, na místě). Platby se sčítají.
+	 * Celá částka → Zaplaceno; méně → Částečně zaplaceno (po splatnosti → Po splatnosti)
+	 * a zákazník dostane upozornění se zbývající částkou a QR kódem.
 	 *
-	 * @return int Počet rezervací převedených do stavu Po splatnosti.
+	 * @param array $opts notify (bool), force (přijmout i přeplatek).
+	 * @return array|WP_Error Rezervace po připsání.
+	 */
+	public static function add_payment( $id, $amount, $method = 'transfer_manual', array $opts = array() ) {
+		global $wpdb;
+		$opts   = wp_parse_args(
+			$opts,
+			array(
+				'notify' => true,
+				'force'  => false,
+			)
+		);
+		$r      = self::get( $id );
+		$amount = round( (float) $amount, 2 );
+		if ( ! $r ) {
+			return new WP_Error( 'not_found', __( 'Rezervace nenalezena.', 'reserveandpay' ) );
+		}
+		if ( self::CANCELLED === $r['status'] ) {
+			return new WP_Error( 'cancelled', __( 'Rezervace je zrušená – platbu je potřeba vyřešit ručně (vrátit?).', 'reserveandpay' ) );
+		}
+		$remaining = self::remaining( $r );
+		if ( self::PAID === $r['status'] || $remaining <= 0 ) {
+			return new WP_Error( 'paid', __( 'Rezervace už je zaplacená – možná duplicitní platba (vrátit?).', 'reserveandpay' ) );
+		}
+		if ( $amount <= 0 ) {
+			return new WP_Error( 'amount', __( 'Neplatná částka.', 'reserveandpay' ) );
+		}
+		if ( $amount > $remaining + 0.009 && ! $opts['force'] ) {
+			/* translators: 1: přijato, 2: zbývá */
+			return new WP_Error( 'overpay', sprintf( __( 'Přeplatek: přijato %1$s, zbývalo zaplatit %2$s.', 'reserveandpay' ), Resandpay_Events::format_price( $amount, $r['currency'] ), Resandpay_Events::format_price( $remaining, $r['currency'] ) ) );
+		}
+		$old_paid = (float) $r['amount_paid'];
+		$new_paid = round( $old_paid + $amount, 2 );
+		$full     = $new_paid + 0.009 >= (float) $r['amount'];
+		if ( $full ) {
+			$target = self::PAID;
+		} else {
+			$after  = array_merge( $r, array( 'amount_paid' => $new_paid ) );
+			$due    = Resandpay_Events::ts( self::due_now( $after ) );
+			$target = $due && $due < time() ? self::OVERDUE : self::PARTIAL;
+			if ( self::ONSITE === $r['status'] ) {
+				$target = self::ONSITE; // Zbytek se doplatí na místě.
+			}
+		}
+		if ( $target !== $r['status'] ) {
+			$res = self::set_status(
+				$id,
+				$target,
+				array(
+					'method'         => $method,
+					'notify'         => false,
+					'allow_overbook' => ! empty( $opts['allow_overbook'] ),
+				)
+			);
+			if ( is_wp_error( $res ) ) {
+				return $res;
+			}
+		}
+		$wpdb->update(
+			self::table(),
+			array(
+				'amount_paid' => $new_paid,
+				'paid_method' => sanitize_key( $method ),
+				'updated_at'  => current_time( 'mysql' ),
+			),
+			array( 'id' => (int) $id )
+		);
+		$new                 = self::get( $id );
+		$new['last_payment'] = $amount;
+		do_action( 'resandpay_payment_added', $new, $amount, $method );
+		if ( $opts['notify'] ) {
+			if ( $full ) {
+				Resandpay_Mailer::send_paid( $new );
+			} elseif ( self::is_split( $new ) && $old_paid + 0.009 < (float) $new['part1_amount'] && $new_paid + 0.009 >= (float) $new['part1_amount'] ) {
+				Resandpay_Mailer::send_template( $new['email'], 'part1', $new ); // 1. část zaplacena – místo potvrzeno.
+			} else {
+				Resandpay_Mailer::send_template( $new['email'], 'partial', $new ); // Zaplaceno méně – upozornění + QR na zbytek.
+			}
+		}
+		return $new;
+	}
+
+	/**
+	 * Zpracování splatností (CRON / plánovač, SWD kap. 3.6, 7.2b):
+	 * - nic nezaplaceno a splatnost (1. části) před začátkem termínu → Expirováno, místo se uvolní, e-mail,
+	 * - nic nezaplaceno, splatnost = začátek termínu (poslední chvíle) → Platba na místě,
+	 * - jinak (splatnost v den termínu / po něm, nebo už něco zaplaceno) → Po splatnosti + jedna připomínka;
+	 *   rezervace nepropadá a rozhodne správkyně.
+	 *
+	 * @return int Počet změněných rezervací.
 	 */
 	public static function process_due( $now_ts = null ) {
 		global $wpdb;
-		$now   = wp_date( 'Y-m-d H:i:s', $now_ts ?? time() );
-		$rows  = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::table() . ' WHERE status = %s AND due_at IS NOT NULL AND due_at < %s', self::PENDING, $now ), ARRAY_A );
-		$count = 0;
+		$now_ts = $now_ts ?? time();
+		$rows   = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::table() . ' WHERE status IN (%s, %s) AND due_at IS NOT NULL', self::PENDING, self::PARTIAL ), ARRAY_A );
+		$count  = 0;
 		foreach ( $rows as $r ) {
+			$due = Resandpay_Events::ts( self::due_now( $r ) );
+			if ( ! $due || $due >= $now_ts ) {
+				continue;
+			}
 			$ev = Resandpay_Events::get( $r['event_id'] );
 			if ( ! $ev ) {
 				continue;
 			}
-			if ( Resandpay_Events::ts( $r['due_at'] ) <= Resandpay_Events::ts( $ev['start'] ) ) {
-				// Rezervace na poslední chvíli: platba nestihla dorazit → platí se na místě (SWD kap. 3.6).
-				if ( $r['last_minute'] ) {
-					self::set_status( $r['id'], self::ONSITE );
+			$start = Resandpay_Events::ts( $ev['start'] );
+			$paid  = (float) $r['amount_paid'] > 0;
+			if ( ! $paid && $due < $start - 60 ) {
+				$new = self::set_status( $r['id'], self::EXPIRED );
+				if ( ! is_wp_error( $new ) ) {
+					++$count;
+					Resandpay_Mailer::send_template( $new['email'], 'expired', $new );
 				}
-				continue; // Ostatní se splatností do začátku termínu → expirace (E6).
+				continue;
+			}
+			if ( ! $paid && $due <= $start + 60 ) {
+				if ( ! is_wp_error( self::set_status( $r['id'], self::ONSITE ) ) ) {
+					++$count; // Platba nestihla dorazit do začátku → platí se na místě.
+				}
+				continue;
 			}
 			$new = self::set_status( $r['id'], self::OVERDUE );
 			if ( is_wp_error( $new ) ) {
@@ -272,7 +412,39 @@ class Resandpay_Reservations {
 				$wpdb->update( self::table(), array( 'reminded_at' => current_time( 'mysql' ) ), array( 'id' => (int) $new['id'] ) );
 			}
 		}
+		$count += self::remind_before_due( $now_ts );
 		return $count;
+	}
+
+	/**
+	 * Připomínka N dní před splatností (N v nastavení, 0 = vypnuto). Každá splatnost
+	 * (1. část, doplatek) se připomene nejvýš jednou; ne u rezervací vzniklých až
+	 * v okně připomínky, u hotovosti a u rezervací na poslední chvíli.
+	 *
+	 * @return int Počet odeslaných připomínek.
+	 */
+	public static function remind_before_due( $now_ts = null ) {
+		global $wpdb;
+		$days = (int) Resandpay_Settings::get( 'reminder_days' );
+		if ( $days <= 0 ) {
+			return 0;
+		}
+		$now_ts = $now_ts ?? time();
+		$rows   = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::table() . ' WHERE status IN (%s, %s) AND last_minute = 0', self::PENDING, self::PARTIAL ), ARRAY_A );
+		$sent   = 0;
+		foreach ( $rows as $r ) {
+			$due_local = self::due_now( $r );
+			$due       = Resandpay_Events::ts( $due_local );
+			$window    = $due - $days * DAY_IN_SECONDS;
+			if ( ! $due || $due <= $now_ts || $now_ts < $window || Resandpay_Events::ts( $r['created_at'] ) > $window || $r['reminded_due_at'] === $due_local ) {
+				continue;
+			}
+			if ( Resandpay_Mailer::send_template( $r['email'], 'reminder', $r ) ) {
+				$wpdb->update( self::table(), array( 'reminded_due_at' => $due_local ), array( 'id' => (int) $r['id'] ) );
+				++$sent;
+			}
+		}
+		return $sent;
 	}
 
 	public static function count_active( $event_id ) {
@@ -363,11 +535,12 @@ class Resandpay_Reservations {
 			return $r;
 		}
 		$allowed = array(
-			self::PENDING   => array( self::PAID, self::ONSITE, self::OVERDUE, self::EXPIRED, self::CANCELLED ),
-			self::ONSITE    => array( self::PAID, self::CANCELLED, self::PENDING ),
-			self::OVERDUE   => array( self::PAID, self::CANCELLED ),
+			self::PENDING   => array( self::PAID, self::PARTIAL, self::ONSITE, self::OVERDUE, self::EXPIRED, self::CANCELLED ),
+			self::ONSITE    => array( self::PAID, self::PARTIAL, self::CANCELLED, self::PENDING ),
+			self::PARTIAL   => array( self::PAID, self::OVERDUE, self::CANCELLED ),
+			self::OVERDUE   => array( self::PAID, self::PARTIAL, self::CANCELLED ),
 			self::PAID      => array( self::CANCELLED ),
-			self::EXPIRED   => array( self::PAID, self::CANCELLED ),
+			self::EXPIRED   => array( self::PAID, self::PARTIAL, self::OVERDUE, self::CANCELLED ),
 			self::CANCELLED => array(),
 		);
 		if ( ! in_array( $status, $allowed[ $old ] ?? array(), true ) ) {
@@ -404,6 +577,8 @@ class Resandpay_Reservations {
 				$update['paid_at']     = $now;
 				$update['paid_method'] = sanitize_key( $args['method'] ?? 'transfer_manual' );
 				$update['paid_by']     = get_current_user_id();
+				// Ruční „zaplaceno“ (převod / hotově) = uhrazen celý zbytek.
+				$update['amount_paid'] = max( (float) $r['amount_paid'], (float) $r['amount'] );
 			}
 			if ( self::CANCELLED === $status ) {
 				$update['cancelled_at']  = $now;

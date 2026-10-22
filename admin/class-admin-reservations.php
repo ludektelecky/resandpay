@@ -29,6 +29,12 @@ class Resandpay_Admin_Reservations {
 				$a['resend']      = __( 'Znovu poslat potvrzení', 'reserveandpay' );
 				$a['cancel']      = __( 'Zrušit', 'reserveandpay' );
 				break;
+			case Resandpay_Reservations::PARTIAL:
+				$a['paid']        = __( 'Doplaceno (převod)', 'reserveandpay' );
+				$a['paid_onsite'] = __( 'Doplaceno hotově', 'reserveandpay' );
+				$a['resend']      = __( 'Znovu poslat platební údaje', 'reserveandpay' );
+				$a['cancel']      = __( 'Zrušit', 'reserveandpay' );
+				break;
 			case Resandpay_Reservations::OVERDUE:
 				$a['paid']        = __( 'Zaplaceno (převod)', 'reserveandpay' );
 				$a['paid_onsite'] = __( 'Zaplaceno hotově', 'reserveandpay' );
@@ -79,12 +85,17 @@ class Resandpay_Admin_Reservations {
 				return Resandpay_Reservations::set_status( $id, Resandpay_Reservations::CANCELLED, array( 'notify' => true, 'reason' => $reason ) );
 			case 'cancel_silent':
 				return Resandpay_Reservations::set_status( $id, Resandpay_Reservations::CANCELLED, array( 'notify' => false, 'reason' => $reason ) );
+			case 'add_payment':
+				$amount = round( (float) str_replace( ',', '.', (string) ( $_REQUEST['amount'] ?? 0 ) ), 2 ); // phpcs:ignore WordPress.Security.NonceVerification -- ověřeno v handle_action.
+				$method = 'cash' === ( $_REQUEST['method'] ?? '' ) ? 'cash' : 'transfer_manual'; // phpcs:ignore WordPress.Security.NonceVerification
+				return Resandpay_Reservations::add_payment( $id, $amount, $method, array( 'allow_overbook' => true ) );
 			case 'resend':
 				$r = Resandpay_Reservations::get( $id );
 				if ( ! $r ) {
 					return new WP_Error( 'not_found', __( 'Rezervace nenalezena.', 'reserveandpay' ) );
 				}
-				if ( ! Resandpay_Mailer::send_template( $r['email'], Resandpay_Mailer::received_key( $r ), $r ) ) {
+				$tpl = (float) $r['amount_paid'] > 0 ? 'reminder' : Resandpay_Mailer::received_key( $r );
+				if ( ! Resandpay_Mailer::send_template( $r['email'], $tpl, $r ) ) {
 					/* translators: %s: chybová zpráva */
 					return new WP_Error( 'mail', sprintf( __( 'E-mail se nepodařilo odeslat: %s', 'reserveandpay' ), Resandpay_Mailer::$last_error ?: '—' ) );
 				}
@@ -186,7 +197,8 @@ class Resandpay_Admin_Reservations {
 			__( 'Telefon', 'reserveandpay' )           => esc_html( $r['phone'] ),
 			__( 'Firma', 'reserveandpay' )             => esc_html( trim( $r['company'] . ( $r['company_ic'] ? ', IČ ' . $r['company_ic'] : '' ) . ( $r['company_dic'] ? ', DIČ ' . $r['company_dic'] : '' ), ', ' ) ?: '—' ),
 			__( 'Poznámka', 'reserveandpay' )          => nl2br( esc_html( $r['note'] ?: '—' ) ),
-			__( 'Částka', 'reserveandpay' )            => esc_html( Resandpay_Events::format_price( $r['amount'], $r['currency'] ) ),
+			__( 'Částka', 'reserveandpay' )            => esc_html( Resandpay_Events::format_price( $r['amount'], $r['currency'] ) ) . ( Resandpay_Reservations::is_split( $r ) ? ' · ' . esc_html( sprintf( /* translators: 1: 1. část, 2: datum, 3: doplatek, 4: datum */ __( '1. část %1$s do %2$s · doplatek %3$s do %4$s', 'reserveandpay' ), Resandpay_Events::format_price( $r['part1_amount'], $r['currency'] ), $fmt( $r['part1_due_at'] ), Resandpay_Events::format_price( (float) $r['amount'] - (float) $r['part1_amount'], $r['currency'] ), $fmt( $r['due_at'] ) ) ) : '' ),
+			__( 'Uhrazeno', 'reserveandpay' )          => esc_html( sprintf( /* translators: 1: zaplaceno, 2: zbývá */ __( '%1$s · zbývá %2$s', 'reserveandpay' ), Resandpay_Events::format_price( $r['amount_paid'], $r['currency'] ), Resandpay_Events::format_price( Resandpay_Reservations::remaining( $r ), $r['currency'] ) ) ),
 			__( 'Variabilní symbol', 'reserveandpay' ) => '<code>' . esc_html( $r['vs'] ) . '</code>',
 			__( 'Číslo pokynu', 'reserveandpay' )      => esc_html( $r['proforma_no'] ) . ' · <a href="' . esc_url( Resandpay_PDF::url( $r ) ) . '" target="_blank">' . esc_html__( 'Platební pokyn (PDF)', 'reserveandpay' ) . '</a>',
 			__( 'Zvolená platba', 'reserveandpay' )    => esc_html( Resandpay_Reservations::pay_choice_labels()[ $r['pay_choice'] ?? 'transfer' ] ?? '' ),
@@ -212,6 +224,16 @@ class Resandpay_Admin_Reservations {
 				echo '<a class="button" href="' . esc_url( self::action_url( $k, $r['id'] ) ) . '">' . esc_html( $l ) . '</a> ';
 			}
 			echo '</p>';
+			if ( Resandpay_Reservations::CANCELLED !== $r['status'] && Resandpay_Reservations::PAID !== $r['status'] ) {
+				echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="rap-addpay-form">';
+				echo '<input type="hidden" name="action" value="resandpay_res_action"><input type="hidden" name="id" value="' . (int) $r['id'] . '"><input type="hidden" name="do" value="add_payment">';
+				wp_nonce_field( 'resandpay_res_add_payment_' . (int) $r['id'] );
+				echo '<label>' . esc_html__( 'Připsat platbu:', 'reserveandpay' ) . ' <input type="number" name="amount" min="1" step="1" class="small-text" value="' . esc_attr( (string) round( Resandpay_Reservations::amount_now( $r ) ) ) . '"> ' . esc_html( $r['currency'] ) . '</label> ';
+				echo '<select name="method"><option value="cash">' . esc_html__( 'hotově', 'reserveandpay' ) . '</option><option value="transfer_manual">' . esc_html__( 'převodem', 'reserveandpay' ) . '</option></select> ';
+				echo '<button class="button">' . esc_html__( 'Připsat a poslat e-mail', 'reserveandpay' ) . '</button>';
+				echo '<p class="description">' . esc_html__( 'Pro částečné platby (např. 1. část hotově). Při doplacení celé částky se rezervace označí jako zaplacená.', 'reserveandpay' ) . '</p>';
+				echo '</form>';
+			}
 			if ( isset( $actions['cancel'] ) ) {
 				echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="rap-cancel-form">';
 				echo '<input type="hidden" name="action" value="resandpay_res_action"><input type="hidden" name="id" value="' . (int) $r['id'] . '">';
@@ -327,7 +349,7 @@ class Resandpay_Admin_Reservations {
 		$out = fopen( 'php://output', 'w' );
 		fwrite( $out, "\xEF\xBB\xBF" );
 		$labels = Resandpay_Reservations::status_labels();
-		fputcsv( $out, array( 'Kód akce', 'Jméno', 'E-mail', 'Telefon', 'Firma', 'IČ', 'DIČ', 'Stav', 'VS', 'Částka', 'Měna', 'Zvolená platba', 'Splatnost', 'Zaplaceno', 'Způsob úhrady', 'Poznámka', 'Newsletter', 'Vytvořeno' ), ';' );
+		fputcsv( $out, array( 'Kód akce', 'Jméno', 'E-mail', 'Telefon', 'Firma', 'IČ', 'DIČ', 'Stav', 'VS', 'Částka', 'Uhrazeno', 'Zbývá', 'Měna', 'Zvolená platba', 'Splatnost', 'Zaplaceno', 'Způsob úhrady', 'Poznámka', 'Newsletter', 'Vytvořeno' ), ';' );
 		foreach ( $rows as $r ) {
 			fputcsv(
 				$out,
@@ -342,6 +364,8 @@ class Resandpay_Admin_Reservations {
 					$labels[ $r['status'] ] ?? $r['status'],
 					$r['vs'],
 					number_format( (float) $r['amount'], 2, ',', '' ),
+					number_format( (float) $r['amount_paid'], 2, ',', '' ),
+					number_format( Resandpay_Reservations::remaining( $r ), 2, ',', '' ),
 					$r['currency'],
 					Resandpay_Reservations::pay_choice_labels()[ $r['pay_choice'] ?? 'transfer' ] ?? '',
 					$r['due_at'],

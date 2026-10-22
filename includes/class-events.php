@@ -24,6 +24,33 @@ class Resandpay_Events {
 		return in_array( $m, self::DUE_MODES, true ) ? $m : 'booking';
 	}
 
+	/**
+	 * Výše 1. části platby (0 = platba najednou). Zaokrouhleno na celé koruny;
+	 * rozdělení nemá smysl, když 1. část pokryje celou cenu.
+	 */
+	public static function part1_amount( array $ev ) {
+		$price = (float) $ev['price'];
+		if ( $price <= 0 || empty( $ev['part1_mode'] ) || 'none' === $ev['part1_mode'] ) {
+			return 0.0;
+		}
+		$p1 = 'percent' === $ev['part1_mode'] ? $price * min( 100, max( 0, (float) $ev['part1_value'] ) ) / 100 : (float) $ev['part1_value'];
+		$p1 = round( $p1 );
+		return $p1 > 0 && $p1 < $price ? $p1 : 0.0;
+	}
+
+	/** Uložení nastavení platby ve dvou částech (akce i služba). */
+	public static function save_part1_meta( $post_id, array $in ) {
+		$mode = (string) ( $in['rap_part1_mode'] ?? '' );
+		$mode = in_array( $mode, array( 'fixed', 'percent' ), true ) ? $mode : 'none';
+		$val  = max( 0, (float) str_replace( ',', '.', (string) ( $in['rap_part1_value'] ?? 0 ) ) );
+		if ( 'percent' === $mode ) {
+			$val = min( 99, $val );
+		}
+		update_post_meta( $post_id, '_rap_part1_mode', $mode );
+		update_post_meta( $post_id, '_rap_part1_value', $val );
+		update_post_meta( $post_id, '_rap_part1_days', max( 0, min( 365, (int) ( $in['rap_part1_days'] ?? 7 ) ) ) );
+	}
+
 	/** Lidsky čitelné pravidlo splatnosti (pro administraci). */
 	public static function due_rule_text( $mode, $days, $offset ) {
 		$off = 0 === (int) $offset ? __( 'v den termínu', 'reserveandpay' ) : sprintf(
@@ -116,6 +143,9 @@ class Resandpay_Events {
 			'due_mode'      => in_array( $m( 'due_mode' ), self::DUE_MODES, true ) ? $m( 'due_mode' ) : self::default_due_mode(),
 			'due_offset'    => '' === $m( 'due_offset' ) ? (int) Resandpay_Settings::get( 'due_offset' ) : (int) $m( 'due_offset' ),
 			'cash'          => '' === $m( 'cash' ) ? (bool) Resandpay_Settings::get( 'cash_enabled' ) : (bool) (int) $m( 'cash' ),
+			'part1_mode'    => in_array( $m( 'part1_mode' ), array( 'fixed', 'percent' ), true ) ? $m( 'part1_mode' ) : 'none',
+			'part1_value'   => (float) $m( 'part1_value', 0 ),
+			'part1_days'    => (int) $m( 'part1_days', 7 ),
 			'close_hours'   => (float) $m( 'close_hours', 0 ),
 			'cancelled'     => (bool) $m( 'cancelled', 0 ),
 			'members_only'  => (bool) $m( 'members_only', 0 ),
@@ -320,6 +350,7 @@ class Resandpay_Events {
 		update_post_meta( $post_id, '_rap_due_offset', '' === $off ? '' : max( -365, min( 365, (int) $off ) ) );
 		$cash = (string) ( $in['rap_cash'] ?? '' );
 		update_post_meta( $post_id, '_rap_cash', in_array( $cash, array( '0', '1' ), true ) ? $cash : '' );
+		self::save_part1_meta( $post_id, $in );
 		update_post_meta( $post_id, '_rap_close_hours', max( 0, (float) str_replace( ',', '.', (string) ( $in['rap_close_hours'] ?? 0 ) ) ) );
 		update_post_meta( $post_id, '_rap_members_only', empty( $in['rap_members_only'] ) ? 0 : 1 );
 		update_post_meta( $post_id, '_rap_cancelled', empty( $in['rap_cancelled'] ) ? 0 : 1 );

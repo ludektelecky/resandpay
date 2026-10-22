@@ -49,7 +49,8 @@ class Resandpay_Admin_Settings {
 				'currency'          => array( __( 'Výchozí měna', 'reserveandpay' ), $text, __( 'Třípísmenný kód, např. CZK.', 'reserveandpay' ) ),
 				'due_mode'          => array( __( 'Výchozí pravidlo splatnosti', 'reserveandpay' ), 'select', __( 'U akce i služby lze pravidlo přepsat. Splatnost je vždy do konce dne.', 'reserveandpay' ), Resandpay_Events::due_mode_labels() ),
 				'due_days'          => array( __( 'Splatnost – dní od rezervace', 'reserveandpay' ), 'number' ),
-				'due_offset'        => array( __( 'Splatnost – dní vůči termínu', 'reserveandpay' ), 'int', __( '−1 = den před termínem, 0 = v den termínu, +1 = den po termínu. Nezaplacená rezervace se splatností v den termínu nebo po něm přejde po splatnosti do stavu „Po splatnosti“ a zákazník dostane připomínku.', 'reserveandpay' ) ),
+				'due_offset'        => array( __( 'Splatnost – dní vůči termínu', 'reserveandpay' ), 'int', __( '−1 = den před termínem, 0 = v den termínu, +1 = den po termínu. Nezaplacená rezervace se splatností před termínem po splatnosti expiruje (místo se uvolní, zákazník dostane e-mail); se splatností v den termínu nebo po něm přejde do stavu „Po splatnosti“ a zákazník dostane připomínku.', 'reserveandpay' ) ),
+				'reminder_days'     => array( __( 'Připomínka před splatností (dní)', 'reserveandpay' ), 'number', __( 'Kolik dní před splatností poslat zákazníkovi připomínku nezaplacené rezervace (i 1. části a doplatku). 0 = nepřipomínat.', 'reserveandpay' ) ),
 				'cash_enabled'      => array( __( 'Povolit platbu v hotovosti na místě', 'reserveandpay' ), 'checkbox', __( 'Doplňková možnost k platbě převodem (QR), která zůstává předvybraná. U akce i služby lze přepsat.', 'reserveandpay' ) ),
 				'last_minute_hours' => array( __( 'Hranice pro platbu na místě (hodin před začátkem)', 'reserveandpay' ), 'number', __( 'Rezervace vytvořená později než tato hranice dostane i možnost zaplatit na místě a po splatnosti neexpiruje. Výchozí 24 h.', 'reserveandpay' ) ),
 				'vs_prefix'         => array( __( 'Prefix variabilního symbolu', 'reserveandpay' ), $text, __( 'Číslice na začátku VS (např. rok 26). VS je vždy jedinečný a nikdy se nepoužije znovu.', 'reserveandpay' ) ),
@@ -90,6 +91,14 @@ class Resandpay_Admin_Settings {
 				'tpl_received_cash_body'    => array( __( 'Přijetí rezervace (hotovost) – text', 'reserveandpay' ), 'textarea', __( 'Posílá se, když zákazník zvolí platbu hotově; obsahuje i údaje pro platbu převodem předem.', 'reserveandpay' ) ),
 				'tpl_overdue_subject'   => array( __( 'Připomínka platby po splatnosti – předmět', 'reserveandpay' ), $text ),
 				'tpl_overdue_body'      => array( __( 'Připomínka platby po splatnosti – text', 'reserveandpay' ), 'textarea' ),
+				'tpl_reminder_subject'  => array( __( 'Připomínka před splatností – předmět', 'reserveandpay' ), $text ),
+				'tpl_reminder_body'     => array( __( 'Připomínka před splatností – text', 'reserveandpay' ), 'textarea' ),
+				'tpl_expired_subject'   => array( __( 'Vypršení rezervace – předmět', 'reserveandpay' ), $text ),
+				'tpl_expired_body'      => array( __( 'Vypršení rezervace – text', 'reserveandpay' ), 'textarea', __( 'Posílá se, když nezaplacená rezervace se splatností před termínem po splatnosti expiruje.', 'reserveandpay' ) ),
+				'tpl_part1_subject'     => array( __( '1. část platby přijata – předmět', 'reserveandpay' ), $text ),
+				'tpl_part1_body'        => array( __( '1. část platby přijata – text', 'reserveandpay' ), 'textarea', __( 'Posílá se po zaplacení 1. části u platby ve dvou částech; obsahuje QR kód na doplatek.', 'reserveandpay' ) ),
+				'tpl_partial_subject'   => array( __( 'Neúplná platba – předmět', 'reserveandpay' ), $text ),
+				'tpl_partial_body'      => array( __( 'Neúplná platba – text', 'reserveandpay' ), 'textarea', __( 'Posílá se, když přijde menší částka, než je potřeba; obsahuje QR kód na zbývající částku.', 'reserveandpay' ) ),
 				'tpl_lastminute_note'   => array( __( 'Doplněk pro rezervaci na poslední chvíli', 'reserveandpay' ), 'textarea', __( 'Vkládá se místo {last_minute_note}.', 'reserveandpay' ) ),
 				'tpl_paid_subject'      => array( __( 'Potvrzení platby – předmět', 'reserveandpay' ), $text ),
 				'tpl_paid_body'         => array( __( 'Potvrzení platby – text', 'reserveandpay' ), 'textarea' ),
@@ -177,7 +186,7 @@ class Resandpay_Admin_Settings {
 		foreach ( self::fields() as $title => $section ) {
 			echo '<h2' . ( __( 'Kontrola plateb', 'reserveandpay' ) === $title ? ' id="rap-payments"' : '' ) . '>' . esc_html( $title ) . '</h2>';
 			if ( __( 'E-maily', 'reserveandpay' ) === $title ) {
-				echo '<p class="description">' . esc_html__( 'Proměnné:', 'reserveandpay' ) . ' <code>{name} {email} {phone} {note} {event} {date} {location} {amount} {vs} {proforma} {due_date} {account} {iban} {company} {free} {reason} {last_minute_note} {pay_choice} {event_code}</code></p>';
+				echo '<p class="description">' . esc_html__( 'Proměnné:', 'reserveandpay' ) . ' <code>{name} {email} {phone} {note} {event} {date} {location} {amount} {vs} {proforma} {due_date} {account} {iban} {company} {free} {reason} {last_minute_note} {pay_choice} {event_code} {event_url} {total} {paid} {remaining} {last_payment} {amount_now} {due_now} {part1} {part1_due} {final_due} {split_note}</code></p>';
 			}
 			echo '<table class="form-table">';
 			foreach ( $section as $key => $def ) {

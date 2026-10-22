@@ -191,56 +191,79 @@ class Resandpay_PDF {
 
 			// Platební údaje.
 			$paid  = Resandpay_Reservations::PAID === $r['status'];
-			$spd   = $paid ? '' : Resandpay_QR::spd( $r );
+			$spd   = $paid || Resandpay_Reservations::amount_now( $r ) <= 0 ? '' : Resandpay_QR::spd( $r );
+			$spd2  = $paid ? '' : Resandpay_QR::spd_full( $r );
+			if ( $paid ) {
+				$items = array(
+					__( 'Částka', 'reserveandpay' )            => Resandpay_Events::format_price( $r['amount'], $r['currency'] ),
+					__( 'Variabilní symbol', 'reserveandpay' ) => $r['vs'],
+					__( 'Číslo účtu', 'reserveandpay' )        => $s['bank_account'],
+					__( 'IBAN', 'reserveandpay' )              => $s['iban'],
+					__( 'Zaplaceno', 'reserveandpay' )         => $r['paid_at'] ? wp_date( 'j. n. Y', Resandpay_Events::ts( $r['paid_at'] ) ) : '',
+				);
+			} else {
+				$items = Resandpay_Mailer::payment_rows( $r );
+			}
+			$items = array_filter( $items, fn( $v ) => '' !== (string) $v );
+			$rows_h = 13;
+			$i      = 0;
+			foreach ( $items as $k => $v ) {
+				$rows_h += $i < 2 ? 9 : ( mb_strlen( (string) $v ) > 44 ? 10 : 6.5 );
+				++$i;
+			}
+			$top_h = max( 62, $rows_h + 3 );
+			$box_h = $top_h + ( $spd2 ? 34 : 0 );
+			if ( $pdf->GetY() + $box_h > 270 ) {
+				$pdf->AddPage();
+			}
 			$box_y = $pdf->GetY();
-			$box_h = 62;
 			$pdf->SetFillColor( ...self::C_BOX );
 			$pdf->Rect( 18, $box_y, $w, $box_h, 'F' );
 			self::label( $pdf, 24, $box_y + 6, $paid ? __( 'Uhrazeno', 'reserveandpay' ) : __( 'Platební údaje', 'reserveandpay' ) );
-			$items = array(
-				__( 'Částka', 'reserveandpay' )            => Resandpay_Events::format_price( $r['amount'], $r['currency'] ),
-				__( 'Variabilní symbol', 'reserveandpay' ) => $r['vs'],
-				__( 'Číslo účtu', 'reserveandpay' )        => $s['bank_account'],
-				__( 'IBAN', 'reserveandpay' )              => $s['iban'],
-			);
-			if ( $paid ) {
-				$items[ __( 'Zaplaceno', 'reserveandpay' ) ] = $r['paid_at'] ? wp_date( 'j. n. Y', Resandpay_Events::ts( $r['paid_at'] ) ) : '';
-			} elseif ( 'cash' !== ( $r['pay_choice'] ?? '' ) && $r['due_at'] ) {
-				$items[ __( 'Splatnost', 'reserveandpay' ) ] = wp_date( 'j. n. Y', Resandpay_Events::ts( $r['due_at'] ) );
-			}
 			$y = $box_y + 13;
+			$i = 0;
 			foreach ( $items as $k => $v ) {
-				if ( '' === (string) $v ) {
-					continue;
-				}
-				$big = in_array( $k, array( __( 'Částka', 'reserveandpay' ), __( 'Variabilní symbol', 'reserveandpay' ) ), true );
+				$big = $i < 2;
+				++$i;
 				self::font( $pdf, 'worksans', 8.5, self::C_SOFT );
 				$pdf->SetXY( 24, $y + ( $big ? 1.2 : 0 ) );
 				$pdf->Cell( 34, 5, $k, 0, 0, 'L' );
+				if ( ! $big && mb_strlen( (string) $v ) > 44 ) {
+					self::font( $pdf, 'worksans', 8.5, self::C_INK );
+					$pdf->SetXY( 58, $y + 0.4 );
+					$pdf->MultiCell( 78, 4.2, (string) $v, 0, 'L' );
+					$y += 10;
+					continue;
+				}
 				self::font( $pdf, $big ? 'fraunces_sb' : 'worksans', $big ? 14 : 9.5, $big ? self::C_ACCENT : self::C_INK );
 				$pdf->SetXY( 58, $y );
-				$pdf->Cell( 66, $big ? 7 : 5, (string) $v, 0, 0, 'L' );
+				$pdf->Cell( 78, $big ? 7 : 5, (string) $v, 0, 0, 'L' );
 				$y += $big ? 9 : 6.5;
 			}
+			$qr_style = array(
+				'border'  => false,
+				'padding' => 0,
+				'fgcolor' => array( 0, 0, 0 ),
+				'bgcolor' => array( 255, 255, 255 ),
+			);
 			if ( $spd ) {
-				$pdf->write2DBarcode(
-					$spd,
-					'QRCODE,M',
-					140,
-					$box_y + 6,
-					46,
-					46,
-					array(
-						'border'  => false,
-						'padding' => 0,
-						'fgcolor' => array( 0, 0, 0 ),
-						'bgcolor' => array( 255, 255, 255 ),
-					),
-					'N'
-				);
+				$pdf->write2DBarcode( $spd, 'QRCODE,M', 140, $box_y + 6, 46, 46, $qr_style, 'N' );
 				self::font( $pdf, 'worksansb', 8, self::C_PLUM );
 				$pdf->SetXY( 140, $box_y + 53 );
-				$pdf->Cell( 46, 4, self::upper( __( 'QR platba', 'reserveandpay' ) ), 0, 0, 'C' );
+				$pdf->Cell( 46, 4, self::upper( Resandpay_Reservations::in_part1( $r ) ? __( 'QR platba – 1. část', 'reserveandpay' ) : __( 'QR platba', 'reserveandpay' ) ), 0, 0, 'C' );
+			}
+			if ( $spd2 ) {
+				$y2 = $box_y + $top_h;
+				$pdf->SetDrawColor( ...self::C_LINE );
+				$pdf->Line( 24, $y2, 18 + $w - 6, $y2 );
+				$pdf->write2DBarcode( $spd2, 'QRCODE,M', 24, $y2 + 4, 26, 26, $qr_style, 'N' );
+				self::font( $pdf, 'fraunces_sb', 11, self::C_INK );
+				$pdf->SetXY( 56, $y2 + 9 );
+				$pdf->Cell( 120, 6, __( 'Nebo zaplaťte vše najednou', 'reserveandpay' ), 0, 0, 'L' );
+				self::font( $pdf, 'worksans', 9, self::C_SOFT );
+				$pdf->SetXY( 56, $y2 + 16 );
+				/* translators: 1: celá částka, 2: splatnost */
+				$pdf->Cell( 120, 5, sprintf( __( '%1$s do %2$s – stejný variabilní symbol', 'reserveandpay' ), Resandpay_Events::format_price( $r['amount'], $r['currency'] ), wp_date( 'j. n. Y', Resandpay_Events::ts( $r['due_at'] ) ) ), 0, 0, 'L' );
 			}
 			$pdf->SetY( $box_y + $box_h + 7 );
 
@@ -273,6 +296,12 @@ class Resandpay_PDF {
 			$out[] = sprintf( __( 'Zvolili jste platbu hotově na místě (%s). Pokud Vám to vyhovuje, můžete pohodlně zaplatit předem převodem – stačí naskenovat QR kód v bankovní aplikaci.', 'reserveandpay' ), Resandpay_Events::format_price( $r['amount'], $r['currency'] ) );
 		} else {
 			$out[] = __( 'Platbu prosím proveďte převodem s uvedeným variabilním symbolem – podle něj ji přiřadíme k Vaší rezervaci. Nejrychlejší je naskenovat QR kód v bankovní aplikaci. Každé místo má vlastní variabilní symbol.', 'reserveandpay' );
+			if ( Resandpay_Reservations::is_split( $r ) && (float) $r['amount_paid'] <= 0 ) {
+				$out[] = __( 'Platba je rozdělená na 1. část a doplatek – obojí posílejte se stejným variabilním symbolem. Můžete také zaplatit vše najednou (druhý QR kód).', 'reserveandpay' );
+			} elseif ( (float) $r['amount_paid'] > 0 ) {
+				/* translators: 1: zaplaceno, 2: zbývá */
+				$out[] = sprintf( __( 'Evidujeme platbu %1$s. Zbývá zaplatit %2$s – se stejným variabilním symbolem.', 'reserveandpay' ), Resandpay_Events::format_price( $r['amount_paid'], $r['currency'] ), Resandpay_Events::format_price( Resandpay_Reservations::remaining( $r ), $r['currency'] ) );
+			}
 			if ( ! empty( $r['last_minute'] ) ) {
 				$out[] = __( 'Rezervujete krátce před začátkem. Pokud platba převodem nestihne dorazit, můžete zaplatit na místě.', 'reserveandpay' );
 			}

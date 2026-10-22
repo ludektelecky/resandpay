@@ -27,7 +27,11 @@ class Resandpay_QR {
 	 * SPD řetězec pro rezervaci. Prázdný, pokud není v nastavení IBAN nebo jde o jinou měnu než CZK
 	 * (SPD je tuzemský standard; EUR → EPC QR ve fázi 2).
 	 */
-	public static function spd( array $r ) {
+	/**
+	 * @param float|null  $amount Částka (výchozí: to, co je teď potřeba zaplatit – 1. část / zbytek).
+	 * @param string|null $due    Splatnost (výchozí: splatnost té částky).
+	 */
+	public static function spd( array $r, $amount = null, $due = null ) {
 		$s    = Resandpay_Settings::all();
 		$iban = strtoupper( preg_replace( '/\s+/', '', (string) $s['iban'] ) );
 		if ( ! preg_match( '/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/', $iban ) || 'CZK' !== strtoupper( (string) $r['currency'] ) ) {
@@ -37,11 +41,12 @@ class Resandpay_QR {
 			'SPD',
 			'1.0',
 			'ACC:' . $iban,
-			'AM:' . number_format( (float) $r['amount'], 2, '.', '' ),
+			'AM:' . number_format( (float) ( $amount ?? Resandpay_Reservations::amount_now( $r ) ), 2, '.', '' ),
 			'CC:CZK',
 		);
-		if ( ! empty( $r['due_at'] ) ) {
-			$parts[] = 'DT:' . wp_date( 'Ymd', Resandpay_Events::ts( $r['due_at'] ) );
+		$due = $due ?? Resandpay_Reservations::due_now( $r );
+		if ( ! empty( $due ) ) {
+			$parts[] = 'DT:' . wp_date( 'Ymd', Resandpay_Events::ts( $due ) );
 		}
 		$msg = self::message( $r );
 		if ( '' !== $msg ) {
@@ -105,6 +110,12 @@ class Resandpay_QR {
 
 	/** Má se u rezervace zobrazit QR platba? (nezaplacená, aktivní, s platným SPD) */
 	public static function applicable( array $r ) {
-		return in_array( $r['status'], array( Resandpay_Reservations::PENDING, Resandpay_Reservations::ONSITE, Resandpay_Reservations::OVERDUE ), true ) && '' !== self::spd( $r );
+		return in_array( $r['status'], array( Resandpay_Reservations::PENDING, Resandpay_Reservations::ONSITE, Resandpay_Reservations::PARTIAL, Resandpay_Reservations::OVERDUE, Resandpay_Reservations::EXPIRED ), true )
+			&& Resandpay_Reservations::amount_now( $r ) > 0 && '' !== self::spd( $r );
+	}
+
+	/** Druhý QR kód „zaplatit vše najednou“ – jen u rozdělené platby, dokud nic nepřišlo. */
+	public static function spd_full( array $r ) {
+		return Resandpay_Reservations::is_split( $r ) && (float) $r['amount_paid'] <= 0 ? self::spd( $r, (float) $r['amount'], $r['due_at'] ) : '';
 	}
 }

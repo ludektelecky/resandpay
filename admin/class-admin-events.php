@@ -96,7 +96,7 @@ class Resandpay_Admin_Events {
 				<p class="rap-row__cur"><label for="rap_currency"><?php esc_html_e( 'Měna', 'reserveandpay' ); ?></label>
 					<input type="text" id="rap_currency" name="rap_currency" value="<?php echo esc_attr( $ev['currency'] ); ?>" maxlength="3"></p>
 			</div>
-			<details class="rap-more" <?php echo ( '' !== $raw_due || '' !== get_post_meta( $post->ID, '_rap_due_mode', true ) || '' !== get_post_meta( $post->ID, '_rap_cash', true ) || $ev['close_hours'] || $ev['members_only'] || $ev['cancelled'] ) ? 'open' : ''; ?>>
+			<details class="rap-more" <?php echo ( '' !== $raw_due || '' !== get_post_meta( $post->ID, '_rap_due_mode', true ) || '' !== get_post_meta( $post->ID, '_rap_cash', true ) || in_array( get_post_meta( $post->ID, '_rap_part1_mode', true ), array( 'fixed', 'percent' ), true ) || $ev['close_hours'] || $ev['members_only'] || $ev['cancelled'] ) ? 'open' : ''; ?>>
 				<summary><?php esc_html_e( 'Další nastavení', 'reserveandpay' ); ?></summary>
 				<?php
 				self::payment_fields(
@@ -105,6 +105,9 @@ class Resandpay_Admin_Events {
 						'due_days'   => $raw_due,
 						'due_offset' => get_post_meta( $post->ID, '_rap_due_offset', true ),
 						'cash'       => get_post_meta( $post->ID, '_rap_cash', true ),
+						'part1_mode'  => get_post_meta( $post->ID, '_rap_part1_mode', true ),
+						'part1_value' => get_post_meta( $post->ID, '_rap_part1_value', true ),
+						'part1_days'  => get_post_meta( $post->ID, '_rap_part1_days', true ),
 					)
 				);
 				?>
@@ -182,6 +185,17 @@ class Resandpay_Admin_Events {
 					<option value="0" <?php selected( (string) $raw['cash'], '0' ); ?>><?php esc_html_e( 'Nepovolit', 'reserveandpay' ); ?></option>
 				</select>
 				<span class="rap-hint"><?php esc_html_e( 'Převod (QR) je vždy hlavní a předvybraná možnost.', 'reserveandpay' ); ?></span></p>
+			<p><label for="<?php echo esc_attr( $uid ); ?>-p1"><?php esc_html_e( 'Platba ve dvou částech', 'reserveandpay' ); ?></label>
+				<select id="<?php echo esc_attr( $uid ); ?>-p1" name="rap_part1_mode" data-rap-p1-mode>
+					<option value="none" <?php selected( (string) ( $raw['part1_mode'] ?? 'none' ), 'none' ); ?>><?php esc_html_e( 'Ne – platba najednou', 'reserveandpay' ); ?></option>
+					<option value="fixed" <?php selected( (string) ( $raw['part1_mode'] ?? '' ), 'fixed' ); ?>><?php esc_html_e( '1. část jako pevná částka', 'reserveandpay' ); ?></option>
+					<option value="percent" <?php selected( (string) ( $raw['part1_mode'] ?? '' ), 'percent' ); ?>><?php esc_html_e( '1. část jako procento z ceny', 'reserveandpay' ); ?></option>
+				</select></p>
+			<p data-rap-p1><label for="<?php echo esc_attr( $uid ); ?>-p1v"><?php esc_html_e( '1. část (Kč nebo %)', 'reserveandpay' ); ?></label>
+				<input type="number" min="0" step="any" id="<?php echo esc_attr( $uid ); ?>-p1v" name="rap_part1_value" value="<?php echo esc_attr( (string) ( $raw['part1_value'] ?? '' ) ); ?>" class="small-text"></p>
+			<p data-rap-p1><label for="<?php echo esc_attr( $uid ); ?>-p1d"><?php esc_html_e( '1. část splatná do (dní od rezervace)', 'reserveandpay' ); ?></label>
+				<input type="number" min="0" step="1" id="<?php echo esc_attr( $uid ); ?>-p1d" name="rap_part1_days" value="<?php echo esc_attr( (string) ( '' === (string) ( $raw['part1_days'] ?? '' ) ? 7 : $raw['part1_days'] ) ); ?>" class="small-text">
+				<span class="rap-hint"><?php esc_html_e( 'Doplatek se řídí splatností výše. Zaplacením 1. části je místo potvrzené; nezaplacený doplatek rezervaci neruší. Nepoužije se u hotovosti a rezervace na poslední chvíli.', 'reserveandpay' ); ?></span></p>
 		</div>
 		<script>
 		( function () {
@@ -192,6 +206,9 @@ class Resandpay_Admin_Events {
 				box.querySelector( '[data-rap-due="event"]' ).hidden = m === 'booking';
 			}
 			sel.addEventListener( 'change', upd ); upd();
+			var p1 = box.querySelector( '[data-rap-p1-mode]' );
+			function upd1() { box.querySelectorAll( '[data-rap-p1]' ).forEach( function ( el ) { el.hidden = p1.value === 'none'; } ); }
+			p1.addEventListener( 'change', upd1 ); upd1();
 		} )();
 		</script>
 		<?php

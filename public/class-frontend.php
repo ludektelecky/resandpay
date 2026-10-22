@@ -378,12 +378,24 @@ class Resandpay_Frontend {
 		if ( $s['bank_account'] ) {
 			echo '<dt>' . esc_html__( 'Číslo účtu', 'reserveandpay' ) . '</dt><dd>' . esc_html( $s['bank_account'] ) . '</dd>';
 		}
-		echo '<dt>' . esc_html__( 'Částka', 'reserveandpay' ) . '</dt><dd>' . esc_html( Resandpay_Events::format_price( $r['amount'], $r['currency'] ) ) . '</dd>';
+		$split = Resandpay_Reservations::is_split( $r ) && ! $cash;
+		echo '<dt>' . esc_html( $split ? __( '1. část platby', 'reserveandpay' ) : __( 'Částka', 'reserveandpay' ) ) . '</dt><dd>' . esc_html( Resandpay_Events::format_price( $split ? Resandpay_Reservations::amount_now( $r ) : $r['amount'], $r['currency'] ) ) . '</dd>';
 		echo '<dt>' . esc_html__( 'Variabilní symbol', 'reserveandpay' ) . '</dt><dd><strong>' . esc_html( $r['vs'] ) . '</strong></dd>';
 		if ( ! $cash ) {
-			echo '<dt>' . esc_html__( 'Splatnost', 'reserveandpay' ) . '</dt><dd>' . esc_html( wp_date( 'j. n. Y G:i', Resandpay_Events::ts( $r['due_at'] ) ) ) . '</dd>';
+			echo '<dt>' . esc_html__( 'Splatnost', 'reserveandpay' ) . '</dt><dd>' . esc_html( wp_date( 'j. n. Y G:i', Resandpay_Events::ts( Resandpay_Reservations::due_now( $r ) ) ) ) . '</dd>';
 		}
-		echo '</dl></div>';
+		if ( $split ) {
+			/* translators: 1: doplatek, 2: datum */
+			echo '<dt>' . esc_html__( 'Doplatek', 'reserveandpay' ) . '</dt><dd>' . esc_html( sprintf( __( '%1$s do %2$s', 'reserveandpay' ), Resandpay_Events::format_price( (float) $r['amount'] - (float) $r['part1_amount'], $r['currency'] ), wp_date( 'j. n. Y', Resandpay_Events::ts( $r['due_at'] ) ) ) ) . '</dd>';
+			echo '<dt>' . esc_html__( 'Celkem', 'reserveandpay' ) . '</dt><dd>' . esc_html( Resandpay_Events::format_price( $r['amount'], $r['currency'] ) ) . '</dd>';
+		}
+		echo '</dl>';
+		$spd2 = $split ? Resandpay_QR::spd_full( $r ) : '';
+		if ( $spd2 ) {
+			/* translators: 1: celá částka, 2: splatnost */
+			echo '<div class="rap-qr-full"><img src="' . esc_attr( Resandpay_QR::data_uri( $spd2, 4 ) ) . '" width="120" height="120" alt="' . esc_attr__( 'QR kód – vše najednou', 'reserveandpay' ) . '"><p><strong>' . esc_html__( 'Nebo zaplaťte vše najednou', 'reserveandpay' ) . '</strong><br>' . esc_html( sprintf( __( '%1$s do %2$s – stejný variabilní symbol', 'reserveandpay' ), Resandpay_Events::format_price( $r['amount'], $r['currency'] ), wp_date( 'j. n. Y', Resandpay_Events::ts( $r['due_at'] ) ) ) ) . '</p></div>';
+		}
+		echo '</div>';
 		echo '<p><a class="rap-button" href="' . esc_url( Resandpay_PDF::url( $r ) ) . '" target="_blank" rel="noopener">' . esc_html__( 'Stáhnout platební pokyn (PDF) →', 'reserveandpay' ) . '</a></p>';
 		if ( $cash ) {
 			echo '<p class="rap-small">' . esc_html__( 'Variabilní symbol mějte prosím u sebe i na místě – podle něj Vás rychle odbavíme.', 'reserveandpay' ) . '</p>';

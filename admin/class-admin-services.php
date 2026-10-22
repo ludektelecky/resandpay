@@ -133,6 +133,7 @@ class Resandpay_Admin_Services {
 		update_post_meta( $post_id, '_rap_due_offset', '' === $off ? '' : max( -365, min( 365, (int) $off ) ) );
 		$cash = (string) ( $in['rap_cash'] ?? '' );
 		update_post_meta( $post_id, '_rap_cash', in_array( $cash, array( '0', '1' ), true ) ? $cash : '' );
+		Resandpay_Events::save_part1_meta( $post_id, $in );
 	}
 
 	public static function columns( $cols ) {

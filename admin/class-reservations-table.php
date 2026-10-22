@@ -166,7 +166,14 @@ class Resandpay_Reservations_Table extends WP_List_Table {
 			case 'vs':
 				return '<code>' . esc_html( $item['vs'] ) . '</code>';
 			case 'amount':
-				return esc_html( Resandpay_Events::format_price( $item['amount'], $item['currency'] ) );
+				$out = esc_html( Resandpay_Events::format_price( $item['amount'], $item['currency'] ) );
+				if ( Resandpay_Reservations::PAID !== $item['status'] && (float) $item['amount_paid'] > 0 ) {
+					/* translators: %s: zaplaceno */
+					$out .= '<br><small>' . esc_html( sprintf( __( 'zaplaceno %s', 'reserveandpay' ), Resandpay_Events::format_price( $item['amount_paid'], $item['currency'] ) ) ) . '</small>';
+				} elseif ( Resandpay_Reservations::is_split( $item ) && Resandpay_Reservations::PAID !== $item['status'] ) {
+					$out .= '<br><small>' . esc_html__( 've 2 částech', 'reserveandpay' ) . '</small>';
+				}
+				return $out;
 			case 'due_at':
 			case 'created_at':
 				return $item[ $col ] ? esc_html( wp_date( 'j. n. Y G:i', Resandpay_Events::ts( $item[ $col ] ) ) ) : '—';

@@ -1,5 +1,20 @@
 # Vývojový deník ReserveAndPay
 
+## 0.6.0 – Etapa E6a (22. 10. 2026)
+
+- **Expirace**: nezaplacená rezervace se splatností před termínem po splatnosti přejde do stavu Expirováno, místo se uvolní a zákazník dostane e-mail „Rezervace vypršela“ s odkazem na akci (nová šablona)
+- **Pozdní platba** expirované rezervace: je-li místo volné, rezervace se obnoví jako zaplacená; je-li obsazeno, avízo jde k ruční kontrole
+- **Připomínka před splatností**: N dní předem (Nastavení → Rezervace a platby, výchozí 1 den, 0 = vypnuto), jednou pro každou splatnost (1. část i doplatek); nová šablona
+- **Platba ve dvou částech (1. část a doplatek)** u akce i služby (Další nastavení): 1. část jako pevná částka nebo procento, splatnost 1. části v dnech od rezervace; doplatek do splatnosti akce
+  - e-mail, platební pokyn (PDF) a potvrzovací stránka: rozpis, QR na 1. část a druhý QR „Nebo zaplaťte vše najednou“
+  - po zaplacení 1. části stav **Částečně zaplaceno** a e-mail „1. část platby přijata – místo potvrzeno“ s QR na doplatek
+  - nezaplacená 1. část → expirace; nezaplacený doplatek → Po splatnosti s připomínkou, rozhodne Hanka
+- **Menší platba** (i u platby najednou) se zapíše automaticky, rezervace je Částečně zaplaceno a zákazník dostane upozornění se zbývající částkou a QR kódem; přeplatek jde k ruční kontrole
+- Platby se sčítají (nové pole Zaplaceno); detail rezervace ukazuje Uhrazeno / zbývá a umožňuje **Připsat platbu** (částka, hotově / převodem); odbavení ukazuje částku, která zbývá vybrat; CSV export má sloupce Uhrazeno a Zbývá
+- Text připomínky po splatnosti uvádí zbývající částku; nové proměnné {total} {paid} {remaining} {amount_now} {due_now} {part1} {part1_due} {final_due} {last_payment} {event_url} {split_note}
+- Databáze verze 5 (u dříve zaplacených rezervací se při aktualizaci doplní zaplacená částka)
+- Testy: 288 kontrol + souběh; analytické zadání v2.6 (nová kap. 3.9, zodpovězena otázka 7)
+
 ## 0.5.4 (22. 10. 2026)
 
 - **Oprava: klíč CRONu se ve verzích 0.5.0–0.5.2 neukládal** – stránka Platby při každém otevření ukázala nový klíč, který web neznal; CRON úloha s dříve zkopírovanou adresou proto nefungovala. Od 0.5.3 se klíč ukládá a nemění – **adresu v CRON úloze je potřeba jednou zkopírovat znovu**

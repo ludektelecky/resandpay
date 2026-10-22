@@ -213,21 +213,16 @@ class Resandpay_Payments {
 		if ( is_wp_error( $check ) ) {
 			return self::store( $row + array( 'status' => self::REVIEW, 'reason' => $check->get_error_message(), 'reservation_id' => (int) $r['id'] ), null );
 		}
-		$paid = Resandpay_Reservations::set_status(
-			$r['id'],
-			Resandpay_Reservations::PAID,
-			array(
-				'method' => 'cron' === $trigger ? 'transfer_auto' : 'transfer_run',
-				'notify' => true,
-			)
-		);
+		$paid = Resandpay_Reservations::add_payment( $r['id'], $p['amount'], 'cron' === $trigger ? 'transfer_auto' : 'transfer_run' );
 		if ( is_wp_error( $paid ) ) {
 			return self::store( $row + array( 'status' => self::REVIEW, 'reason' => $paid->get_error_message(), 'reservation_id' => (int) $r['id'] ), null );
 		}
+		$left = Resandpay_Reservations::remaining( $paid );
 		return self::store(
 			$row + array(
 				'status'         => self::MATCHED,
-				'reason'         => '',
+				/* translators: 1: zaplaceno, 2: celkem */
+				'reason'         => $left > 0 ? sprintf( __( 'Částečná platba – zaplaceno %1$s z %2$s, zákazník upozorněn.', 'reserveandpay' ), Resandpay_Events::format_price( $paid['amount_paid'], $paid['currency'] ), Resandpay_Events::format_price( $paid['amount'], $paid['currency'] ) ) : '',
 				'reservation_id' => (int) $r['id'],
 				'matched_at'     => $now,
 			),
@@ -235,21 +230,25 @@ class Resandpay_Payments {
 		);
 	}
 
-	/** Lze platbu přiřadit k rezervaci? (částka, měna, stav) */
+	/**
+	 * Lze platbu přiřadit k rezervaci? (měna, stav, přeplatek). Menší částka je
+	 * v pořádku – zapíše se jako částečná platba (1. část / část platby).
+	 */
 	public static function check_match( array $r, array $payment ) {
 		if ( strtoupper( (string) $payment['currency'] ) !== strtoupper( (string) $r['currency'] ) ) {
 			/* translators: 1: měna platby, 2: měna rezervace */
 			return new WP_Error( 'currency', sprintf( __( 'Měna platby %1$s neodpovídá rezervaci (%2$s).', 'reserveandpay' ), $payment['currency'], $r['currency'] ) );
 		}
-		if ( abs( (float) $payment['amount'] - (float) $r['amount'] ) > 0.009 ) {
-			/* translators: 1: přijato, 2: očekáváno */
-			return new WP_Error( 'amount', sprintf( __( 'Částka %1$s neodpovídá rezervaci (%2$s).', 'reserveandpay' ), Resandpay_Events::format_price( $payment['amount'], $payment['currency'] ), Resandpay_Events::format_price( $r['amount'], $r['currency'] ) ) );
-		}
-		if ( Resandpay_Reservations::PAID === $r['status'] ) {
+		if ( Resandpay_Reservations::PAID === $r['status'] || Resandpay_Reservations::remaining( $r ) <= 0 ) {
 			return new WP_Error( 'paid', __( 'Rezervace už je zaplacená – možná duplicitní platba (vrátit?).', 'reserveandpay' ) );
 		}
 		if ( Resandpay_Reservations::CANCELLED === $r['status'] ) {
 			return new WP_Error( 'cancelled', __( 'Rezervace je zrušená – platbu je potřeba vyřešit ručně (vrátit?).', 'reserveandpay' ) );
+		}
+		$left = Resandpay_Reservations::remaining( $r );
+		if ( (float) $payment['amount'] > $left + 0.009 ) {
+			/* translators: 1: přijato, 2: zbývá */
+			return new WP_Error( 'overpay', sprintf( __( 'Přeplatek: přijato %1$s, zbývalo zaplatit %2$s.', 'reserveandpay' ), Resandpay_Events::format_price( $payment['amount'], $payment['currency'] ), Resandpay_Events::format_price( $left, $r['currency'] ) ) );
 		}
 		return true;
 	}
@@ -291,7 +290,9 @@ class Resandpay_Payments {
 		if ( preg_match_all( '/\d{6,10}/', (string) $p['message'], $m ) ) {
 			foreach ( $m[0] as $cand ) {
 				$r = Resandpay_Reservations::find_by_vs_input( $cand );
-				if ( $r && ! is_wp_error( self::check_match( $r, $p ) ) ) {
+				// Návrh jen při přesné shodě částky (1. část nebo celý zbytek) – VS ve zprávě je nejistý.
+				$fits = $r && ( abs( (float) $p['amount'] - Resandpay_Reservations::amount_now( $r ) ) < 0.01 || abs( (float) $p['amount'] - Resandpay_Reservations::remaining( $r ) ) < 0.01 );
+				if ( $fits && ! is_wp_error( self::check_match( $r, $p ) ) ) {
 					return $r;
 				}
 			}
@@ -319,12 +320,12 @@ class Resandpay_Payments {
 		if ( is_wp_error( $check ) && ( ! $force || in_array( $check->get_error_code(), array( 'paid', 'cancelled' ), true ) ) ) {
 			return $check;
 		}
-		$paid = Resandpay_Reservations::set_status(
+		$paid = Resandpay_Reservations::add_payment(
 			$r['id'],
-			Resandpay_Reservations::PAID,
+			(float) $p['amount'],
+			'transfer_manual',
 			array(
-				'method'         => 'transfer_manual',
-				'notify'         => true,
+				'force'          => $force,
 				'allow_overbook' => true,
 			)
 		);

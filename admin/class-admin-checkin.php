@@ -47,7 +47,7 @@ class Resandpay_Admin_Checkin {
 
 	/** Lze rezervaci na místě označit jako zaplacenou? */
 	public static function payable( array $r ) {
-		return in_array( $r['status'], array( Resandpay_Reservations::PENDING, Resandpay_Reservations::ONSITE, Resandpay_Reservations::OVERDUE, Resandpay_Reservations::EXPIRED ), true );
+		return in_array( $r['status'], array( Resandpay_Reservations::PENDING, Resandpay_Reservations::PARTIAL, Resandpay_Reservations::ONSITE, Resandpay_Reservations::OVERDUE, Resandpay_Reservations::EXPIRED ), true );
 	}
 
 	/**
@@ -157,7 +157,12 @@ class Resandpay_Admin_Checkin {
 		}
 		echo '</p><dl>';
 		echo '<dt>' . esc_html__( 'Akce', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev ? $ev['title'] . ' – ' . Resandpay_Events::format_date( $ev ) : '—' ) . ( $ev && $ev['code'] ? ' <code>' . esc_html( $ev['code'] ) . '</code>' : '' ) . '</dd>';
-		echo '<dt>' . esc_html__( 'Částka', 'reserveandpay' ) . '</dt><dd><strong>' . esc_html( Resandpay_Events::format_price( $r['amount'], $r['currency'] ) ) . '</strong></dd>';
+		if ( ! $paid && (float) $r['amount_paid'] > 0 ) {
+			/* translators: 1: zaplaceno, 2: celkem */
+			echo '<dt>' . esc_html__( 'Zbývá vybrat', 'reserveandpay' ) . '</dt><dd><strong>' . esc_html( Resandpay_Events::format_price( Resandpay_Reservations::remaining( $r ), $r['currency'] ) ) . '</strong> <span class="description">(' . esc_html( sprintf( __( 'zaplaceno %1$s z %2$s', 'reserveandpay' ), Resandpay_Events::format_price( $r['amount_paid'], $r['currency'] ), Resandpay_Events::format_price( $r['amount'], $r['currency'] ) ) ) . ')</span></dd>';
+		} else {
+			echo '<dt>' . esc_html__( 'Částka', 'reserveandpay' ) . '</dt><dd><strong>' . esc_html( Resandpay_Events::format_price( $r['amount'], $r['currency'] ) ) . '</strong></dd>';
+		}
 		echo '<dt>' . esc_html__( 'VS', 'reserveandpay' ) . '</dt><dd><code>' . esc_html( $r['vs'] ) . '</code></dd>';
 		echo '<dt>' . esc_html__( 'Zvolená platba', 'reserveandpay' ) . '</dt><dd>' . esc_html( Resandpay_Reservations::pay_choice_labels()[ $r['pay_choice'] ?? 'transfer' ] ?? '' ) . '</dd>';
 		echo '<dt>' . esc_html__( 'Kontakt', 'reserveandpay' ) . '</dt><dd>' . esc_html( trim( $r['email'] . ' · ' . $r['phone'], ' ·' ) ) . '</dd>';
@@ -196,7 +201,7 @@ class Resandpay_Admin_Checkin {
 			}
 			$any     = true;
 			$unpaid  = array_filter( $rows, fn( $r ) => Resandpay_Reservations::PAID !== $r['status'] );
-			$sum     = array_sum( array_map( fn( $r ) => (float) $r['amount'], $unpaid ) );
+			$sum     = array_sum( array_map( fn( $r ) => Resandpay_Reservations::CANCELLED === $r['status'] ? 0 : Resandpay_Reservations::remaining( $r ), $unpaid ) );
 			$cur     = $rows[0]['currency'];
 			echo '<h3>' . esc_html( $ev['title'] . ' – ' . Resandpay_Events::format_date( $ev ) ) . '</h3>';
 			/* translators: 1: počet nezaplacených, 2: částka */

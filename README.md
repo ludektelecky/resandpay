@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.5.4** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 2.5** (22. 10. 2026, vydáno k pluginu 0.5.1) – viz `docs/`.
+> **Aktuální verze pluginu: 0.6.0** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 2.6** (22. 10. 2026, vydáno k pluginu 0.6.0) – viz `docs/`.
 
 ### Název a označení
 
@@ -31,7 +31,7 @@ Technické identifikátory se nemění (slug a textdomain `reserveandpay`, před
 ### Rezervace
 - Rezervační formulář v detailu akce / po výběru volného termínu
 - Kalendář a výpis akcí na webu, pohled „Volné termíny“ u služeb
-- Stavy: Čeká na platbu · Zaplaceno · Platba na místě · Expirováno · Nejasná platba · Zrušeno
+- Stavy: Čeká na platbu · Částečně zaplaceno · Zaplaceno · Platba na místě · Po splatnosti · Expirováno · Zrušeno
 - Rezervace kdykoli až do začátku; při rezervaci na poslední chvíli lze platit na místě
 
 ### Platby
@@ -41,7 +41,9 @@ Technické identifikátory se nemění (slug a textdomain `reserveandpay`, před
   - režim **ručně** (tlačítko „Zkontrolovat platby nyní“) nebo **automaticky** v intervalu (standardně 60 min, konfigurovatelné)
   - spouštění serverovým CRONem hostingu Active24 (ne WP-Cron)
   - nespárované platby k ručnímu přiřazení, log běhů, upozornění při výpadku
-- Expirace neuhrazených rezervací a uvolnění místa
+- Expirace neuhrazených rezervací (e-mail zákazníkovi, uvolnění místa); pozdní platba rezervaci obnoví, je-li volno
+- Připomínka N dní před splatností (nastavitelné, 0 = vypnuto)
+- Platba ve dvou částech – **1. část** (pevná částka nebo procento, u akce i služby) a **doplatek**; QR na 1. část i „zaplatit vše najednou“; menší platba se zapíše a zákazník dostane upozornění se zbývající částkou
 
 ### Napojení
 - **Ultimate Member** – po zaplacení založení účtu / přidání role
@@ -116,9 +118,10 @@ resandpay/
 | E2 | Kalendář a výpis akcí na webu, styling dle grafického manuálu | ✅ 0.2.0 (testuje se) |
 | E3 | Služby a jejich termíny (1 i více míst), generátor termínů | ✅ 0.3.2 |
 | E3+ | Pravidla splatnosti, stav Po splatnosti, hotovost, odbavení na místě, kódy akcí/služeb/termínů | ✅ 0.3.3–0.3.4 (testuje se) |
-| E4 | QR platba (SPD), PDF platební pokyn, HTML e-maily, odbavení kamerou | ✅ 0.4.0 (testuje se) |
-| E5 | Automatická kontrola plateb z avíz Raiffeisenbank (IMAP, CRON), ruční přiřazení | ✅ 0.5.0 (testuje se) |
-| E6 | Expirace, platba na místě, Ultimate Member, MailerLite | ⏳ |
+| E4 | QR platba (SPD), PDF platební pokyn, HTML e-maily, odbavení kamerou | ✅ 0.4.0 |
+| E5 | Automatická kontrola plateb z avíz Raiffeisenbank (IMAP, CRON), ruční přiřazení | ✅ 0.5.0–0.5.4 |
+| E6a | Expirace, připomínky, platba ve dvou částech (1. část a doplatek) | ✅ 0.6.0 (testuje se) |
+| E6b | Ultimate Member, MailerLite | ⏳ po spuštění |
 | E7 | Testování dle akceptačních kritérií a nasazení | ⏳ |
 | F2 | Fáze 2 – zobecnění pluginu | ⏳ |
 
