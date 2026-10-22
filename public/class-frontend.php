@@ -17,6 +17,7 @@ class Resandpay_Frontend {
 		add_shortcode( 'reserveandpay_calendar', array( __CLASS__, 'shortcode_calendar' ) );
 		add_shortcode( 'reserveandpay_program', array( __CLASS__, 'shortcode_program' ) );
 		add_shortcode( 'reserveandpay_slots', array( __CLASS__, 'shortcode_slots' ) );
+		add_shortcode( 'reserveandpay_upcoming', array( __CLASS__, 'shortcode_upcoming' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'assets' ) );
 		add_action( 'template_redirect', array( __CLASS__, 'redirect_archives' ), 5 );
 	}
@@ -25,7 +26,12 @@ class Resandpay_Frontend {
 		wp_register_style( 'reserveandpay', RESANDPAY_URL . 'assets/css/frontend.css', array(), RESANDPAY_VERSION );
 		$post = get_post();
 		$has  = $post && is_singular() && preg_match( '/\[reserveandpay_/', (string) $post->post_content );
-		if ( $has || is_singular( Resandpay_Post_Types::EVENT ) || is_post_type_archive( Resandpay_Post_Types::EVENT ) ) {
+		$on   = $has || is_singular( Resandpay_Post_Types::EVENT ) || is_post_type_archive( Resandpay_Post_Types::EVENT );
+		/**
+		 * Načíst styly pluginu i na stránce, kde výpis vkládá šablona (např. úvodní stránka).
+		 * add_filter( 'resandpay_enqueue_assets', fn( $on ) => $on || is_front_page() );
+		 */
+		if ( apply_filters( 'resandpay_enqueue_assets', $on ) ) {
 			wp_enqueue_style( 'reserveandpay' );
 		}
 	}
@@ -167,6 +173,22 @@ class Resandpay_Frontend {
 		);
 		wp_enqueue_style( 'reserveandpay' );
 		return Resandpay_Views::render_slots( $a );
+	}
+
+	/** [reserveandpay_upcoming limit="3" first_service="yes" category="" more="yes"] – krátký přehled (úvodní stránka). */
+	public static function shortcode_upcoming( $atts ) {
+		$a = shortcode_atts(
+			array(
+				'limit'         => 3,
+				'category'      => '',
+				'first_service' => 'yes',
+				'more'          => 'yes',
+			),
+			$atts,
+			'reserveandpay_upcoming'
+		);
+		wp_enqueue_style( 'reserveandpay' );
+		return Resandpay_Views::render_upcoming( $a );
 	}
 
 	public static function shortcode_program( $atts ) {

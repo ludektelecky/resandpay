@@ -225,6 +225,89 @@ class Resandpay_Views {
 		return '<div class="rap-list">' . implode( '', array_column( $rows, 1 ) ) . '</div>';
 	}
 
+	/**
+	 * Krátký přehled nadcházejících položek (např. úvodní stránka webu):
+	 * na prvním místě vždy nejbližší služba s volným termínem, za ní nadcházející
+	 * akce podle data začátku; celkem nejvýše `limit` položek.
+	 * Zrušené akce a akce, které už začaly, se vynechají. Individuální termíny služeb
+	 * se jednotlivě nevypisují (služba je jedna souhrnná položka).
+	 *
+	 * @param array $args limit (výchozí 3), category (slug, víc oddělit čárkou), first_service (bool).
+	 * @return array Položky: [ 'kind' => 'service'|'event', 'start' => 'Y-m-d H:i:s', 'service' => souhrn služby | 'event' => akce ].
+	 */
+	public static function upcoming_feed( array $args = array() ) {
+		$a     = wp_parse_args(
+			$args,
+			array(
+				'limit'         => 3,
+				'category'      => '',
+				'first_service' => true,
+			)
+		);
+		$limit = max( 1, min( 20, (int) $a['limit'] ) );
+		$items = array();
+
+		if ( $a['first_service'] ) {
+			$services = self::service_summaries( $a['category'] );
+			usort( $services, fn( $x, $y ) => strcmp( $x['next']['start'], $y['next']['start'] ) );
+			if ( $services ) {
+				$items[] = array(
+					'kind'    => 'service',
+					'start'   => $services[0]['next']['start'],
+					'service' => $services[0],
+				);
+			}
+		}
+
+		$now    = wp_date( 'Y-m-d H:i:s' );
+		$events = Resandpay_Events::upcoming(
+			array(
+				'limit'    => $limit + 20, // rezerva na vynechané (zrušené / probíhající) akce
+				'category' => $a['category'],
+			)
+		);
+		foreach ( $events as $ev ) {
+			if ( count( $items ) >= $limit ) {
+				break;
+			}
+			if ( $ev['cancelled'] || $ev['start'] <= $now ) {
+				continue;
+			}
+			$items[] = array(
+				'kind'  => 'event',
+				'start' => $ev['start'],
+				'event' => $ev,
+			);
+		}
+		return apply_filters( 'resandpay_upcoming_feed', $items, $a );
+	}
+
+	/** Krátký přehled nadcházejících položek (shortcode [reserveandpay_upcoming]). */
+	public static function render_upcoming( array $args ) {
+		$items = self::upcoming_feed(
+			array(
+				'limit'         => $args['limit'],
+				'category'      => $args['category'],
+				'first_service' => 'no' !== $args['first_service'],
+			)
+		);
+		$out = '<div class="rap-upcoming">';
+		if ( ! $items ) {
+			$out .= '<p class="rap-empty">' . esc_html__( 'Momentálně nejsou vypsané žádné termíny. Sledujte novinky – brzy přibudou.', 'reserveandpay' ) . '</p>';
+		} else {
+			$out .= '<div class="rap-list">';
+			foreach ( $items as $it ) {
+				$out .= 'service' === $it['kind'] ? self::render_service_item( $it['service'] ) : self::render_item( $it['event'] );
+			}
+			$out .= '</div>';
+		}
+		$page = (int) Resandpay_Settings::get( 'events_page' );
+		if ( 'no' !== $args['more'] && $page && 'publish' === get_post_status( $page ) ) {
+			$out .= '<p class="rap-upcoming__more"><a class="rap-button rap-button--ghost" href="' . esc_url( get_permalink( $page ) ) . '">' . esc_html__( 'Zobrazit všechny termíny →', 'reserveandpay' ) . '</a></p>';
+		}
+		return $out . '</div>';
+	}
+
 	/** Akce, které zasahují do daného období. */
 	public static function events_between( DateTimeImmutable $from, DateTimeImmutable $to, $category = '', $include_slots = false ) {
 		$query = array(

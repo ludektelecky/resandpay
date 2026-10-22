@@ -18,7 +18,7 @@
 	--rap-max: 1120px;
 }
 
-.rap-details, .rap-booking, .rap-program-view, .rap-calendar { font-family: var(--rap-font); color: var(--rap-ink); }
+.rap-details, .rap-booking, .rap-program-view, .rap-calendar, .rap-upcoming { font-family: var(--rap-font); color: var(--rap-ink); }
 /* Přehled akcí smí být širší než úzký textový sloupec šablony (až --rap-max), bez vodorovného posuvníku. */
 .rap-program-view { --rap-w: max(100%, min(var(--rap-max), calc(100vw - 80px))); width: var(--rap-w); max-width: none; margin-left: calc((100% - var(--rap-w)) / 2); margin-right: calc((100% - var(--rap-w)) / 2); }
 
@@ -61,6 +61,8 @@
 .rap-item--full .rap-item__title a, .rap-item--cancelled .rap-item__title a { color: var(--rap-ink-soft) !important; }
 .rap-empty { color: var(--rap-ink-soft); padding: 1.5rem 0; }
 .rap-calendar__services { margin: 0 0 1.5rem; }
+/* Krátký přehled [reserveandpay_upcoming] – úvodní stránka */
+.rap-upcoming__more { margin: 1.5rem 0 0; text-align: right; }
 
 /* Kalendář */
 .rap-calendar__head { display: flex; align-items: center; justify-content: space-between; margin: 0 0 1rem; }

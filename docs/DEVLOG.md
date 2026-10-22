@@ -1,5 +1,15 @@
 # Vývojový deník ReserveAndPay
 
+## 0.6.2 (22. 10. 2026)
+
+- Nový shortcode **`[reserveandpay_upcoming]`** – krátký přehled nadcházejících pro úvodní stránku webu: na **prvním místě vždy nejbližší služba** s volným termínem (souhrnná karta jako v přehledu akcí), za ní **nadcházející akce podle data**; celkem **nejvýše 3 položky** (parametr `limit`)
+  - zrušené akce a akce, které už začaly (např. probíhající vícedenní), se vynechají; obsazené akce zůstanou s označením „Obsazeno“
+  - parametry `category`, `first_service="no"` (jen akce), `more="no"` (bez odkazu „Zobrazit všechny termíny →“ na stránku s přehledem akcí)
+- Data přehledu pro šablony: `Resandpay_Views::upcoming_feed()`, filtr `resandpay_upcoming_feed`
+- Filtr **`resandpay_enqueue_assets`** – šablona zapne styly pluginu i na stránce bez shortcodu v obsahu (úvodní stránka vykreslovaná šablonou)
+- Úvodní stránka slehkouhlavou.cz: sekce „Nadcházející události“ v child theme už není ručně psaná, vypisuje ji plugin
+- Testy: 294 kontrol + souběh; analytické zadání v2.8 (kap. 4)
+
 ## 0.6.1 (22. 10. 2026)
 
 - **Pozdní rezervace**: rezervuje-li zákazník až po splatnosti podle pravidla (např. splatnost 30 dní před akcí a rezervace 14 dní předem), platí **celou částku do N dní od rezervace** (N = „1. část splatná do“, výchozí 7), nejpozději den před akcí. Platba se nedělí, rezervace po splatnosti normálně expiruje a nepřechází do „Platba na místě“ (dříve se brala jako rezervace na poslední chvíli – splatnost až začátek akce, platba na místě i při vypnuté hotovosti)

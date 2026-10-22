@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.6.1** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 2.7** (22. 10. 2026, vydáno k pluginu 0.6.1) – viz `docs/`.
+> **Aktuální verze pluginu: 0.6.2** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 2.8** (22. 10. 2026, vydáno k pluginu 0.6.2) – viz `docs/`.
 
 ### Název a označení
 
@@ -122,6 +122,7 @@ resandpay/
 | E4 | QR platba (SPD), PDF platební pokyn, HTML e-maily, odbavení kamerou | ✅ 0.4.0 |
 | E5 | Automatická kontrola plateb z avíz Raiffeisenbank (IMAP, CRON), ruční přiřazení | ✅ 0.5.0–0.5.4 |
 | E6a | Expirace, připomínky, platba ve dvou částech (1. část a doplatek), pozdní rezervace | ✅ 0.6.0–0.6.1 (testuje se) |
+| – | Krátký přehled nadcházejících na úvodní stránce (`[reserveandpay_upcoming]`) | ✅ 0.6.2 |
 | E6b | Ultimate Member, MailerLite | ⏳ po spuštění |
 | E7 | Testování dle akceptačních kritérií a nasazení | ⏳ |
 | F2 | Fáze 2 – zobecnění pluginu | ⏳ |
@@ -157,7 +158,10 @@ Po etapách E1 a E2 lze rezervace spustit s ručním potvrzováním plateb.
 | `[reserveandpay_events limit="50" category="slug" filter="yes"]` | Seznam nadcházejících akcí (bez individuálních termínů) |
 | `[reserveandpay_calendar category="slug"]` | Samotný měsíční kalendář |
 | `[reserveandpay_slots service="bukalni-masaz" days="21"]` | Volné termíny služby (např. masáže) po dnech |
+| `[reserveandpay_upcoming limit="3" first_service="yes" category="" more="yes"]` | Krátký přehled pro úvodní stránku: na 1. místě nejbližší služba s volným termínem, pak nadcházející akce podle data, celkem max. `limit`; zrušené a probíhající akce vynechá; `more` = odkaz „Zobrazit všechny termíny →“ |
 | `[reserveandpay_booking id="123"]` | Detail a rezervační formulář akce (na stránce akce se vkládá automaticky) |
+
+Šablona webu může výpis vložit i bez shortcodu v obsahu stránky (`do_shortcode()` nebo data z `Resandpay_Views::upcoming_feed()`); styly pluginu na takové stránce zapne filtr `resandpay_enqueue_assets`, např. `add_filter( 'resandpay_enqueue_assets', fn( $on ) => $on || is_front_page() );`.
 
 ## Testy
 
