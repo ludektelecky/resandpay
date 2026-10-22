@@ -10,6 +10,7 @@ class Resandpay_Admin_Tools {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ), 21 );
 		add_action( 'admin_post_resandpay_cleanup', array( __CLASS__, 'handle_cleanup' ) );
 		add_action( 'admin_post_resandpay_test_mail', array( __CLASS__, 'handle_test_mail' ) );
+		add_action( 'admin_post_resandpay_reset_templates', array( __CLASS__, 'handle_reset_templates' ) );
 	}
 
 	public static function menu() {
@@ -21,6 +22,12 @@ class Resandpay_Admin_Tools {
 		echo '<div class="wrap"><h1>' . esc_html__( 'Nástroje ReserveAndPay', 'reserveandpay' ) . '</h1>';
 		Resandpay_Admin::render_flash();
 		self::render_mail_section();
+		echo '<h2>' . esc_html__( 'Texty e-mailů', 'reserveandpay' ) . '</h2>';
+		echo '<p>' . esc_html__( 'Obnoví výchozí texty všech e-mailů (předměty i obsah). Platební údaje, QR kód a odkaz na platební pokyn se v e-mailech zobrazují automaticky pod textem.', 'reserveandpay' ) . '</p>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="resandpay_reset_templates">';
+		wp_nonce_field( 'resandpay_reset_templates' );
+		submit_button( __( 'Obnovit výchozí texty e-mailů', 'reserveandpay' ), 'secondary', 'submit', true, array( 'onclick' => "return confirm('" . esc_js( __( 'Přepsat texty e-mailů výchozími?', 'reserveandpay' ) ) . "')" ) );
+		echo '</form>';
 		echo '<h2>' . esc_html__( 'Úklid testovacích dat', 'reserveandpay' ) . '</h2>';
 		/* translators: %d: počet */
 		echo '<p>' . esc_html( sprintf( __( 'Smaže všechny rezervace (%d) a vynuluje řadu variabilních symbolů. Akce a lokace zůstanou zachovány.', 'reserveandpay' ), array_sum( $counts ) ) ) . '</p>';
@@ -86,6 +93,17 @@ class Resandpay_Admin_Tools {
 				Resandpay_Admin::flash( sprintf( __( 'WordPress e-mail předal k odeslání na %s. Pokud nedorazí ani do spamu, hosting ho zahazuje – bude potřeba SMTP.', 'reserveandpay' ), $to ) );
 			}
 		}
+		wp_safe_redirect( admin_url( 'admin.php?page=reserveandpay-tools' ) );
+		exit;
+	}
+
+	public static function handle_reset_templates() {
+		if ( ! current_user_can( resandpay_cap_settings() ) ) {
+			wp_die( esc_html__( 'Nemáte oprávnění.', 'reserveandpay' ) );
+		}
+		check_admin_referer( 'resandpay_reset_templates' );
+		Resandpay_Settings::reset_templates();
+		Resandpay_Admin::flash( __( 'Texty e-mailů byly obnoveny na výchozí.', 'reserveandpay' ) );
 		wp_safe_redirect( admin_url( 'admin.php?page=reserveandpay-tools' ) );
 		exit;
 	}

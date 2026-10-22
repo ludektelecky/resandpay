@@ -38,6 +38,13 @@ class Resandpay_Admin_Settings {
 				'admin_email'     => array( __( 'E-mail pro upozornění na nové rezervace', 'reserveandpay' ), 'email' ),
 				'notify_admin'    => array( __( 'Posílat upozornění na nové rezervace', 'reserveandpay' ), 'checkbox' ),
 			),
+			__( 'Platební pokyn a QR platba', 'reserveandpay' ) => array(
+				'brand_name'        => array( __( 'Značka v hlavičce', 'reserveandpay' ), $text, __( 'Za jménem provozovatele, např. „INSYSTEMS CZ s.r.o. · S lehkou hlavou…“. Logo se bere z Vzhled → Přizpůsobit → Identita webu.', 'reserveandpay' ) ),
+				'contact_web'       => array( __( 'Web v kontaktech', 'reserveandpay' ), $text, __( 'Např. slehkouhlavou.cz – v hlavičce a patičce platebního pokynu.', 'reserveandpay' ) ),
+				'contact_email'     => array( __( 'E-mail v kontaktech', 'reserveandpay' ), 'email' ),
+				'qr_recipient_name' => array( __( 'Jméno příjemce v QR platbě', 'reserveandpay' ), $text, __( 'Pole RN (max. 35 znaků, bez diakritiky). Prázdné = jméno provozovatele.', 'reserveandpay' ) ),
+				'pdf_footer'        => array( __( 'Patička platebního pokynu', 'reserveandpay' ), $text ),
+			),
 			__( 'Rezervace a platby', 'reserveandpay' ) => array(
 				'currency'          => array( __( 'Výchozí měna', 'reserveandpay' ), $text, __( 'Třípísmenný kód, např. CZK.', 'reserveandpay' ) ),
 				'due_mode'          => array( __( 'Výchozí pravidlo splatnosti', 'reserveandpay' ), 'select', __( 'U akce i služby lze pravidlo přepsat. Splatnost je vždy do konce dne.', 'reserveandpay' ), Resandpay_Events::due_mode_labels() ),

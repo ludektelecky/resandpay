@@ -13,9 +13,34 @@ class Resandpay_Mailer {
 	/** @var string Poslední chyba odesílání (pro zobrazení v administraci). */
 	public static $last_error = '';
 
+	/** @var array|null Části právě odesílaného e-mailu (textová verze, QR obrázek, PDF) pro phpmailer_init. */
+	private static $parts = null;
+
+	/** @var array Části posledního sestaveného e-mailu (diagnostika a testy). */
+	public static $last_parts = array();
+
+	/** Šablony, ke kterým patří platební údaje, QR kód a PDF platebního pokynu. */
+	const PAYMENT_KEYS = array( 'received', 'received_cash', 'overdue' );
+
 	public static function init() {
 		add_filter( 'wp_mail', array( __CLASS__, 'redirect_in_test_mode' ), 99 );
 		add_action( 'wp_mail_failed', array( __CLASS__, 'log_failure' ) );
+		add_action( 'phpmailer_init', array( __CLASS__, 'phpmailer_parts' ) );
+	}
+
+	/** Vloží do e-mailu textovou verzi, QR kód (inline, cid:rap-qr) a PDF přílohu. */
+	public static function phpmailer_parts( $phpmailer ) {
+		if ( ! self::$sending || ! self::$parts ) {
+			return;
+		}
+		$p                  = self::$parts;
+		$phpmailer->AltBody = $p['text'];
+		if ( ! empty( $p['qr_png'] ) ) {
+			$phpmailer->addStringEmbeddedImage( $p['qr_png'], 'rap-qr', 'qr-platba.png', 'base64', 'image/png' );
+		}
+		if ( ! empty( $p['pdf'] ) ) {
+			$phpmailer->addStringAttachment( $p['pdf'], $p['pdf_name'], 'base64', 'application/pdf' );
+		}
 	}
 
 	/** Zaznamená chybu odesílání (posledních 20) – zobrazuje se v Nástrojích. */
@@ -74,18 +99,139 @@ class Resandpay_Mailer {
 		return strtr( (string) $template, $ph );
 	}
 
-	public static function send_template( $to, $key, array $r ) {
+	/**
+	 * Sestaví e-mail: předmět, HTML (v barvách webu), textovou verzi, QR kód a PDF.
+	 * U šablon s platbou (PAYMENT_KEYS) přidá platební údaje, QR kód a platební pokyn.
+	 */
+	public static function build( $key, array $r ) {
 		$s       = Resandpay_Settings::all();
 		$subject = self::render( $s[ 'tpl_' . $key . '_subject' ] ?? '', $r );
 		$body    = self::render( $s[ 'tpl_' . $key . '_body' ] ?? '', $r );
-		$headers = array( 'Content-Type: text/plain; charset=UTF-8' );
+		$parts   = array(
+			'subject'  => $subject,
+			'text'     => $body,
+			'qr_png'   => '',
+			'pdf'      => '',
+			'pdf_name' => '',
+		);
+		$payment = in_array( $key, self::PAYMENT_KEYS, true ) && Resandpay_Reservations::PAID !== $r['status'];
+		$box     = '';
+		if ( $payment ) {
+			$rows  = self::payment_rows( $r );
+			$spd   = Resandpay_QR::applicable( $r ) ? Resandpay_QR::spd( $r ) : '';
+			$png   = $spd ? Resandpay_QR::png( $spd, 6 ) : '';
+			$pdf   = Resandpay_PDF::render( $r );
+			$url   = Resandpay_PDF::url( $r );
+			$parts = array_merge(
+				$parts,
+				array(
+					'qr_png'   => $png,
+					'pdf'      => $pdf,
+					'pdf_name' => Resandpay_PDF::filename( $r ),
+					'spd'      => $spd,
+				)
+			);
+			$text = "\n\n" . __( 'Platební údaje', 'reserveandpay' ) . "\n";
+			foreach ( $rows as $k => $v ) {
+				$text .= $k . ': ' . $v . "\n";
+			}
+			$parts['text'] .= $text . __( 'Platební pokyn (PDF):', 'reserveandpay' ) . ' ' . $url . "\n";
+			$box            = self::html_payment_box( $rows, $png ? 'cid:rap-qr' : '', $url, 'cash' === ( $r['pay_choice'] ?? '' ) );
+		}
+		$parts['html']    = self::html_layout( $subject, self::text_to_html( $body ), $box );
+		self::$last_parts = $parts;
+		return $parts;
+	}
+
+	/** Řádky platebních údajů (stejné v HTML i textové verzi). */
+	public static function payment_rows( array $r ) {
+		$s    = Resandpay_Settings::all();
+		$rows = array(
+			__( 'Částka', 'reserveandpay' )            => Resandpay_Events::format_price( $r['amount'], $r['currency'] ),
+			__( 'Variabilní symbol', 'reserveandpay' ) => $r['vs'],
+			__( 'Číslo účtu', 'reserveandpay' )        => $s['bank_account'],
+			__( 'IBAN', 'reserveandpay' )              => $s['iban'],
+		);
+		if ( 'cash' !== ( $r['pay_choice'] ?? '' ) && $r['due_at'] ) {
+			$rows[ __( 'Splatnost', 'reserveandpay' ) ] = wp_date( 'j. n. Y', Resandpay_Events::ts( $r['due_at'] ) );
+		}
+		return array_filter( $rows, fn( $v ) => '' !== (string) $v );
+	}
+
+	public static function text_to_html( $text ) {
+		$paras = preg_split( '/\n\s*\n/', trim( (string) $text ) );
+		$out   = '';
+		foreach ( $paras as $p ) {
+			$out .= '<p style="margin:0 0 14px;">' . nl2br( esc_html( trim( $p ) ) ) . '</p>';
+		}
+		return make_clickable( $out );
+	}
+
+	private static function html_payment_box( array $rows, $qr_src, $pdf_url, $cash ) {
+		$c   = self::colors();
+		$out = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:' . $c['box'] . ';margin:8px 0 18px;"><tr><td style="padding:20px 22px;">';
+		$out .= '<p style="margin:0 0 10px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:bold;color:' . $c['plum'] . ';">' . esc_html( $cash ? __( 'Platba předem převodem (nepovinné)', 'reserveandpay' ) : __( 'Platební údaje', 'reserveandpay' ) ) . '</p>';
+		$out .= '<table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td valign="top" style="padding-right:12px;"><table role="presentation" cellpadding="0" cellspacing="0">';
+		$i = 0;
+		foreach ( $rows as $k => $v ) {
+			$big  = $i < 2;
+			$out .= '<tr><td style="padding:3px 14px 3px 0;font-size:13px;color:' . $c['soft'] . ';white-space:nowrap;">' . esc_html( $k ) . '</td><td style="padding:3px 0;' . ( $big ? 'font-family:Georgia,\'Times New Roman\',serif;font-size:20px;font-weight:bold;color:' . $c['accent'] . ';' : 'font-size:14px;color:' . $c['ink'] . ';' ) . '">' . esc_html( $v ) . '</td></tr>';
+			++$i;
+		}
+		$out .= '</table></td>';
+		if ( $qr_src ) {
+			$out .= '<td valign="top" align="center" width="170" style="width:170px;"><img src="' . esc_attr( $qr_src ) . '" width="160" height="160" alt="' . esc_attr__( 'QR platba', 'reserveandpay' ) . '" style="display:block;width:160px;height:160px;border:0;background:#fff;"><p style="margin:6px 0 0;font-size:11px;color:' . $c['soft'] . ';">' . esc_html__( 'Naskenujte v bankovní aplikaci', 'reserveandpay' ) . '</p></td>';
+		}
+		$out .= '</tr></table>';
+		$out .= '<p style="margin:16px 0 0;"><a href="' . esc_url( $pdf_url ) . '" style="display:inline-block;background:' . $c['accent'] . ';color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:2px;font-weight:bold;font-size:14px;">' . esc_html__( 'Stáhnout platební pokyn (PDF) →', 'reserveandpay' ) . '</a></p>';
+		return $out . '</td></tr></table>';
+	}
+
+	private static function colors() {
+		return apply_filters(
+			'resandpay_mail_colors',
+			array(
+				'bg'     => '#F0E8DA',
+				'card'   => '#FAF6EF',
+				'box'    => '#F0E8DA',
+				'ink'    => '#2E2A22',
+				'soft'   => '#5C5E52',
+				'accent' => '#8C6423',
+				'plum'   => '#6B3F4B',
+				'line'   => '#D6C3A0',
+			)
+		);
+	}
+
+	/** Rámec e-mailu v barvách webu (tabulky a inline styly kvůli e-mailovým klientům). */
+	public static function html_layout( $title, $body_html, $box_html = '' ) {
+		$s       = Resandpay_Settings::all();
+		$c       = self::colors();
+		$brand   = $s['brand_name'] ?: get_bloginfo( 'name' );
+		$contact = implode( ' · ', array_filter( array( $s['company_name'], $s['contact_web'], $s['contact_email'] ) ) );
+		return '<!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' . esc_html( $title ) . '</title></head>'
+			. '<body style="margin:0;padding:0;background:' . $c['bg'] . ';">'
+			. '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:' . $c['bg'] . ';"><tr><td align="center" style="padding:24px 12px;">'
+			. '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:' . $c['card'] . ';border-top:3px solid ' . $c['accent'] . ';">'
+			. '<tr><td style="padding:26px 30px 8px;font-family:Georgia,\'Times New Roman\',serif;font-size:22px;color:' . $c['accent'] . ';">' . esc_html( $brand ) . '</td></tr>'
+			. '<tr><td style="padding:10px 30px 8px;font-family:\'Work Sans\',Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:' . $c['ink'] . ';">' . $body_html . $box_html . '</td></tr>'
+			. '<tr><td style="padding:14px 30px 24px;border-top:1px solid ' . $c['line'] . ';font-family:Arial,Helvetica,sans-serif;font-size:12px;color:' . $c['soft'] . ';">' . esc_html( $contact ) . '</td></tr>'
+			. '</table></td></tr></table></body></html>';
+	}
+
+	public static function send_template( $to, $key, array $r ) {
+		$s       = Resandpay_Settings::all();
+		$parts   = self::build( $key, $r );
+		$headers = array( 'Content-Type: text/html; charset=UTF-8' );
 		if ( $s['mail_from_email'] && is_email( $s['mail_from_email'] ) ) {
 			$headers[] = sprintf( 'From: %s <%s>', wp_specialchars_decode( $s['mail_from_name'] ), $s['mail_from_email'] );
 		}
 		self::$sending    = true;
+		self::$parts      = $parts;
 		self::$last_error = '';
-		$ok               = wp_mail( $to, $subject, $body, $headers );
-		self::$sending = false;
+		$ok               = wp_mail( $to, $parts['subject'], $parts['html'], $headers );
+		self::$sending    = false;
+		self::$parts      = null;
 		do_action( 'resandpay_mail_sent', $key, $to, $r, $ok );
 		return $ok;
 	}
@@ -140,7 +286,15 @@ class Resandpay_Mailer {
 		$orig            = is_array( $args['to'] ) ? implode( ', ', $args['to'] ) : $args['to'];
 		$args['to']      = $test;
 		$args['subject'] = '[TEST → ' . $orig . '] ' . $args['subject'];
-		$args['message'] = '*** ' . __( 'TESTOVACÍ REŽIM – původní příjemce:', 'reserveandpay' ) . ' ' . $orig . " ***\n\n" . $args['message'];
+		$note = __( 'TESTOVACÍ REŽIM – původní příjemce:', 'reserveandpay' ) . ' ' . $orig;
+		if ( false !== stripos( (string) $args['message'], '<body' ) ) {
+			$args['message'] = preg_replace( '/(<body[^>]*>)/i', '$1<div style="background:#fcf0f1;color:#8a2424;padding:10px 14px;font:13px Arial,sans-serif;">' . esc_html( $note ) . '</div>', $args['message'], 1 );
+			if ( self::$parts ) {
+				self::$parts['text'] = '*** ' . $note . " ***\n\n" . self::$parts['text'];
+			}
+		} else {
+			$args['message'] = '*** ' . $note . " ***\n\n" . $args['message'];
+		}
 		return $args;
 	}
 }

@@ -161,3 +161,17 @@
 .rap-radio { display: flex; gap: .6rem; align-items: flex-start; margin: .4rem 0; cursor: pointer; }
 .rap-radio input { margin-top: .3rem; accent-color: var(--rap-accent); }
 .rap-radio small { display: block; color: var(--rap-ink-soft); font-size: 13px; }
+
+/* Potvrzení: platební údaje s QR kódem */
+.rap-paybox { display: flex; gap: 1.5rem; align-items: flex-start; flex-wrap: wrap; background: var(--rap-bg); border: 1px solid var(--rap-line); padding: 1.25rem; margin: 1rem 0; }
+.rap-paybox .rap-pay { margin: 0; flex: 1 1 240px; min-width: 0; }
+.rap-paybox .rap-pay dd { overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+	.rap-success { padding: 1.25rem 1rem; }
+	.rap-paybox { padding: 1rem; justify-content: center; }
+	.rap-paybox .rap-pay { grid-template-columns: 1fr; gap: 0; }
+	.rap-paybox .rap-pay dt { font-size: 13px; margin-top: .5rem; }
+}
+.rap-qr { margin: 0; text-align: center; }
+.rap-qr img { display: block; width: 180px; height: 180px; background: #fff; }
+.rap-qr figcaption { font-size: 12px; color: var(--rap-ink-soft); margin-top: .35rem; }

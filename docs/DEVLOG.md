@@ -1,5 +1,18 @@
 # Vývojový deník ReserveAndPay
 
+## 0.4.0 – Etapa E4 (22. 10. 2026)
+
+- **QR platba (SPD 1.0)**: ACC (IBAN), AM, CC, DT (splatnost), MSG (kód akce + jméno, jen ASCII, max. 60 znaků), RN (jméno příjemce, výchozí provozovatel), X-VS. Bez IBAN nebo u jiné měny než CZK se QR negeneruje. Obrázek PNG skládá plugin sám – hosting nepotřebuje GD ani Imagick
+- **PDF platební pokyn** (TCPDF, písma Fraunces a Work Sans dle manuálu): hlavička „INSYSTEMS CZ s.r.o. · S lehkou hlavou…“ s logem webu (Identita webu), adresou a IČ, web a e-mail; odběratel, rezervace s kódem akce, rámeček platebních údajů s QR kódem, texty podle situace (převod / hotovost / poslední chvíle / uhrazeno), patička „Nejedná se o daňový doklad“
+- Trvalý odkaz ke stažení PDF (`?rap_pdf=token`), na potvrzovací stránce i v detailu rezervace
+- **HTML e-maily v barvách webu** s textovou verzí; u přijetí rezervace (převod i hotovost), připomínky po splatnosti a opětovného zaslání rámeček s platebními údaji, QR kód přímo v těle (inline obrázek) a PDF v příloze. Testovací režim přidá do HTML pruh s původním příjemcem
+- Nové výchozí texty e-mailů (platební údaje už neopakují – jsou v rámečku); Nástroje → **Obnovit výchozí texty e-mailů**
+- Potvrzovací stránka: QR kód, platební údaje a „Stáhnout platební pokyn (PDF) →“ (upraveno i pro telefon)
+- **Odbavení kamerou**: tlačítko „Načíst QR kód kamerou“ – BarcodeDetector, jinak přibalené jsQR (Safari/iPhone); z QR platby vezme VS a ukáže kartu rezervace
+- Nastavení → Platební pokyn a QR platba: značka v hlavičce, web a e-mail v kontaktech, jméno příjemce v QR, patička
+- Přibalené knihovny v `lib/` (TCPDF 6.10.0 ořezané, LGPL; písma OFL) a `assets/js/jsQR.js` (1.4.0, Apache-2.0)
+- Analytické zadání v2.3 (vydáno k pluginu 0.4.0); testy rozšířeny na 189 kontrol
+
 ## 0.3.4 (22. 10. 2026)
 
 - **Jednoznačné kódy**: akce `AK-RRRR-NNNN`, služba `SL-NNN`, termín služby `TE-RRRR-NNNN` (rok založení, řada akcí a termínů od 1 každý rok). Kód vznikne při prvním uložení (termíny v generátoru), je neměnný a nikdy se nepoužije znovu; přidělování pod zámkem

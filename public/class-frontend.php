@@ -368,6 +368,11 @@ class Resandpay_Frontend {
 			/* translators: %s: e-mail */
 			echo '<p>' . esc_html( sprintf( __( 'Platební údaje jsme poslali také na e-mail %s.', 'reserveandpay' ), $r['email'] ) ) . '</p>';
 		}
+		$spd = Resandpay_QR::applicable( $r ) ? Resandpay_QR::spd( $r ) : '';
+		echo '<div class="rap-paybox">';
+		if ( $spd ) {
+			echo '<figure class="rap-qr"><img src="' . esc_attr( Resandpay_QR::data_uri( $spd, 5 ) ) . '" width="180" height="180" alt="' . esc_attr__( 'QR kód pro platbu', 'reserveandpay' ) . '"><figcaption>' . esc_html__( 'Naskenujte v bankovní aplikaci', 'reserveandpay' ) . '</figcaption></figure>';
+		}
 		echo '<dl class="rap-pay">';
 		echo '<dt>' . esc_html__( 'Akce', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev['title'] . ' – ' . Resandpay_Events::format_date( $ev ) ) . '</dd>';
 		if ( $s['bank_account'] ) {
@@ -378,7 +383,8 @@ class Resandpay_Frontend {
 		if ( ! $cash ) {
 			echo '<dt>' . esc_html__( 'Splatnost', 'reserveandpay' ) . '</dt><dd>' . esc_html( wp_date( 'j. n. Y G:i', Resandpay_Events::ts( $r['due_at'] ) ) ) . '</dd>';
 		}
-		echo '</dl>';
+		echo '</dl></div>';
+		echo '<p><a class="rap-button" href="' . esc_url( Resandpay_PDF::url( $r ) ) . '" target="_blank" rel="noopener">' . esc_html__( 'Stáhnout platební pokyn (PDF) →', 'reserveandpay' ) . '</a></p>';
 		if ( $cash ) {
 			echo '<p class="rap-small">' . esc_html__( 'Variabilní symbol mějte prosím u sebe i na místě – podle něj Vás rychle odbavíme.', 'reserveandpay' ) . '</p>';
 		} elseif ( $r['last_minute'] ) {

@@ -14,6 +14,27 @@ class Resandpay_Admin_Checkin {
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ), 12 );
 		add_action( 'admin_post_resandpay_checkin', array( __CLASS__, 'handle' ) );
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
+	}
+
+	public static function assets( $hook ) {
+		if ( false === strpos( (string) $hook, self::PAGE ) ) {
+			return;
+		}
+		wp_enqueue_script( 'reserveandpay-jsqr', RESANDPAY_URL . 'assets/js/jsQR.js', array(), '1.4.0', true );
+		wp_enqueue_script( 'reserveandpay-scan', RESANDPAY_URL . 'assets/js/checkin-scan.js', array( 'reserveandpay-jsqr' ), RESANDPAY_VERSION, true );
+		wp_add_inline_script(
+			'reserveandpay-scan',
+			'window.rapScanText = ' . wp_json_encode(
+				array(
+					'aim'        => __( 'Namiřte kameru na QR kód z e-mailu nebo platebního pokynu.', 'reserveandpay' ),
+					'notPayment' => __( 'Tento QR kód neobsahuje variabilní symbol – zkuste QR platbu z e-mailu.', 'reserveandpay' ),
+					'noCamera'   => __( 'Kamera není v tomto prohlížeči dostupná (je potřeba zabezpečené připojení HTTPS).', 'reserveandpay' ),
+					'denied'     => __( 'Přístup ke kameře byl zamítnut. Povolte ho v prohlížeči, nebo zadejte VS ručně.', 'reserveandpay' ),
+				)
+			) . ';',
+			'before'
+		);
 	}
 
 	public static function menu() {
@@ -106,7 +127,10 @@ class Resandpay_Admin_Checkin {
 		echo '<label class="screen-reader-text" for="rap-vs">' . esc_html__( 'Variabilní symbol', 'reserveandpay' ) . '</label>';
 		echo '<input type="text" id="rap-vs" name="vs" value="' . esc_attr( $input ) . '" placeholder="' . esc_attr__( 'Variabilní symbol', 'reserveandpay' ) . '" inputmode="numeric" autocomplete="off" autofocus>';
 		submit_button( __( 'Najít rezervaci', 'reserveandpay' ), 'primary', '', false );
-		echo '</form><p class="description">' . esc_html__( 'Zadejte VS z potvrzovacího e-mailu (stačí i bez úvodních nul). Načtení QR kódu kamerou telefonu přibude s QR platbou (etapa E4).', 'reserveandpay' ) . '</p>';
+		echo '</form>';
+		echo '<p><button type="button" class="button button-hero" id="rap-scan-btn">📷 ' . esc_html__( 'Načíst QR kód kamerou', 'reserveandpay' ) . '</button></p>';
+		echo '<div id="rap-scan" class="rap-scan" hidden><video muted playsinline></video><p class="rap-scan__msg"></p><p><button type="button" class="button rap-scan__stop">' . esc_html__( 'Zavřít kameru', 'reserveandpay' ) . '</button></p></div>';
+		echo '<p class="description">' . esc_html__( 'Zadejte VS z potvrzovacího e-mailu (stačí i bez úvodních nul), nebo načtěte QR kód z e-mailu či platebního pokynu.', 'reserveandpay' ) . '</p>';
 
 		if ( '' !== $input ) {
 			$r = Resandpay_Reservations::find_by_vs_input( $input );

@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.3.4** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 2.2** (22. 10. 2026, vydáno k pluginu 0.3.4) – viz `docs/`.
+> **Aktuální verze pluginu: 0.4.0** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 2.3** (22. 10. 2026, vydáno k pluginu 0.4.0) – viz `docs/`.
 
 ---
 
@@ -86,7 +86,8 @@ resandpay/
 ├── admin/                 # administrace, nastavení, generátor termínů
 ├── public/                # kalendář, výpis akcí, rezervační formulář
 ├── templates/             # šablony e-mailů a PDF
-├── assets/                # CSS (dle grafického manuálu), JS
+├── assets/                # CSS (dle grafického manuálu), JS (čtečka QR, jsQR)
+├── lib/                   # přibalené knihovny: TCPDF (PDF, QR), písma Fraunces a Work Sans – viz lib/README.md
 ├── cron/                  # spouštěcí skript pro CRON Active24
 ├── languages/             # překlady (cs_CZ)
 ├── tests/                 # automatické testy
@@ -105,7 +106,7 @@ resandpay/
 | E2 | Kalendář a výpis akcí na webu, styling dle grafického manuálu | ✅ 0.2.0 (testuje se) |
 | E3 | Služby a jejich termíny (1 i více míst), generátor termínů | ✅ 0.3.2 |
 | E3+ | Pravidla splatnosti, stav Po splatnosti, hotovost, odbavení na místě, kódy akcí/služeb/termínů | ✅ 0.3.3–0.3.4 (testuje se) |
-| E4 | QR platební pokyn (SPD), variabilní symbol, PDF | ⏳ |
+| E4 | QR platba (SPD), PDF platební pokyn, HTML e-maily, odbavení kamerou | ✅ 0.4.0 (testuje se) |
 | E5 | Kontrola plateb (IMAP, párování, ruční/automatický režim, CRON) | ⏳ |
 | E6 | Expirace, platba na místě, Ultimate Member, MailerLite | ⏳ |
 | E7 | Testování dle akceptačních kritérií a nasazení | ⏳ |

@@ -58,3 +58,7 @@ td.rap-box .rap-payfields { max-width: 520px; }
 .rap-code { margin: 0 0 10px; }
 .rap-code code { font-size: 13px; }
 .column-rap_code { width: 120px; }
+.rap-scan { max-width: 480px; margin: 0 0 16px; }
+.rap-scan video { width: 100%; max-height: 60vh; background: #000; border-radius: 4px; display: block; }
+.rap-scan__msg { margin: 8px 0; font-weight: 600; }
+#rap-scan-btn { width: 100%; max-width: 480px; }

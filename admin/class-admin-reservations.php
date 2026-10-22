@@ -188,7 +188,7 @@ class Resandpay_Admin_Reservations {
 			__( 'Poznámka', 'reserveandpay' )          => nl2br( esc_html( $r['note'] ?: '—' ) ),
 			__( 'Částka', 'reserveandpay' )            => esc_html( Resandpay_Events::format_price( $r['amount'], $r['currency'] ) ),
 			__( 'Variabilní symbol', 'reserveandpay' ) => '<code>' . esc_html( $r['vs'] ) . '</code>',
-			__( 'Číslo pokynu', 'reserveandpay' )      => esc_html( $r['proforma_no'] ),
+			__( 'Číslo pokynu', 'reserveandpay' )      => esc_html( $r['proforma_no'] ) . ' · <a href="' . esc_url( Resandpay_PDF::url( $r ) ) . '" target="_blank">' . esc_html__( 'Platební pokyn (PDF)', 'reserveandpay' ) . '</a>',
 			__( 'Zvolená platba', 'reserveandpay' )    => esc_html( Resandpay_Reservations::pay_choice_labels()[ $r['pay_choice'] ?? 'transfer' ] ?? '' ),
 			__( 'Splatnost', 'reserveandpay' )         => esc_html( $fmt( $r['due_at'] ) ) . ( $r['last_minute'] ? ' (' . esc_html__( 'rezervace na poslední chvíli – lze platit na místě', 'reserveandpay' ) . ')' : '' ),
 			__( 'Zaplaceno', 'reserveandpay' )         => $r['paid_at'] ? esc_html( $fmt( $r['paid_at'] ) . ' – ' . ( Resandpay_Reservations::paid_method_labels()[ $r['paid_method'] ] ?? $r['paid_method'] ) ) : '—',

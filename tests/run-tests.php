@@ -98,6 +98,8 @@ Resandpay_Settings::update(
 		'admin_email'       => 'admin@example.com',
 	)
 );
+Resandpay_Settings::reset_templates();
+Resandpay_Settings::update( array( 'company_name' => 'INSYSTEMS CZ s.r.o.', 'brand_name' => 'S lehkou hlavou…', 'company_ic' => '01919555', 'company_address' => 'Pod višňovkou 1661/31, 140 00 Praha 4', 'contact_web' => 'slehkouhlavou.cz', 'contact_email' => 'hana@slehkouhlavou.cz', 'qr_recipient_name' => '', 'pdf_footer' => 'Nejedná se o daňový doklad' ) );
 $loc = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::LOCATION, 'post_status' => 'publish', 'post_title' => 'Studio Brno' ) );
 update_post_meta( $loc, '_rap_address', 'Hlavní 1, Brno' );
 
@@ -191,7 +193,7 @@ $first    = reset( $received );
 rap_t( count( $received ) >= 3, 'e-mail o přijetí rezervace se odesílá' );
 rap_t( $first && 'tester@example.com' === $first['to'], 'v testovacím režimu jde e-mail jen na testovací adresu' );
 rap_t( $first && false !== strpos( $first['subject'], '[TEST → osoba' ), 'předmět obsahuje původního příjemce' );
-rap_t( $first && false !== strpos( $first['message'], 'Variabilní symbol: 26' ), 'text obsahuje variabilní symbol' );
+rap_t( $first && (bool) preg_match( '/Variabilní symbol<\/td><td[^>]*>26\d+/', $first['message'] ), 'e-mail obsahuje variabilní symbol v platebních údajích' );
 rap_t( $first && false !== strpos( $first['message'], '123456789/2700' ), 'text obsahuje číslo účtu z nastavení' );
 rap_t( (bool) array_filter( $GLOBALS['rap_mails'], fn( $m ) => false !== strpos( $m['subject'], 'Nová rezervace' ) ), 'správce dostává upozornění na novou rezervaci' );
 rap_t( (bool) array_filter( $GLOBALS['rap_mails'], fn( $m ) => false !== strpos( $m['subject'], 'Platba přijata' ) ), 'e-mail o zaplacení se odesílá' );
@@ -474,6 +476,78 @@ $ev5 = rap_event( 'Jiná předpona', $now + 41 * $day, $now + 41 * $day + 3600, 
 rap_t( (bool) preg_match( '/^EV-' . $yr . '-\d{5}$/', Resandpay_Codes::get( $ev5 ) ) && $before === Resandpay_Events::get( $a )['code'], 'předpona a počet číslic z nastavení; stávající kódy beze změny' );
 Resandpay_Settings::update( array( 'code_prefix_event' => 'AK', 'code_digits_event' => 4 ) );
 rap_t( 'TE-2027-0001' === Resandpay_Codes::format( 'slot', 1, 2027 ) && 'SL-012' === Resandpay_Codes::format( 'service', 12, 2027 ), 'formát kódu podle druhu' );
+
+echo "== E4: QR platba (SPD)\n";
+$qe  = rap_event( 'Jóga & dech', $now + 20 * $day, $now + 20 * $day + 7200, 10, array( 'rap_location' => $loc ) );
+$qr  = Resandpay_Reservations::create( $qe, array_merge( rap_person( 90 ), array( 'customer_name' => 'Žofie Řeháková-*Dlouhé příjmení které je opravdu velmi dlouhé' ) ), array( 'notify' => false ) );
+$spd = Resandpay_QR::spd( $qr );
+$fld = array();
+foreach ( array_slice( explode( '*', $spd ), 2 ) as $kv ) {
+	list( $k, $v ) = explode( ':', $kv, 2 );
+	$fld[ $k ]     = $v;
+}
+rap_t( 0 === strpos( $spd, 'SPD*1.0*ACC:CZ6527000000000123456789*' ), 'SPD začíná hlavičkou a IBAN z nastavení' );
+rap_t( '500.00' === $fld['AM'] && 'CZK' === $fld['CC'] && $qr['vs'] === $fld['X-VS'], 'částka, měna a VS' );
+rap_t( wp_date( 'Ymd', Resandpay_Events::ts( $qr['due_at'] ) ) === $fld['DT'], 'datum splatnosti DT = splatnost rezervace' );
+rap_t( 0 === strpos( $fld['MSG'], Resandpay_Codes::get( $qe ) . ' Zofie Rehakova' ) && mb_strlen( $fld['MSG'] ) <= 60 && false === strpos( $fld['MSG'], '*' ), 'MSG: kód akce + jméno bez diakritiky, bez „*“, max. 60 znaků (' . $fld['MSG'] . ')' );
+rap_t( 'INSYSTEMS CZ s.r.o.' === $fld['RN'], 'RN: jméno příjemce = provozovatel' );
+Resandpay_Settings::update( array( 'qr_recipient_name' => 'S lehkou hlavou – Hana Vildomcová' ) );
+rap_t( false !== strpos( Resandpay_QR::spd( $qr ), '*RN:S lehkou hlavou - Hana Vildomcova*' ), 'RN z nastavení, jen ASCII (bez diakritiky a pomlček „–“)' );
+Resandpay_Settings::update( array( 'qr_recipient_name' => '' ) );
+$png = Resandpay_QR::png( $spd, 4 );
+$dim = unpack( 'Nw/Nh', substr( $png, 16, 8 ) );
+rap_t( "\x89PNG\r\n\x1a\n" === substr( $png, 0, 8 ) && $dim['w'] === $dim['h'] && $dim['w'] >= 4 * ( 21 + 8 ), 'PNG obrázek QR kódu bez GD (' . $dim['w'] . ' px)' );
+file_put_contents( sys_get_temp_dir() . '/rap-qr-test.png', $png );
+file_put_contents( sys_get_temp_dir() . '/rap-qr-test.txt', $spd );
+rap_t( Resandpay_QR::applicable( $qr ) && ! Resandpay_QR::applicable( array_merge( $qr, array( 'status' => 'paid' ) ) ), 'QR jen u nezaplacené rezervace' );
+rap_t( '' === Resandpay_QR::spd( array_merge( $qr, array( 'currency' => 'EUR' ) ) ), 'jiná měna než CZK → bez SPD (EUR ve fázi 2)' );
+$iban = Resandpay_Settings::get( 'iban' );
+Resandpay_Settings::update( array( 'iban' => '' ) );
+rap_t( '' === Resandpay_QR::spd( $qr ), 'bez IBAN v nastavení se QR negeneruje' );
+Resandpay_Settings::update( array( 'iban' => $iban ) );
+
+echo "== E4: platební pokyn (PDF)\n";
+$pdf = Resandpay_PDF::render( $qr );
+rap_t( 0 === strpos( $pdf, '%PDF-' ) && strlen( $pdf ) > 10000, 'PDF platebního pokynu se vytvoří (' . round( strlen( $pdf ) / 1024 ) . ' kB)' );
+file_put_contents( sys_get_temp_dir() . '/rap-pokyn-test.pdf', $pdf );
+rap_t( false !== strpos( Resandpay_PDF::url( $qr ), 'rap_pdf=' . $qr['token'] ) && 'platebni-pokyn-' . $qr['proforma_no'] . '.pdf' === Resandpay_PDF::filename( $qr ), 'odkaz ke stažení s tokenem a název souboru' );
+$pp = Resandpay_Reservations::set_status( $qr['id'], Resandpay_Reservations::PAID );
+rap_t( 0 === strpos( Resandpay_PDF::render( $pp ), '%PDF-' ), 'PDF i pro zaplacenou rezervaci (bez QR, „Uhrazeno“)' );
+rap_t( (bool) array_filter( Resandpay_PDF::notes( $rC, Resandpay_Events::get( $cE ), Resandpay_Settings::all() ), fn( $n ) => false !== strpos( $n, 'hotově na místě' ) ), 'PDF u hotovosti: text o platbě na místě a možnosti platit předem' );
+
+echo "== E4: HTML e-maily\n";
+$qr2 = Resandpay_Reservations::create( $qe, rap_person( 91 ), array( 'notify' => false ) );
+$bp  = Resandpay_Mailer::build( 'received', $qr2 );
+rap_t( false !== strpos( $bp['html'], '<!doctype html>' ) && false !== strpos( $bp['html'], '#8C6423' ) && false !== strpos( $bp['html'], 'S lehkou hlavou…' ), 'HTML e-mail v barvách webu se značkou' );
+rap_t( false !== strpos( $bp['html'], 'src="cid:rap-qr"' ) && "\x89PNG" === substr( $bp['qr_png'], 0, 4 ), 'QR kód vložený do e-mailu (cid:rap-qr)' );
+rap_t( 0 === strpos( $bp['pdf'], '%PDF-' ) && 'platebni-pokyn-' . $qr2['proforma_no'] . '.pdf' === $bp['pdf_name'], 'PDF platebního pokynu jako příloha' );
+rap_t( false !== strpos( $bp['html'], esc_url( Resandpay_PDF::url( $qr2 ) ) ) && false !== strpos( $bp['text'], Resandpay_PDF::url( $qr2 ) ), 'odkaz ke stažení PDF v HTML i textové verzi' );
+rap_t( false !== strpos( $bp['text'], 'Variabilní symbol: ' . $qr2['vs'] ) && false !== strpos( $bp['text'], 'IBAN: CZ6527' ) && false === strpos( $bp['text'], '<' ), 'textová verze obsahuje platební údaje' );
+rap_t( 1 === substr_count( $bp['html'], '123456789/2700' ), 'výchozí text neopakuje platební údaje (jen v rámečku)' );
+$bc = Resandpay_Mailer::build( 'received_cash', array_merge( $qr2, array( 'pay_choice' => 'cash', 'status' => 'onsite' ) ) );
+rap_t( false !== strpos( $bc['html'], 'Platba předem převodem' ) && false !== strpos( $bc['html'], 'cid:rap-qr' ) && false === strpos( $bc['text'], 'Splatnost:' ), 'u hotovosti: QR pro platbu předem, bez splatnosti' );
+$bpaid = Resandpay_Mailer::build( 'paid', $pp );
+rap_t( '' === $bpaid['pdf'] && false === strpos( $bpaid['html'], 'cid:rap-qr' ), 'potvrzení platby bez QR a přílohy' );
+$GLOBALS['rap_mails'] = array();
+Resandpay_Mailer::send_template( $qr2['email'], 'received', $qr2 );
+$m0 = $GLOBALS['rap_mails'][0];
+rap_t( 'tester@example.com' === $m0['to'] && false !== strpos( $m0['message'], 'TESTOVACÍ REŽIM' ) && in_array( 'Content-Type: text/html; charset=UTF-8', (array) $m0['headers'], true ), 'testovací režim: HTML e-mail s pruhem o původním příjemci' );
+
+echo "== E4: web a odbavení\n";
+$_GET['rap_done'] = $qr2['token'];
+$conf = Resandpay_Frontend::render_booking( $qe );
+unset( $_GET['rap_done'] );
+rap_t( false !== strpos( $conf, 'src="data:image/png;base64,' ) && false !== strpos( $conf, 'Stáhnout platební pokyn (PDF)' ), 'potvrzovací stránka: QR kód a odkaz na PDF' );
+$_GET = array( 'page' => 'reserveandpay-checkin' );
+ob_start();
+Resandpay_Admin_Checkin::page();
+$ckp = ob_get_clean();
+$_GET = array();
+rap_t( false !== strpos( $ckp, 'id="rap-scan-btn"' ) && false !== strpos( $ckp, '<video' ), 'odbavení: tlačítko „Načíst QR kód kamerou“' );
+rap_t( (int) $qr2['id'] === (int) Resandpay_Reservations::find_by_vs_input( Resandpay_QR::spd( $qr2 ) )['id'], 'odbavení: obsah QR platby najde rezervaci' );
+Resandpay_Settings::update( array( 'tpl_received_body' => 'upraveno' ) );
+Resandpay_Settings::reset_templates();
+rap_t( 0 === strpos( Resandpay_Settings::get( 'tpl_received_body' ), 'Dobrý den' ), 'obnovení výchozích textů e-mailů' );
 
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 

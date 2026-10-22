@@ -1,0 +1,110 @@
+<?php
+defined( 'ABSPATH' ) || exit;
+
+/**
+ * QR platba – český standard SPD 1.0 (SPAYD), SWD kap. 5.1.
+ * Matici QR kódu počítá přibalená knihovna TCPDF, obrázek PNG skládá tato třída
+ * sama (bez rozšíření GD/Imagick – hosting je nemusí mít).
+ */
+class Resandpay_QR {
+
+	/** Text jen v ASCII (bez diakritiky a typografických znaků) a bez „*“ (oddělovač polí SPD). */
+	public static function clean( $text, $max ) {
+		$t = remove_accents( (string) $text );
+		$t = strtr( $t, array( '–' => '-', '—' => '-', '…' => '...', '„' => '"', '“' => '"', '”' => '"', '‚' => "'", '‘' => "'", '’' => "'", ' ' => ' ' ) );
+		$t = preg_replace( '/[^\x20-\x7E]/', '', $t ); // Jen ASCII – bankovní aplikace jinak znaky komolí.
+		$t = preg_replace( '/[\*\r\n\t]+/', ' ', $t );
+		$t = trim( preg_replace( '/\s+/', ' ', $t ) );
+		return trim( mb_substr( $t, 0, $max ) );
+	}
+
+	/** Zpráva pro příjemce: „AK-2026-0012 Jana Novakova“ (max. 60 znaků). */
+	public static function message( array $r ) {
+		return self::clean( trim( Resandpay_Codes::get( $r['event_id'] ) . ' ' . $r['customer_name'] ), 60 );
+	}
+
+	/**
+	 * SPD řetězec pro rezervaci. Prázdný, pokud není v nastavení IBAN nebo jde o jinou měnu než CZK
+	 * (SPD je tuzemský standard; EUR → EPC QR ve fázi 2).
+	 */
+	public static function spd( array $r ) {
+		$s    = Resandpay_Settings::all();
+		$iban = strtoupper( preg_replace( '/\s+/', '', (string) $s['iban'] ) );
+		if ( ! preg_match( '/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/', $iban ) || 'CZK' !== strtoupper( (string) $r['currency'] ) ) {
+			return '';
+		}
+		$parts = array(
+			'SPD',
+			'1.0',
+			'ACC:' . $iban,
+			'AM:' . number_format( (float) $r['amount'], 2, '.', '' ),
+			'CC:CZK',
+		);
+		if ( ! empty( $r['due_at'] ) ) {
+			$parts[] = 'DT:' . wp_date( 'Ymd', Resandpay_Events::ts( $r['due_at'] ) );
+		}
+		$msg = self::message( $r );
+		if ( '' !== $msg ) {
+			$parts[] = 'MSG:' . $msg;
+		}
+		$rn = self::clean( $s['qr_recipient_name'] ?: $s['company_name'], 35 );
+		if ( '' !== $rn ) {
+			$parts[] = 'RN:' . $rn;
+		}
+		$parts[] = 'X-VS:' . preg_replace( '/\D/', '', (string) $r['vs'] );
+		return implode( '*', $parts );
+	}
+
+	/** Matice QR kódu (pole řádků s 0/1). */
+	public static function matrix( $text ) {
+		if ( ! class_exists( 'TCPDF2DBarcode' ) ) {
+			require_once RESANDPAY_DIR . 'lib/tcpdf/tcpdf_barcodes_2d.php';
+		}
+		$bc  = new TCPDF2DBarcode( $text, 'QRCODE,M' );
+		$arr = $bc->getBarcodeArray();
+		return is_array( $arr ) && ! empty( $arr['bcode'] ) ? $arr['bcode'] : array();
+	}
+
+	/**
+	 * PNG obrázek QR kódu (černobílý, s okrajem 4 moduly).
+	 *
+	 * @param int $scale Pixelů na modul.
+	 */
+	public static function png( $text, $scale = 6 ) {
+		$m = self::matrix( $text );
+		if ( ! $m ) {
+			return '';
+		}
+		$quiet = 4;
+		$n     = count( $m );
+		$size  = ( $n + 2 * $quiet ) * $scale;
+		$raw   = '';
+		for ( $y = 0; $y < $size; $y++ ) {
+			$my  = intdiv( $y, $scale ) - $quiet;
+			$row = "\0"; // Filtr řádku: žádný.
+			for ( $x = 0; $x < $size; $x++ ) {
+				$mx   = intdiv( $x, $scale ) - $quiet;
+				$dark = $my >= 0 && $my < $n && $mx >= 0 && $mx < $n && ! empty( $m[ $my ][ $mx ] );
+				$row .= $dark ? "\x00" : "\xFF";
+			}
+			$raw .= $row;
+		}
+		$chunk = function ( $type, $data ) {
+			return pack( 'N', strlen( $data ) ) . $type . $data . pack( 'N', crc32( $type . $data ) );
+		};
+		return "\x89PNG\r\n\x1a\n"
+			. $chunk( 'IHDR', pack( 'NNCCCCC', $size, $size, 8, 0, 0, 0, 0 ) ) // 8 bit, odstíny šedi.
+			. $chunk( 'IDAT', gzcompress( $raw, 9 ) )
+			. $chunk( 'IEND', '' );
+	}
+
+	public static function data_uri( $text, $scale = 6 ) {
+		$png = self::png( $text, $scale );
+		return $png ? 'data:image/png;base64,' . base64_encode( $png ) : '';
+	}
+
+	/** Má se u rezervace zobrazit QR platba? (nezaplacená, aktivní, s platným SPD) */
+	public static function applicable( array $r ) {
+		return in_array( $r['status'], array( Resandpay_Reservations::PENDING, Resandpay_Reservations::ONSITE, Resandpay_Reservations::OVERDUE ), true ) && '' !== self::spd( $r );
+	}
+}
