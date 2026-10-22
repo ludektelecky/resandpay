@@ -17,11 +17,21 @@ class Resandpay_Admin_Events {
 		add_action( 'admin_notices', array( __CLASS__, 'overlap_notice' ) );
 		add_filter( 'post_row_actions', array( __CLASS__, 'row_actions' ), 10, 2 );
 		add_action( 'admin_post_resandpay_duplicate', array( __CLASS__, 'handle_duplicate' ) );
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'gallery_assets' ) );
+	}
+
+	/** Knihovna médií pro výběr fotek galerie (jen při úpravě akce). */
+	public static function gallery_assets( $hook ) {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( in_array( $hook, array( 'post.php', 'post-new.php' ), true ) && $screen && Resandpay_Post_Types::EVENT === $screen->post_type ) {
+			wp_enqueue_media();
+		}
 	}
 
 	public static function meta_boxes() {
 		add_meta_box( 'rap_event', __( 'Termín, kapacita a cena', 'reserveandpay' ), array( __CLASS__, 'box_event' ), Resandpay_Post_Types::EVENT, 'side', 'high' );
 		add_meta_box( 'rap_occupancy', __( 'Obsazenost', 'reserveandpay' ), array( __CLASS__, 'box_occupancy' ), Resandpay_Post_Types::EVENT, 'side', 'default' );
+		add_meta_box( 'rap_gallery_box', __( 'Fotky akce', 'reserveandpay' ), array( __CLASS__, 'box_gallery' ), Resandpay_Post_Types::EVENT, 'normal', 'high' );
 		add_meta_box( 'rap_program_box', __( 'Program po dnech (vícedenní akce)', 'reserveandpay' ), array( __CLASS__, 'box_program' ), Resandpay_Post_Types::EVENT, 'normal', 'default' );
 		add_meta_box( 'rap_location', __( 'Adresa lokace', 'reserveandpay' ), array( __CLASS__, 'box_location' ), Resandpay_Post_Types::LOCATION, 'normal', 'high' );
 	}
@@ -218,6 +228,55 @@ class Resandpay_Admin_Events {
 		$ev = Resandpay_Events::get( $post->ID );
 		echo '<textarea id="rap_program" name="rap_program" rows="6" class="large-text">' . esc_textarea( $ev['program'] ) . '</textarea>';
 		echo '<p class="description">' . esc_html__( 'Zobrazí se u vícedenních akcí. Např. „Den 1: příjezd od 15:00, večerní relaxace“.', 'reserveandpay' ) . '</p>';
+	}
+
+	/** Galerie akce: fotky z Knihovny médií, pořadí přetažením v okně knihovny. */
+	public static function box_gallery( $post ) {
+		$ids = Resandpay_Events::get( $post->ID )['gallery'];
+		echo '<input type="hidden" id="rap_gallery" name="rap_gallery" value="' . esc_attr( implode( ',', $ids ) ) . '">';
+		echo '<ul class="rap-gallery-admin" id="rap_gallery_list">';
+		foreach ( $ids as $id ) {
+			echo '<li>' . wp_get_attachment_image( $id, 'thumbnail' ) . '</li>';
+		}
+		echo '</ul>';
+		echo '<p><button type="button" class="button" id="rap_gallery_pick">' . esc_html( $ids ? __( 'Upravit fotky', 'reserveandpay' ) : __( 'Vybrat fotky', 'reserveandpay' ) ) . '</button> ';
+		echo '<button type="button" class="button-link button-link-delete" id="rap_gallery_clear"' . ( $ids ? '' : ' hidden' ) . '>' . esc_html__( 'Odebrat všechny', 'reserveandpay' ) . '</button></p>';
+		echo '<p class="description">' . esc_html__( 'Zobrazí se v záhlaví stránky akce (poměr 4:3, náhledy pod ní). První je vždy Náhledový obrázek akce, pokud je nastavený. Pořadí změníte přetažením v okně knihovny. Nejvýše 12 fotek. Popisek fotky (pole Popisek v knihovně) se zobrazí pod ní.', 'reserveandpay' ) . '</p>';
+		?>
+		<style>.rap-gallery-admin{display:flex;flex-wrap:wrap;gap:8px;margin:0}.rap-gallery-admin li{margin:0;width:80px;height:80px}.rap-gallery-admin img{width:80px;height:80px;object-fit:cover;display:block}</style>
+		<script>
+		( function () {
+			var input = document.getElementById( 'rap_gallery' ), list = document.getElementById( 'rap_gallery_list' );
+			var pick = document.getElementById( 'rap_gallery_pick' ), clear = document.getElementById( 'rap_gallery_clear' ), frame;
+			if ( ! input || ! window.wp || ! wp.media ) { return; }
+			function render( items ) {
+				list.innerHTML = '';
+				items.forEach( function ( a ) {
+					var li = document.createElement( 'li' ), img = document.createElement( 'img' );
+					var s = a.sizes && ( a.sizes.thumbnail || a.sizes.medium || a.sizes.full );
+					img.src = s ? s.url : a.url; img.alt = '';
+					li.appendChild( img ); list.appendChild( li );
+				} );
+				input.value = items.map( function ( a ) { return a.id; } ).join( ',' );
+				clear.hidden = ! items.length;
+				pick.textContent = items.length ? <?php echo wp_json_encode( __( 'Upravit fotky', 'reserveandpay' ) ); ?> : <?php echo wp_json_encode( __( 'Vybrat fotky', 'reserveandpay' ) ); ?>;
+			}
+			pick.addEventListener( 'click', function () {
+				// Standardní editor galerie WordPressu: výběr, pořadí přetažením, popisky.
+				if ( input.value ) {
+					frame = wp.media.gallery.edit( '[gallery ids="' + input.value + '"]' );
+				} else {
+					frame = wp.media( { frame: 'post', state: 'gallery-library', multiple: true } );
+					frame.open();
+				}
+				frame.on( 'update', function ( selection ) {
+					render( selection.models.slice( 0, 12 ).map( function ( m ) { return m.toJSON(); } ) );
+				} );
+			} );
+			clear.addEventListener( 'click', function () { render( [] ); } );
+		} )();
+		</script>
+		<?php
 	}
 
 	public static function row_actions( $actions, $post ) {

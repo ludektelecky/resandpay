@@ -1,5 +1,20 @@
 # Vývojový deník ReserveAndPay
 
+## 0.7.0 (22. 10. 2026)
+
+- **Nový vzhled stránky akce** podle schváleného vzoru („Vzor stránky akce RaS“):
+  - **záhlaví**: odkaz „← Všechny termíny“, kategorie (eyebrow), nadpis, **perex** (pole Úryvek akce), Kdy / Kde (adresa a mapa), cena „/ osoba“ (u vícedenní „za celou akci“) a tlačítko „Rezervovat místo →“; u obsazené akce „Obsazeno“
+  - **galerie** vpravo: velká fotka 4:3 a čtvercové náhledy, kliknutím se přepne velká fotka (bez JavaScriptu se fotka otevře); popisek fotky z knihovny se zobrazí pod ní. Bez fotek tlumená plocha s vlnami (náhradní pozadí)
+  - **dechová linka** mezi záhlavím a popisem (dýchá 6,5 s, vypnutá při omezení animací)
+  - pod ní **popis akce** z blokového editoru (u vícedenní akce i program) a vedle něj **rezervační karta** (při posunu zůstává na místě): „Rezervovat místo“, **„5 volných míst z 16“**, tečky po místech (do 40 míst), **uzávěrka** (je-li nastavená), formulář; po odeslání v kartě potvrzení s QR kódem
+  - pod 860 px jeden sloupec, fotky nahoře
+- **Fotky akce** – nový panel při úpravě akce: výběr z Knihovny médií (standardní editor galerie – pořadí přetažením, popisky), nejvýše 12 fotek; první je vždy **Náhledový obrázek** akce. Termín služby bez vlastních fotek použije náhledový obrázek služby. Duplikace akce fotky převezme
+- **Nastavení → Detail akce**: „Vzhled stránky akce“ (S galerií a rezervační kartou – výchozí / Jednoduchý = vzhled do 0.6) a „Nadpis akce v záhlaví pluginu“ (výchozí zapnuto; titulek šablony GeneratePress se skryje)
+- Na stránce akce s novým vzhledem: GeneratePress bez postranního panelu, skrytý náhledový obrázek šablony (fotky jsou v galerii), třídy `rap-detail-full` / `rap-detail-own-title` na `<body>`
+- Nové CSS proměnné `--rap-gold-light`, `--rap-card-top`, `--rap-card-bottom`, `--rap-on-dark`
+- Pro šablony: `Resandpay_Frontend::render_event_page()`, `Resandpay_Events::photos()`
+- Testy: +14 kontrol (galerie, fotky, záhlaví, karta, obsazenost, nastavení, duplikace, potvrzení v kartě); analytické zadání beze změny (v2.8, doplní se při další verzi)
+
 ## 0.6.2 (22. 10. 2026)
 
 - Nový shortcode **`[reserveandpay_upcoming]`** – krátký přehled nadcházejících pro úvodní stránku webu: na **prvním místě vždy nejbližší služba** s volným termínem (souhrnná karta jako v přehledu akcí), za ní **nadcházející akce podle data**; celkem **nejvýše 3 položky** (parametr `limit`)

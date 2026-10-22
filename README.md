@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.6.2** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 2.8** (22. 10. 2026, vydáno k pluginu 0.6.2) – viz `docs/`.
+> **Aktuální verze pluginu: 0.7.0** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 2.8** (22. 10. 2026, vydáno k pluginu 0.6.2) – viz `docs/`.
 
 ### Název a označení
 
@@ -25,6 +25,7 @@ Technické identifikátory se nemění (slug a textdomain `reserveandpay`, před
 - Služby s termíny z generátoru: masáže (1 místo na termín) i pravidelné skupinové lekce (např. Sound Healing, 15 míst)
   - pevná délka termínu a pauza jako nastavitelné parametry služby (výchozí 60 + 15 min)
   - generátor termínů (dny v týdnu, časové okno, období) s náhledem a hromadným rušením
+- Stránka akce s galerií: záhlaví (kategorie, nadpis, perex z úryvku, termín, místo, cena, „Rezervovat místo →“) vedle fotek z Knihovny médií, pod ním popis akce a vedle něj rezervační karta s počtem volných míst a uzávěrkou; volba „Jednoduchý“ vrací dřívější vzhled (Nastavení → Detail akce)
 - Překrývání akcí je povoleno – systém pouze upozorní
 - Hlídání kapacity: jedna rezervace = jedno místo = vlastní variabilní symbol; atomická kontrola proti přeplnění
 
@@ -123,6 +124,7 @@ resandpay/
 | E5 | Automatická kontrola plateb z avíz Raiffeisenbank (IMAP, CRON), ruční přiřazení | ✅ 0.5.0–0.5.4 |
 | E6a | Expirace, připomínky, platba ve dvou částech (1. část a doplatek), pozdní rezervace | ✅ 0.6.0–0.6.1 (testuje se) |
 | – | Krátký přehled nadcházejících na úvodní stránce (`[reserveandpay_upcoming]`) | ✅ 0.6.2 |
+| – | Stránka akce s galerií a rezervační kartou | ✅ 0.7.0 |
 | E6b | Ultimate Member, MailerLite | ⏳ po spuštění |
 | E7 | Testování dle akceptačních kritérií a nasazení | ⏳ |
 | F2 | Fáze 2 – zobecnění pluginu | ⏳ |

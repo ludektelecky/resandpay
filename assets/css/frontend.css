@@ -16,9 +16,13 @@
 	--rap-font: "Work Sans", system-ui, sans-serif;
 	--rap-font-heading: "Fraunces", Georgia, serif;
 	--rap-max: 1120px;
+	--rap-gold-light: #c9a86a;  /* vlny, dekor */
+	--rap-card-top: #7a8466;    /* náhradní plocha galerie – přechod tmavé karty */
+	--rap-card-bottom: #1e1b16;
+	--rap-on-dark: #faf6ef;
 }
 
-.rap-details, .rap-booking, .rap-program-view, .rap-calendar, .rap-upcoming { font-family: var(--rap-font); color: var(--rap-ink); }
+.rap-details, .rap-booking, .rap-event, .rap-program-view, .rap-calendar, .rap-upcoming { font-family: var(--rap-font); color: var(--rap-ink); }
 /* Přehled akcí smí být širší než úzký textový sloupec šablony (až --rap-max), bez vodorovného posuvníku. */
 .rap-program-view { --rap-w: max(100%, min(var(--rap-max), calc(100vw - 80px))); width: var(--rap-w); max-width: none; margin-left: calc((100% - var(--rap-w)) / 2); margin-right: calc((100% - var(--rap-w)) / 2); }
 
@@ -180,3 +184,90 @@
 .rap-qr-full { flex: 1 1 100%; display: flex; gap: 1rem; align-items: center; border-top: 1px solid var(--rap-line); padding-top: 1rem; }
 .rap-qr-full img { flex: 0 0 auto; background: #fff; }
 .rap-qr-full p { margin: 0; }
+
+/* ==========================================================================
+   Detail akce – vzhled s galerií (Nastavení → Detail akce)
+   Záhlaví: text vlevo, fotky vpravo. Pod dechovou linkou popis vlevo a rezervační karta vpravo.
+   Pod 860 px jeden sloupec, fotky nahoře.
+   ========================================================================== */
+.rap-event { --rap-w: max(100%, min(var(--rap-max), calc(100vw - 64px))); width: var(--rap-w); max-width: none; margin-left: calc((100% - var(--rap-w)) / 2); margin-right: calc((100% - var(--rap-w)) / 2); line-height: 1.6; }
+.rap-event *, .rap-event *::before, .rap-event *::after { box-sizing: border-box; }
+.rap-detail-full .featured-image.page-header-image-single, .rap-detail-full .page-header-image-single { display: none; }
+
+.rap-event__hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 56px; align-items: start; }
+.rap-event__intro { display: flex; flex-direction: column; gap: 18px; min-width: 0; padding-top: 8px; }
+.rap-event__intro > * { margin: 0; }
+.rap-event .rap-back { margin: 0; }
+.rap-event__title { font-family: var(--rap-font-heading); font-weight: 500; font-size: clamp(34px, 5vw, 56px); line-height: 1.06; color: var(--rap-ink); text-wrap: balance; margin: 0; }
+.rap-event__lead { font-size: 18px; color: var(--rap-ink-soft); max-width: 36ch; }
+.rap-event__facts { display: grid; grid-template-columns: max-content 1fr; gap: 10px 18px; margin: 4px 0 0; padding: 18px 0; border-top: 1px solid var(--rap-line); border-bottom: 1px solid var(--rap-line); }
+.rap-event__facts dt { font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--rap-ink-soft); padding-top: 3px; }
+.rap-event__facts dd { margin: 0; font-variant-numeric: tabular-nums; min-width: 0; }
+.rap-event__facts dd small { display: block; color: var(--rap-ink-soft); font-size: 14px; }
+.rap-event__facts a { color: var(--rap-accent) !important; }
+.rap-event__when { color: var(--rap-accent-2); font-weight: 500; }
+.rap-event__cta { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; }
+.rap-event__price { margin: 0; font-family: var(--rap-font-heading); font-size: 30px; line-height: 1.1; color: var(--rap-ink); font-variant-numeric: tabular-nums; }
+.rap-event__price small { font-family: var(--rap-font); font-size: 14px; color: var(--rap-ink-soft); }
+.rap-event__full { font-weight: 600; color: var(--rap-accent-2); letter-spacing: .14em; text-transform: uppercase; font-size: 12.5px; }
+.rap-event--cancelled .rap-event__when { text-decoration: line-through; color: var(--rap-ink-soft); }
+
+/* Galerie – velká fotka 4:3 a čtvercové náhledy; fotky z Knihovny médií */
+.rap-gallery { display: grid; gap: 10px; min-width: 0; }
+.rap-gallery__main { position: relative; margin: 0; aspect-ratio: 4 / 3; max-width: 100%; border-radius: var(--rap-radius); overflow: hidden; background: linear-gradient(180deg, var(--rap-card-top), var(--rap-card-bottom)); }
+.rap-gallery__main img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.rap-gallery__main figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 24px 14px 10px; font-size: 13px; color: var(--rap-on-dark); background: linear-gradient(transparent, rgba(30, 27, 22, .6)); }
+.rap-gallery__main figcaption[hidden] { display: none; }
+.rap-gallery__waves { position: absolute; right: -6%; bottom: -6%; width: 72%; fill: none; stroke: var(--rap-gold-light); stroke-width: 1.3; stroke-linecap: round; opacity: .55; }
+.rap-gallery__thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 10px; }
+.rap-gallery__thumb { display: block; aspect-ratio: 1 / 1; border-radius: var(--rap-radius); overflow: hidden; opacity: .7; transition: opacity .2s; }
+.rap-gallery__thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.rap-gallery__thumb:hover, .rap-gallery__thumb[aria-current="true"] { opacity: 1; }
+.rap-gallery__thumb[aria-current="true"] { box-shadow: 0 0 0 1px var(--rap-accent); }
+.rap-gallery__thumb:focus-visible { outline: 2px solid var(--rap-accent); outline-offset: 2px; opacity: 1; }
+
+/* Dechová linka – podpis značky, dýchá v cyklu 6,5 s */
+.rap-breath { display: flex; justify-content: center; padding: 56px 0 0; }
+.rap-breath svg { width: 220px; height: 28px; overflow: visible; }
+.rap-breath path { fill: none; stroke: var(--rap-accent); stroke-width: 1.4; stroke-linecap: round; transform-origin: center; animation: rap-breathe 6.5s ease-in-out infinite; }
+@keyframes rap-breathe { 0%, 100% { transform: scaleY(.55); } 50% { transform: scaleY(1); } }
+
+/* Popis a rezervační karta */
+.rap-event__body { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 64px; align-items: start; padding: 56px 0 0; }
+.rap-event__desc { min-width: 0; }
+.rap-event__desc > :first-child { margin-top: 0; }
+.rap-event__desc p, .rap-event__desc li { max-width: 65ch; }
+.rap-event__desc .rap-program { margin-top: 2rem; }
+.rap-event__aside { position: sticky; top: 24px; min-width: 0; }
+.admin-bar .rap-event__aside { top: 56px; }
+.rap-booking--card { margin: 0; padding: 28px; border: 1px solid var(--rap-line); border-top: 1px solid var(--rap-line); border-radius: var(--rap-radius); background: var(--rap-bg-alt); }
+.rap-booking--card .rap-booking__title { font-size: 28px; line-height: 1.15; margin: 0 0 1.25rem; }
+.rap-booking--card .rap-eyebrow { margin-bottom: .25rem; }
+.rap-booking--card .rap-form { max-width: none; }
+.rap-booking--card .rap-field input, .rap-booking--card .rap-field textarea { background: var(--rap-bg); }
+.rap-booking--card .rap-summary { padding: 12px 14px; border: 1px solid var(--rap-accent); border-radius: var(--rap-radius); background: var(--rap-bg); color: var(--rap-ink); }
+.rap-booking--card .rap-button[type="submit"] { width: 100%; text-align: center; white-space: normal; padding-top: .85rem; padding-bottom: .85rem; }
+.rap-booking--card .rap-success { padding: 0; border: 0; background: none; }
+.rap-booking--card .rap-paybox { justify-content: center; }
+.rap-booking--card .rap-success .rap-button { white-space: normal; }
+.rap-seats { margin: 0 0 1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--rap-line); }
+.rap-seats__row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; margin: 0 0 .6rem; font-size: 15px; }
+.rap-seats__row strong { color: var(--rap-accent-2); font-weight: 600; }
+.rap-seats__dots { display: flex; flex-wrap: wrap; gap: 5px; margin: 0; }
+.rap-seats__dots i { width: 12px; height: 12px; border-radius: 50%; border: 1px solid var(--rap-accent); }
+.rap-seats__dots i.is-taken { background: var(--rap-accent); }
+
+@media (max-width: 860px) {
+	.rap-event { --rap-w: 100%; }
+	.rap-event__hero, .rap-event__body { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+	.rap-gallery { order: -1; }
+	.rap-event__aside { position: static; }
+	.rap-breath { padding-top: 40px; }
+	.rap-event__body { padding-top: 40px; }
+}
+@media (max-width: 480px) {
+	.rap-booking--card { padding: 20px 16px; }
+	.rap-event__facts { grid-template-columns: minmax(0, 1fr); gap: 0; }
+	.rap-event__facts dd { margin-bottom: 10px; }
+}
+@media (prefers-reduced-motion: reduce) { .rap-breath path { animation: none; } .rap-gallery__thumb { transition: none; } }

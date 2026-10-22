@@ -927,6 +927,59 @@ rap_t( false === strpos( Resandpay_Views::render_upcoming( array( 'limit' => 3, 
 Resandpay_Settings::update( array( 'events_page' => $uold ) );
 rap_t( false !== strpos( do_shortcode( '[reserveandpay_upcoming category="uvod-test"]' ), 'rap-upcoming' ), 'shortcode [reserveandpay_upcoming] je registrovaný' );
 
+echo "== 0.7.0: detail akce s galerií\n";
+require_once ABSPATH . 'wp-admin/includes/image.php';
+$rap_img = function ( $name ) {
+	$up  = wp_upload_dir();
+	$f   = trailingslashit( $up['path'] ) . $name . '-' . wp_generate_password( 6, false ) . '.png';
+	$im  = imagecreatetruecolor( 400, 300 );
+	imagefill( $im, 0, 0, imagecolorallocate( $im, 122, 132, 102 ) );
+	imagepng( $im, $f );
+	imagedestroy( $im );
+	$id = wp_insert_attachment( array( 'post_mime_type' => 'image/png', 'post_title' => $name, 'post_status' => 'inherit' ), $f );
+	wp_update_attachment_metadata( $id, wp_generate_attachment_metadata( $id, $f ) );
+	return $id;
+};
+$din = array( 'rap_type' => 'single', 'rap_start' => wp_date( 'Y-m-d H:i', $now + 15 * $day ), 'rap_end' => wp_date( 'Y-m-d H:i', $now + 15 * $day + 90 * MINUTE_IN_SECONDS ), 'rap_capacity' => 16, 'rap_price' => '500', 'rap_currency' => 'CZK', 'rap_close_hours' => 1 );
+$dE  = rap_event( 'Večer s mísami', $now + 15 * $day, $now + 15 * $day + 90 * MINUTE_IN_SECONDS, 16, array( 'rap_close_hours' => 1 ) );
+$im1 = $rap_img( 'misy' );
+$im2 = $rap_img( 'ruce' );
+$im3 = $rap_img( 'sal' );
+$doc = wp_insert_attachment( array( 'post_mime_type' => 'application/pdf', 'post_title' => 'pdf', 'post_status' => 'inherit' ), 'neni.pdf' );
+Resandpay_Events::save_meta( $dE, array_merge( $din, array( 'rap_gallery' => "$im2, $im3,$im2,abc,$doc" ) ) );
+rap_t( array( $im2, $im3 ) === Resandpay_Events::get( $dE )['gallery'], 'galerie: jen obrázky, bez duplicit, v zadaném pořadí' );
+Resandpay_Events::save_meta( $dE, $din );
+rap_t( array( $im2, $im3 ) === Resandpay_Events::get( $dE )['gallery'], 'uložení bez pole galerie (generátor termínů) galerii ponechá' );
+set_post_thumbnail( $dE, $im1 );
+rap_t( array( $im1, $im2, $im3 ) === Resandpay_Events::photos( $dE ), 'fotky detailu: náhledový obrázek první, za ním galerie' );
+wp_update_post( array( 'ID' => $dE, 'post_excerpt' => 'Hodina a půl vleže na podložce.' ) );
+wp_set_object_terms( $dE, 'Sound Healing', Resandpay_Post_Types::CATEGORY );
+for ( $i = 0; $i < 11; $i++ ) {
+	Resandpay_Reservations::create( $dE, rap_person( 200 + $i ) );
+}
+$pg = Resandpay_Frontend::render_event_page( $dE, '<p>Popis akce z editoru.</p>', true );
+rap_t( false !== strpos( $pg, '<h1 class="rap-event__title">Večer s mísami</h1>' ) && false !== strpos( $pg, 'Hodina a půl vleže na podložce.' ) && false !== strpos( $pg, '<p class="rap-eyebrow">Sound Healing</p>' ), 'záhlaví: nadpis, perex z úryvku a kategorie' );
+rap_t( 3 === substr_count( $pg, 'class="rap-gallery__thumb"' ) && false !== strpos( $pg, 'data-rap-main' ), 'galerie: velká fotka a 3 náhledy' );
+rap_t( strpos( $pg, 'rap-event__hero' ) < strpos( $pg, 'Popis akce z editoru.' ) && strpos( $pg, 'Popis akce z editoru.' ) < strpos( $pg, 'id="rap-booking"' ), 'pořadí: záhlaví, popis, rezervační karta' );
+rap_t( false !== strpos( $pg, 'rap-booking--card' ) && false !== strpos( $pg, '<strong>5 volných míst</strong> z 16' ) && 11 === substr_count( $pg, '<i class="is-taken"></i>' ) && false !== strpos( $pg, 'Uzávěrka ' ), 'karta: 5 volných míst z 16, 11 obsazených teček, uzávěrka' );
+rap_t( false !== strpos( $pg, 'name="rap_name"' ) && false !== strpos( $pg, 'Rezervovat místo →' ) && false !== strpos( $pg, '500 Kč' ), 'karta obsahuje formulář, tlačítko v záhlaví a cenu' );
+rap_t( false === strpos( Resandpay_Frontend::render_event_page( $dE, '', false ), '<h1' ), 'bez vlastního nadpisu se H1 nevykreslí' );
+$dF = rap_event( 'Bez fotek', $now + 16 * $day, $now + 16 * $day + HOUR_IN_SECONDS, 2 );
+Resandpay_Reservations::create( $dF, rap_person( 230 ) );
+Resandpay_Reservations::create( $dF, rap_person( 231 ) );
+$pf = Resandpay_Frontend::render_event_page( $dF, '', true );
+rap_t( false !== strpos( $pf, 'rap-gallery--empty' ) && false === strpos( $pf, 'name="rap_name"' ) && false !== strpos( $pf, 'rap-event__full' ) && false === strpos( $pf, 'href="#rap-booking"' ), 'bez fotek náhradní plocha; obsazená akce bez formuláře a tlačítka' );
+rap_t( 'full' === Resandpay_Settings::get( 'detail_layout' ) && Resandpay_Frontend::full_layout(), 'výchozí vzhled detailu: s galerií' );
+Resandpay_Settings::update( array( 'detail_layout' => 'basic' ) );
+rap_t( ! Resandpay_Frontend::full_layout(), 'nastavení „Jednoduchý“ vrátí dosavadní vzhled' );
+Resandpay_Settings::update( array( 'detail_layout' => 'full' ) );
+$dup = Resandpay_Admin_Events::duplicate( $dE );
+rap_t( array( $im2, $im3 ) === Resandpay_Events::get( $dup )['gallery'] && $im1 === (int) get_post_thumbnail_id( $dup ), 'duplikace akce převezme galerii i náhledový obrázek' );
+$_GET['rap_done'] = Resandpay_Reservations::create( $dE, rap_person( 240 ) )['token'];
+$pc = Resandpay_Frontend::render_event_page( $dE, '', true );
+unset( $_GET['rap_done'] );
+rap_t( false !== strpos( $pc, 'rap-success' ) && false === strpos( $pc, 'name="rap_name"' ), 'potvrzení rezervace se zobrazí v kartě místo formuláře' );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );

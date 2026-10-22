@@ -41,6 +41,10 @@ class Resandpay_Settings {
 			'gdpr_page'           => 0,
 			'terms_page'          => 0,
 			'events_page'         => 0,
+			// Detail akce: full = záhlaví s galerií a rezervační karta vedle popisu, basic = údaje, text a formulář pod sebou.
+			'detail_layout'       => 'full',
+			// Nadpis akce vykreslí plugin v záhlaví (titulek šablony GeneratePress se skryje).
+			'detail_own_title'    => 1,
 			'vs_prefix'           => gmdate( 'y' ),
 			'notify_admin'        => 1,
 			// Kódy akcí, služeb a termínů (AK-2026-0012, SL-003, TE-2026-0145).

@@ -163,11 +163,41 @@ class Resandpay_Events {
 			'cancelled'     => (bool) $m( 'cancelled', 0 ),
 			'members_only'  => (bool) $m( 'members_only', 0 ),
 			'program'       => $m( 'program' ),
+			'gallery'       => self::parse_gallery( $m( 'gallery' ) ),
 			'location_id'   => $location_id,
 			'location'      => $location_id ? get_the_title( $location_id ) : '',
 			'location_addr' => $location_id ? (string) get_post_meta( $location_id, '_rap_address', true ) : '',
 			'location_map'  => $location_id ? (string) get_post_meta( $location_id, '_rap_map_url', true ) : '',
 		);
+	}
+
+	/** Galerie akce: seznam ID příloh (obrázků) bez duplicit, nejvýše 12. */
+	public static function parse_gallery( $raw ) {
+		$ids = is_array( $raw ) ? $raw : preg_split( '/[\s,]+/', (string) $raw );
+		$ids = array_values( array_unique( array_filter( array_map( 'absint', (array) $ids ) ) ) );
+		$ids = array_values( array_filter( $ids, fn( $id ) => wp_attachment_is_image( $id ) ) );
+		return array_slice( $ids, 0, 12 );
+	}
+
+	/**
+	 * Fotky pro detail akce: náhledový obrázek (je-li) a za ním galerie.
+	 * U termínu služby bez vlastních fotek se použijí fotky služby.
+	 */
+	public static function photos( $event_id ) {
+		$ev = self::get( $event_id );
+		if ( ! $ev ) {
+			return array();
+		}
+		$ids   = $ev['gallery'];
+		$thumb = (int) get_post_thumbnail_id( $event_id );
+		if ( ! $ids && ! $thumb && 'slot' === $ev['type'] ) {
+			$sid   = (int) get_post_meta( $event_id, '_rap_service', true );
+			$thumb = $sid ? (int) get_post_thumbnail_id( $sid ) : 0;
+		}
+		if ( $thumb ) {
+			array_unshift( $ids, $thumb );
+		}
+		return array_values( array_unique( $ids ) );
 	}
 
 	/** Převod lokálního data a času (Y-m-d H:i:s) na timestamp. */
@@ -368,6 +398,9 @@ class Resandpay_Events {
 		update_post_meta( $post_id, '_rap_members_only', empty( $in['rap_members_only'] ) ? 0 : 1 );
 		update_post_meta( $post_id, '_rap_cancelled', empty( $in['rap_cancelled'] ) ? 0 : 1 );
 		update_post_meta( $post_id, '_rap_program', wp_kses_post( (string) ( $in['rap_program'] ?? '' ) ) );
+		if ( array_key_exists( 'rap_gallery', $in ) ) { // Generátor termínů galerii neposílá – ponechat.
+			update_post_meta( $post_id, '_rap_gallery', implode( ',', self::parse_gallery( $in['rap_gallery'] ) ) );
+		}
 		if ( ! in_array( get_post_status( $post_id ), array( 'auto-draft', 'trash', false ), true ) ) {
 			Resandpay_Codes::assign( $post_id ); // Kód podle typu (akce / termín), jakmile je typ uložen.
 		}
