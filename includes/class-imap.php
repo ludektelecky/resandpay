@@ -63,10 +63,35 @@ class Resandpay_Imap {
 		return true;
 	}
 
+	/**
+	 * Přihlášení. Přednostně AUTHENTICATE PLAIN (umí i hesla s diakritikou a speciálními
+	 * znaky), jinak / při neúspěchu LOGIN. Chyba obsahuje odpověď serveru.
+	 */
 	public function login( $user, $pass ) {
-		$r = $this->command( 'LOGIN ' . $this->quote( $user ) . ' ' . $this->quote( $pass ) );
-		if ( ! $r['ok'] ) {
-			$this->error = __( 'Přihlášení ke schránce se nezdařilo – zkontrolujte uživatele a heslo.', 'reserveandpay' );
+		$ascii  = ! preg_match( '/[^\x20-\x7E]/', $user . $pass );
+		$tried  = array();
+		$status = '';
+		if ( in_array( 'AUTH=PLAIN', $this->caps, true ) || ! $ascii ) {
+			$payload = base64_encode( "\0" . $user . "\0" . $pass );
+			$r       = in_array( 'SASL-IR', $this->caps, true )
+				? $this->command( 'AUTHENTICATE PLAIN ' . $payload )
+				: $this->command( 'AUTHENTICATE PLAIN', $payload );
+			$tried[] = 'PLAIN';
+			$status  = $r['status'];
+			$ok      = $r['ok'];
+		} else {
+			$ok = false;
+		}
+		if ( ! $ok && $ascii && ! in_array( 'LOGINDISABLED', $this->caps, true ) ) {
+			$r       = $this->command( 'LOGIN ' . $this->quote( $user ) . ' ' . $this->quote( $pass ) );
+			$tried[] = 'LOGIN';
+			$status  = $r['status'];
+			$ok      = $r['ok'];
+		}
+		if ( ! $ok ) {
+			$reply       = trim( preg_replace( '/^(NO|BAD)\s*/i', '', (string) $status ) );
+			/* translators: 1: uživatel, 2: odpověď serveru */
+			$this->error = sprintf( __( 'Přihlášení ke schránce se nezdařilo (uživatel %1$s). Server odpověděl: „%2$s“. Zkontrolujte heslo – nejlépe přihlášením se stejnými údaji do webmailu.', 'reserveandpay' ), $user, $reply ?: __( 'bez odpovědi', 'reserveandpay' ) );
 			return false;
 		}
 		$r = $this->command( 'CAPABILITY' );
@@ -167,7 +192,7 @@ class Resandpay_Imap {
 	 *
 	 * @return array{ok:bool, untagged:array, literals:array, status:string}
 	 */
-	private function command( $cmd ) {
+	private function command( $cmd, $continuation = null ) {
 		$out = array(
 			'ok'       => false,
 			'untagged' => array(),
@@ -190,6 +215,11 @@ class Resandpay_Imap {
 				$data              = $this->read( (int) $m[1] );
 				$out['literals'][] = $data;
 				$line             .= $this->line();
+			}
+			if ( null !== $continuation && 0 === strpos( $line, '+' ) ) {
+				fwrite( $this->sock, $continuation . "\r\n" ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+				$continuation = null;
+				continue;
 			}
 			if ( 0 === strpos( $line, $tag . ' ' ) ) {
 				$out['status'] = trim( substr( $line, strlen( $tag ) + 1 ) );

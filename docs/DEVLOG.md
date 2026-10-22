@@ -1,5 +1,12 @@
 # Vývojový deník ReserveAndPay
 
+## 0.5.2 (22. 10. 2026)
+
+- Přihlášení ke schránce přednostně přes **AUTHENTICATE PLAIN** (funguje i heslo s diakritikou, uvozovkami nebo zpětným lomítkem; i server bez SASL-IR), jinak / při neúspěchu LOGIN
+- Chyba přihlášení uvádí uživatele a **přesnou odpověď serveru** (např. „[AUTHENTICATIONFAILED] Authentication failed.“)
+- Stránka Platby ukazuje, **kdy bylo heslo naposledy uloženo**; v nastavení upozornění, že prohlížeč může do pole hesla sám vložit heslo k WordPressu
+- Testy rozšířeny na 242 kontrol (přihlášení s diakritikou proti serveru Dovecot); analytické zadání beze změny (v2.5, doplní se při další verzi)
+
 ## 0.5.1 (22. 10. 2026)
 
 - Položka v menu administrace se jmenuje **ResAndPay** (dříve „Rezervace“); titulky stránek nesou plný název **ReserveAndPay**

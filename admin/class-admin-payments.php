@@ -130,7 +130,7 @@ class Resandpay_Admin_Payments {
 			: __( 'jen ručně (CRON kontrolu plateb nespouští)', 'reserveandpay' );
 		$rows = array(
 			__( 'Režim', 'reserveandpay' )              => esc_html( $mode ),
-			__( 'Schránka', 'reserveandpay' )           => esc_html( ( $s['imap_user'] ?: '—' ) . ' @ ' . $s['imap_host'] . ':' . $s['imap_port'] ) . ( $has_pwd ? '' : ' <span class="rap-tag--off">' . esc_html__( 'chybí heslo', 'reserveandpay' ) . '</span>' ),
+			__( 'Schránka', 'reserveandpay' )           => esc_html( ( $s['imap_user'] ?: '—' ) . ' @ ' . $s['imap_host'] . ':' . $s['imap_port'] ) . ( $has_pwd ? ' <small>· ' . esc_html( ( $pw = (int) get_option( 'resandpay_imap_pwd_saved', 0 ) ) ? sprintf( /* translators: %s: datum */ __( 'heslo uloženo %s', 'reserveandpay' ), wp_date( 'j. n. Y G:i', $pw ) ) : __( 'heslo uloženo', 'reserveandpay' ) ) . '</small>' : ' <span class="rap-tag--off">' . esc_html__( 'chybí heslo', 'reserveandpay' ) . '</span>' ),
 			__( 'Poslední běh', 'reserveandpay' )       => esc_html( self::ago( $last ) ),
 			__( 'Poslední úspěšný běh', 'reserveandpay' ) => esc_html( self::ago( $ok ) ),
 			__( 'Poslední volání CRONu', 'reserveandpay' ) => esc_html( self::ago( $cron ) ) . ( 'auto' === $s['payment_mode'] && ( ! $cron || time() - $cron > HOUR_IN_SECONDS ) ? ' <span class="rap-tag--off">' . esc_html__( 'CRON neběží – nastavte ho ve WebAdminu (níže)', 'reserveandpay' ) . '</span>' : '' ),
