@@ -13,6 +13,9 @@ class Resandpay_Mailer {
 	/** @var string Poslední chyba odesílání (pro zobrazení v administraci). */
 	public static $last_error = '';
 
+	/** @var string Skutečná adresa po přesměrování v testovacím režimu (pro seznam odeslaných). */
+	public static $sent_to = '';
+
 	/** @var array|null Části právě odesílaného e-mailu (textová verze, QR obrázek, PDF) pro phpmailer_init. */
 	private static $parts = null;
 
@@ -294,9 +297,11 @@ class Resandpay_Mailer {
 		self::$sending    = true;
 		self::$parts      = $parts;
 		self::$last_error = '';
+		self::$sent_to    = '';
 		$ok               = wp_mail( $to, $parts['subject'], $parts['html'], $headers );
 		self::$sending    = false;
 		self::$parts      = null;
+		self::record( $key, $to, $parts['subject'], $ok, (int) ( $r['id'] ?? 0 ) );
 		do_action( 'resandpay_mail_sent', $key, $to, $r, $ok );
 		return $ok;
 	}
@@ -310,8 +315,11 @@ class Resandpay_Mailer {
 		}
 		self::$sending    = true;
 		self::$last_error = '';
-		$ok               = wp_mail( $to, 'ReserveAndPay – zkušební e-mail', "Toto je zkušební e-mail pluginu ReserveAndPay.\nOdesláno: " . current_time( 'mysql' ) . "\nOdesílatel: " . $s['mail_from_email'], $headers );
+		self::$sent_to    = '';
+		$subject          = 'ReserveAndPay – zkušební e-mail';
+		$ok               = wp_mail( $to, $subject, "Toto je zkušební e-mail pluginu ReserveAndPay.\nOdesláno: " . current_time( 'mysql' ) . "\nOdesílatel: " . $s['mail_from_email'], $headers );
 		self::$sending    = false;
+		self::record( 'test', $to, $subject, $ok, 0 );
 		return $ok ? true : new WP_Error( 'mail', self::$last_error ?: __( 'Funkce wp_mail() vrátila chybu bez popisu.', 'reserveandpay' ) );
 	}
 
@@ -336,6 +344,108 @@ class Resandpay_Mailer {
 		return self::send_template( $r['email'], 'cancelled', $r );
 	}
 
+	/** Tabulka seznamu odeslaných e-mailů. */
+	public static function log_table() {
+		global $wpdb;
+		return $wpdb->prefix . 'resandpay_mails';
+	}
+
+	/** Názvy typů e-mailů pro seznam odeslaných. */
+	public static function key_labels() {
+		return array(
+			'received'      => __( 'Rezervace přijata', 'reserveandpay' ),
+			'received_cash' => __( 'Rezervace přijata (hotovost)', 'reserveandpay' ),
+			'admin'         => __( 'Nová rezervace (správce)', 'reserveandpay' ),
+			'reminder'      => __( 'Připomínka před splatností', 'reserveandpay' ),
+			'overdue'       => __( 'Připomínka po splatnosti', 'reserveandpay' ),
+			'part1'         => __( '1. část platby přijata', 'reserveandpay' ),
+			'partial'       => __( 'Neúplná platba', 'reserveandpay' ),
+			'paid'          => __( 'Platba přijata', 'reserveandpay' ),
+			'expired'       => __( 'Rezervace vypršela', 'reserveandpay' ),
+			'cancelled'     => __( 'Zrušení rezervace', 'reserveandpay' ),
+			'test'          => __( 'Zkušební e-mail', 'reserveandpay' ),
+		);
+	}
+
+	/**
+	 * Zápis do seznamu odeslaných e-mailů. „Odesláno“ = WordPress e-mail předal poštovnímu
+	 * serveru; doručení do schránky příjemce plugin ověřit nemůže.
+	 */
+	public static function record( $key, $to, $subject, $ok, $reservation_id = 0 ) {
+		global $wpdb;
+		$to = is_array( $to ) ? implode( ', ', $to ) : (string) $to;
+		$wpdb->insert(
+			self::log_table(),
+			array(
+				'created_at'     => current_time( 'mysql' ),
+				'reservation_id' => (int) $reservation_id,
+				'mail_key'       => mb_substr( sanitize_key( $key ), 0, 30 ),
+				'recipient'      => mb_substr( $to, 0, 255 ),
+				'sent_to'        => mb_substr( self::$sent_to ?: $to, 0, 255 ),
+				'subject'        => mb_substr( wp_strip_all_tags( (string) $subject ), 0, 255 ),
+				'ok'             => $ok ? 1 : 0,
+				'error'          => $ok ? '' : mb_substr( self::$last_error ?: __( 'wp_mail() vrátil chybu bez popisu', 'reserveandpay' ), 0, 255 ),
+			)
+		);
+	}
+
+	/**
+	 * Seznam odeslaných e-mailů.
+	 *
+	 * @param array $args reservation_id, search (e-mail / VS), only_failed, limit, offset.
+	 */
+	public static function log_rows( array $args = array() ) {
+		global $wpdb;
+		$args  = wp_parse_args( $args, array( 'reservation_id' => 0, 'search' => '', 'only_failed' => false, 'limit' => 50, 'offset' => 0 ) );
+		$where = array( '1=1' );
+		if ( $args['reservation_id'] ) {
+			$where[] = $wpdb->prepare( 'm.reservation_id = %d', $args['reservation_id'] );
+		}
+		if ( $args['only_failed'] ) {
+			$where[] = 'm.ok = 0';
+		}
+		if ( '' !== $args['search'] ) {
+			$like    = '%' . $wpdb->esc_like( $args['search'] ) . '%';
+			$where[] = $wpdb->prepare( '(m.recipient LIKE %s OR m.sent_to LIKE %s OR r.vs LIKE %s OR m.subject LIKE %s)', $like, $like, $like, $like );
+		}
+		$sql = 'SELECT m.*, r.vs FROM ' . self::log_table() . ' m LEFT JOIN ' . Resandpay_Reservations::table() . ' r ON r.id = m.reservation_id WHERE ' . implode( ' AND ', $where );
+		return array(
+			'rows'  => $wpdb->get_results( $sql . ' ORDER BY m.id DESC LIMIT ' . max( 1, (int) $args['limit'] ) . ' OFFSET ' . max( 0, (int) $args['offset'] ), ARRAY_A ), // phpcs:ignore WordPress.DB.PreparedSQL
+			'total' => (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . self::log_table() . ' m LEFT JOIN ' . Resandpay_Reservations::table() . ' r ON r.id = m.reservation_id WHERE ' . implode( ' AND ', $where ) ), // phpcs:ignore WordPress.DB.PreparedSQL
+		);
+	}
+
+	/** Smaže záznamy starší než nastavený počet dní (volá se z CRONu). */
+	public static function prune_log() {
+		global $wpdb;
+		$days = max( 30, (int) Resandpay_Settings::get( 'mail_log_days' ) );
+		$wpdb->query( $wpdb->prepare( 'DELETE FROM ' . self::log_table() . ' WHERE created_at < %s', wp_date( 'Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS ) ) );
+	}
+
+	/** Tabulka seznamu odeslaných e-mailů pro administraci (Nástroje i detail rezervace). */
+	public static function render_log_table( array $rows, $show_reservation = true ) {
+		$labels = self::key_labels();
+		echo '<table class="widefat striped rap-maillog"><thead><tr><th>' . esc_html__( 'Čas', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Typ', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Příjemce', 'reserveandpay' ) . '</th>';
+		if ( $show_reservation ) {
+			echo '<th>' . esc_html__( 'Rezervace', 'reserveandpay' ) . '</th>';
+		}
+		echo '<th>' . esc_html__( 'Předmět', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Výsledek', 'reserveandpay' ) . '</th></tr></thead><tbody>';
+		foreach ( $rows as $m ) {
+			$to = esc_html( $m['recipient'] );
+			if ( $m['sent_to'] && strcasecmp( $m['sent_to'], $m['recipient'] ) ) {
+				/* translators: %s: testovací adresa */
+				$to .= '<br><small>' . esc_html( sprintf( __( 'testovací režim → %s', 'reserveandpay' ), $m['sent_to'] ) ) . '</small>';
+			}
+			echo '<tr><td>' . esc_html( wp_date( 'j. n. Y H:i', Resandpay_Events::ts( $m['created_at'] ) ) ) . '</td><td>' . esc_html( $labels[ $m['mail_key'] ] ?? $m['mail_key'] ) . '</td><td>' . $to . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput
+			if ( $show_reservation ) {
+				echo '<td>' . ( $m['reservation_id'] && $m['vs'] ? '<a href="' . esc_url( admin_url( 'admin.php?page=reserveandpay-detail&id=' . (int) $m['reservation_id'] ) ) . '">' . esc_html( $m['vs'] ) . '</a>' : '—' ) . '</td>';
+			}
+			echo '<td>' . esc_html( $m['subject'] ) . '</td><td>' . ( $m['ok'] ? '<span class="rap-ok">✓ ' . esc_html__( 'odesláno', 'reserveandpay' ) . '</span>' : '<span class="rap-err">✗ ' . esc_html( $m['error'] ) . '</span>' ) . '</td></tr>';
+		}
+		echo '</tbody></table>';
+		echo '<p class="description">' . esc_html__( '„Odesláno“ znamená, že web e-mail předal poštovnímu serveru. Zda dorazil do schránky (nebo skončil ve spamu či firemní karanténě), web zjistit nemůže.', 'reserveandpay' ) . '</p>';
+	}
+
 	/**
 	 * Testovací režim: e-maily pluginu jdou jen na testovací adresu,
 	 * původní příjemce je uveden v předmětu i v textu.
@@ -350,6 +460,7 @@ class Resandpay_Mailer {
 		}
 		$orig            = is_array( $args['to'] ) ? implode( ', ', $args['to'] ) : $args['to'];
 		$args['to']      = $test;
+		self::$sent_to   = $test;
 		$args['subject'] = '[RAP TEST → ' . $orig . '] ' . $args['subject'];
 		$note = __( 'TESTOVACÍ REŽIM – původní příjemce:', 'reserveandpay' ) . ' ' . $orig;
 		if ( false !== stripos( (string) $args['message'], '<body' ) ) {

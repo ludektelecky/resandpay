@@ -72,3 +72,6 @@ td.rap-box .rap-payfields { max-width: 520px; }
 .rap-assign summary { cursor: pointer; color: #2271b1; margin-top: 4px; }
 .rap-assign form p { margin: 6px 0; }
 .rap-steps li { margin-bottom: 6px; }
+.rap-maillog .rap-ok { color: #2e6b34; white-space: nowrap; }
+.rap-maillog .rap-err { color: #a12b2b; }
+.rap-maillog small { color: #646970; }

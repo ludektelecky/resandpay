@@ -89,6 +89,7 @@ class Resandpay_Admin_Settings {
 			__( 'E-maily', 'reserveandpay' )           => array(
 				'mail_from_name'        => array( __( 'Jméno odesílatele', 'reserveandpay' ), $text ),
 				'mail_from_email'       => array( __( 'E-mail odesílatele', 'reserveandpay' ), 'email' ),
+				'mail_log_days'         => array( __( 'Uchovávat seznam odeslaných e-mailů (dní)', 'reserveandpay' ), 'number', __( 'Seznam je v Nástrojích a v detailu rezervace. Starší záznamy se mažou automaticky.', 'reserveandpay' ) ),
 				'tpl_received_subject'  => array( __( 'Přijetí rezervace – předmět', 'reserveandpay' ), $text ),
 				'tpl_received_body'     => array( __( 'Přijetí rezervace – text', 'reserveandpay' ), 'textarea' ),
 				'tpl_received_cash_subject' => array( __( 'Přijetí rezervace (hotovost) – předmět', 'reserveandpay' ), $text ),

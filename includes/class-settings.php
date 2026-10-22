@@ -73,6 +73,7 @@ class Resandpay_Settings {
 			// E-maily.
 			'mail_from_name'      => get_option( 'blogname' ),
 			'mail_from_email'     => get_option( 'admin_email' ),
+			'mail_log_days'       => 365,
 			// Testovací režim.
 			'test_mode'           => 1,
 			'test_email'          => get_option( 'admin_email' ),

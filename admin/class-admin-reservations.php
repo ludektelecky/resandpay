@@ -244,6 +244,13 @@ class Resandpay_Admin_Reservations {
 				echo '</form>';
 			}
 		}
+		echo '<h2>' . esc_html__( 'Odeslané e-maily', 'reserveandpay' ) . '</h2>';
+		$mails = Resandpay_Mailer::log_rows( array( 'reservation_id' => (int) $r['id'], 'limit' => 100 ) );
+		if ( $mails['rows'] ) {
+			Resandpay_Mailer::render_log_table( $mails['rows'], false );
+		} else {
+			echo '<p>' . esc_html__( 'K této rezervaci zatím není zaznamenaný žádný e-mail (seznam se vede od verze 0.7.2).', 'reserveandpay' ) . '</p>';
+		}
 		echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=reserveandpay' ) ) . '">&larr; ' . esc_html__( 'Zpět na seznam', 'reserveandpay' ) . '</a></p></div>';
 	}
 

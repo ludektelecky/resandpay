@@ -1,5 +1,16 @@
 # Vývojový deník ReserveAndPay
 
+## 0.7.2 (22. 10. 2026)
+
+- **Seznam odeslaných e-mailů**: každý e-mail pluginu se zapíše – čas, typ (Rezervace přijata, 1. část platby přijata, Připomínka…), příjemce (v testovacím režimu i skutečná testovací adresa), předmět a výsledek (✓ odesláno / ✗ chyba s popisem)
+  - **ResAndPay → Nástroje → Odeslané e-maily**: hledání podle e-mailu, VS a předmětu, filtr „jen chyby“, stránkování; odkaz na rezervaci
+  - **Detail rezervace → Odeslané e-maily**: všechny e-maily k dané rezervaci
+  - „Odesláno“ = předáno poštovnímu serveru; doručení do schránky (spam, firemní karanténa) web ověřit nemůže
+  - doba uchování v Nastavení → E-maily (výchozí 365 dní), starší záznamy maže CRON; úklid testovacích dat smaže i záznamy k rezervacím
+  - zapisuje se i zkušební e-mail z Nástrojů; seznam se vede od této verze
+- Databáze verze 6 (nová tabulka seznamu e-mailů)
+- Testy: 334 kontrol + souběh; analytické zadání v3.0 (kap. 4.5, 8, 13)
+
 ## 0.7.1 (22. 10. 2026)
 
 - **Oprava: QR kód „Nebo zaplaťte vše najednou“** měl splatnost doplatku; nově má splatnost **1. části** (v QR kódu, e-mailu, PDF i na potvrzovací stránce). Kdo by platil vše najednou až ke splatnosti doplatku, tomu by rezervace mezitím expirovala

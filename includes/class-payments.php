@@ -502,6 +502,7 @@ class Resandpay_Payments {
 		);
 		$days = max( 7, (int) Resandpay_Settings::get( 'payment_log_days' ) );
 		$wpdb->query( $wpdb->prepare( 'DELETE FROM ' . self::runs_table() . ' WHERE started_at < %s', wp_date( 'Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS ) ) );
+		Resandpay_Mailer::prune_log();
 	}
 
 	public static function runs( $limit = 20 ) {

@@ -43,7 +43,7 @@ class Resandpay_Admin_Tools {
 		echo '</form></div>';
 	}
 
-	/** Diagnostika e-mailů: zkušební odeslání, kontrola domény odesílatele, log chyb. */
+	/** Diagnostika e-mailů: zkušební odeslání, kontrola domény odesílatele, seznam odeslaných e-mailů. */
 	private static function render_mail_section() {
 		$s         = Resandpay_Settings::all();
 		$from      = (string) $s['mail_from_email'];
@@ -62,15 +62,38 @@ class Resandpay_Admin_Tools {
 		echo '<p><label>' . esc_html__( 'Poslat zkušební e-mail na:', 'reserveandpay' ) . ' <input type="email" name="to" class="regular-text" value="' . esc_attr( $s['test_email'] ) . '" required></label> ';
 		submit_button( __( 'Odeslat', 'reserveandpay' ), 'secondary', 'submit', false );
 		echo '</p><p class="description">' . esc_html__( 'Zkušební e-mail se posílá přímo na zadanou adresu (testovací režim ho nepřesměrovává).', 'reserveandpay' ) . '</p></form>';
-		$log = get_option( 'resandpay_mail_log', array() );
-		if ( $log ) {
-			echo '<h3>' . esc_html__( 'Poslední chyby odesílání', 'reserveandpay' ) . '</h3><table class="widefat striped"><thead><tr><th>' . esc_html__( 'Čas', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Příjemce', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Chyba', 'reserveandpay' ) . '</th></tr></thead><tbody>';
-			foreach ( $log as $row ) {
-				echo '<tr><td>' . esc_html( $row['time'] ) . '</td><td>' . esc_html( $row['to'] ) . '</td><td>' . esc_html( $row['error'] ) . '</td></tr>';
+		$search = sanitize_text_field( wp_unslash( $_GET['mail_q'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification
+		$failed = ! empty( $_GET['mail_failed'] ); // phpcs:ignore WordPress.Security.NonceVerification
+		$paged  = max( 1, absint( $_GET['mail_p'] ?? 1 ) ); // phpcs:ignore WordPress.Security.NonceVerification
+		$per    = 50;
+		$log    = Resandpay_Mailer::log_rows(
+			array(
+				'search'      => $search,
+				'only_failed' => $failed,
+				'limit'       => $per,
+				'offset'      => ( $paged - 1 ) * $per,
+			)
+		);
+		echo '<h2 id="rap-maillog">' . esc_html__( 'Odeslané e-maily', 'reserveandpay' ) . '</h2>';
+		echo '<form method="get" action="' . esc_url( admin_url( 'admin.php' ) ) . '#rap-maillog"><input type="hidden" name="page" value="reserveandpay-tools">';
+		echo '<p><label>' . esc_html__( 'Hledat (e-mail, VS, předmět):', 'reserveandpay' ) . ' <input type="search" name="mail_q" value="' . esc_attr( $search ) . '"></label> ';
+		echo '<label><input type="checkbox" name="mail_failed" value="1" ' . checked( $failed, true, false ) . '> ' . esc_html__( 'jen chyby', 'reserveandpay' ) . '</label> ';
+		submit_button( __( 'Filtrovat', 'reserveandpay' ), 'secondary', '', false );
+		echo '</p></form>';
+		if ( ! $log['rows'] ) {
+			echo '<p>' . esc_html( '' !== $search || $failed ? __( 'Nic nenalezeno.', 'reserveandpay' ) : __( 'Zatím nebyl odeslán žádný e-mail (seznam se vede od verze 0.7.2).', 'reserveandpay' ) ) . '</p>';
+			return;
+		}
+		Resandpay_Mailer::render_log_table( $log['rows'] );
+		$pages = (int) ceil( $log['total'] / $per );
+		if ( $pages > 1 ) {
+			echo '<p>';
+			for ( $p = 1; $p <= $pages; $p++ ) {
+				$url = add_query_arg( array( 'page' => 'reserveandpay-tools', 'mail_q' => $search, 'mail_failed' => $failed ? 1 : null, 'mail_p' => $p ), admin_url( 'admin.php' ) ) . '#rap-maillog';
+				echo $p === $paged ? '<strong>' . (int) $p . '</strong> ' : '<a href="' . esc_url( $url ) . '">' . (int) $p . '</a> ';
 			}
-			echo '</tbody></table>';
-		} else {
-			echo '<p>' . esc_html__( 'Zatím nebyla zaznamenána žádná chyba odesílání.', 'reserveandpay' ) . '</p>';
+			/* translators: %d: počet */
+			echo '· ' . esc_html( sprintf( __( 'celkem %d', 'reserveandpay' ), $log['total'] ) ) . '</p>';
 		}
 	}
 

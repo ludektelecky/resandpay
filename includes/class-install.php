@@ -142,6 +142,20 @@ class Resandpay_Install {
 			PRIMARY KEY  (id),
 			KEY started_at (started_at)
 		) {$charset};
+		CREATE TABLE {$wpdb->prefix}resandpay_mails (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			created_at datetime NOT NULL,
+			reservation_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			mail_key varchar(30) NOT NULL DEFAULT '',
+			recipient varchar(255) NOT NULL DEFAULT '',
+			sent_to varchar(255) NOT NULL DEFAULT '',
+			subject varchar(255) NOT NULL DEFAULT '',
+			ok tinyint(1) NOT NULL DEFAULT 0,
+			error varchar(255) NOT NULL DEFAULT '',
+			PRIMARY KEY  (id),
+			KEY reservation_id (reservation_id),
+			KEY created_at (created_at)
+		) {$charset};
 		CREATE TABLE {$locks} (
 			lock_name varchar(100) NOT NULL,
 			expires_at bigint(20) NOT NULL,

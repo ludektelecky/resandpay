@@ -607,6 +607,7 @@ class Resandpay_Reservations {
 	public static function delete_all() {
 		global $wpdb;
 		$wpdb->query( 'DELETE FROM ' . self::table() );
+		$wpdb->query( 'DELETE FROM ' . Resandpay_Mailer::log_table() . ' WHERE reservation_id > 0' );
 		delete_option( 'resandpay_sequence' );
 	}
 }

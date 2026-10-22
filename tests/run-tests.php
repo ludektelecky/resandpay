@@ -890,7 +890,7 @@ global $wpdb;
 $wpdb->update( $wpdb->prefix . 'resandpay_reservations', array( 'amount_paid' => 0 ), array( 'id' => (int) $s2['id'] ) );
 update_option( 'resandpay_db_version', '4' );
 Resandpay_Install::maybe_upgrade();
-rap_t( 500.0 === (float) Resandpay_Reservations::get( $s2['id'] )['amount_paid'] && '5' === get_option( 'resandpay_db_version' ), 'upgrade DB 4 → 5: zaplaceným rezervacím doplněna zaplacená částka' );
+rap_t( 500.0 === (float) Resandpay_Reservations::get( $s2['id'] )['amount_paid'] && RESANDPAY_DB_VERSION === get_option( 'resandpay_db_version' ), 'upgrade DB 4 → 5: zaplaceným rezervacím doplněna zaplacená částka' );
 
 echo "== 0.6.2: krátký přehled nadcházejících (úvodní stránka)\n";
 $ucat = wp_insert_term( 'Úvodní test', Resandpay_Post_Types::CATEGORY, array( 'slug' => 'uvod-test' ) );
@@ -987,6 +987,47 @@ $_GET['rap_done'] = Resandpay_Reservations::create( $dE, rap_person( 240 ) )['to
 $pc = Resandpay_Frontend::render_event_page( $dE, '', true );
 unset( $_GET['rap_done'] );
 rap_t( false !== strpos( $pc, 'rap-success' ) && false === strpos( $pc, 'name="rap_name"' ), 'potvrzení rezervace se zobrazí v kartě místo formuláře' );
+
+echo "== 0.7.2: seznam odeslaných e-mailů\n";
+require_once RESANDPAY_DIR . 'admin/class-admin-tools.php';
+global $wpdb;
+$wpdb->query( 'DELETE FROM ' . Resandpay_Mailer::log_table() );
+$ml = rap_event( 'Log e-mailů', $now + 40 * $day, $now + 40 * $day + 3600, 5 );
+Resandpay_Settings::update( array( 'test_mode' => 0, 'notify_admin' => 1, 'admin_email' => 'spravce@example.com' ) );
+$mr = Resandpay_Reservations::create( $ml, rap_person( 140 ) );
+$rows = Resandpay_Mailer::log_rows( array( 'reservation_id' => $mr['id'] ) )['rows'];
+$keys = wp_list_pluck( $rows, 'mail_key' );
+rap_t( 2 === count( $rows ) && in_array( 'received', $keys, true ) && in_array( 'admin', $keys, true ), 'po rezervaci zapsány 2 e-maily (zákazník, správce)' );
+$rc = array_values( array_filter( $rows, fn( $x ) => 'received' === $x['mail_key'] ) )[0];
+rap_t( 'osoba140@example.com' === $rc['recipient'] && 'osoba140@example.com' === $rc['sent_to'] && 1 === (int) $rc['ok'] && false !== strpos( $rc['subject'], 'Rezervace přijata' ) && $mr['vs'] === $rc['vs'], 'záznam: příjemce, předmět, výsledek, VS' );
+Resandpay_Reservations::add_payment( $mr['id'], 500, 'cash' );
+rap_t( 'paid' === Resandpay_Mailer::log_rows( array( 'reservation_id' => $mr['id'], 'limit' => 1 ) )['rows'][0]['mail_key'], 'potvrzení platby zapsáno' );
+Resandpay_Settings::update( array( 'test_mode' => 1, 'test_email' => 'test@example.com' ) );
+Resandpay_Mailer::send_template( 'zakaznik@example.com', 'reminder', $mr );
+$tl = Resandpay_Mailer::log_rows( array( 'reservation_id' => $mr['id'], 'limit' => 1 ) )['rows'][0];
+rap_t( 'zakaznik@example.com' === $tl['recipient'] && 'test@example.com' === $tl['sent_to'], 'testovací režim: původní příjemce i skutečná testovací adresa' );
+add_filter( 'pre_wp_mail', '__return_false', 99 );
+Resandpay_Mailer::send_template( 'chyba@example.com', 'paid', $mr );
+remove_filter( 'pre_wp_mail', '__return_false', 99 );
+rap_t( 0 === (int) Resandpay_Mailer::log_rows( array( 'only_failed' => true ) )['rows'][0]['ok'] && 1 === Resandpay_Mailer::log_rows( array( 'only_failed' => true ) )['total'], 'neúspěšné odeslání se zapíše jako chyba (filtr „jen chyby“)' );
+rap_t( 1 <= Resandpay_Mailer::log_rows( array( 'search' => $mr['vs'] ) )['total'] && 0 === Resandpay_Mailer::log_rows( array( 'search' => 'nikdo@nikde.cz' ) )['total'], 'hledání podle VS a e-mailu' );
+$wpdb->update( Resandpay_Mailer::log_table(), array( 'created_at' => '2020-01-01 00:00:00' ), array( 'mail_key' => 'admin', 'reservation_id' => $mr['id'] ) );
+Resandpay_Mailer::prune_log();
+rap_t( 0 === Resandpay_Mailer::log_rows( array( 'search' => 'spravce@example.com' ) )['total'], 'staré záznamy se automaticky mažou' );
+wp_set_current_user( 1 );
+$_GET = array( 'page' => 'reserveandpay-tools' );
+ob_start();
+Resandpay_Admin_Tools::page();
+$tp = ob_get_clean();
+$_GET = array( 'page' => 'reserveandpay-detail', 'id' => $mr['id'] );
+ob_start();
+Resandpay_Admin_Reservations::page_detail();
+$dp2 = ob_get_clean();
+$_GET = array();
+wp_set_current_user( 0 );
+rap_t( false !== strpos( $tp, 'Odeslané e-maily' ) && false !== strpos( $tp, 'Rezervace přijata' ) && false !== strpos( $tp, 'testovací režim → test@example.com' ), 'Nástroje: seznam odeslaných e-mailů' );
+rap_t( false !== strpos( $dp2, 'Odeslané e-maily' ) && false !== strpos( $dp2, 'Platba přijata' ) && false !== strpos( $dp2, '✗' ), 'detail rezervace: odeslané e-maily vč. chyby' );
+Resandpay_Settings::update( array( 'test_mode' => 1 ) );
 
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
