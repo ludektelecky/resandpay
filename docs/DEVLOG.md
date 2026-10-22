@@ -1,5 +1,15 @@
 # Vývojový deník ReserveAndPay
 
+## 0.7.5 (22. 10. 2026)
+
+- **Dynamický prefix variabilního symbolu** (Nastavení → Rezervace a platby → Prefix variabilního symbolu): kromě číslic proměnné **%YYYY%** (2026), **%YY%** (26) a **%MM%** (01–12), vyhodnocené k okamžiku rezervace – s novým rokem se prefix změní sám
+  - příklad %YY%: letos 26000123, v roce 2027 27000124; %YYYY%: 2027000124
+  - po dosazení nejvýš 4 číslice (VS má max. 10 číslic), jinou hodnotu nastavení neuloží a ohlásí chybu
+  - pořadové číslo za prefixem se nenuluje ani nevrací → VS je vždy jedinečný
+  - v popisu pole náhled: jaký VS dostane příští rezervace a jaký by dostala za rok
+  - výchozí hodnota pro nové instalace %YY%; **na webu je uložené pevné „26“ – změňte na %YY%**
+- Testy: 386 kontrol + souběh; analytické zadání v3.3 (kap. 5.3)
+
 ## 0.7.4 (22. 10. 2026)
 
 - **Evidence plateb u rezervace** (detail rezervace → Přijaté platby): každá platba zvlášť – datum, částka, způsob, vazba na avízo, kdo ji zapsal; dosavadní platby se při aktualizaci převedou automaticky

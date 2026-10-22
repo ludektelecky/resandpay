@@ -45,7 +45,7 @@ class Resandpay_Settings {
 			'detail_layout'       => 'full',
 			// Nadpis akce vykreslí plugin v záhlaví (titulek šablony GeneratePress se skryje).
 			'detail_own_title'    => 1,
-			'vs_prefix'           => gmdate( 'y' ),
+			'vs_prefix'           => '%YY%',
 			'notify_admin'        => 1,
 			// Kódy akcí, služeb a termínů (AK-2026-0012, SL-003, TE-2026-0145).
 			'code_prefix_event'   => 'AK',

@@ -124,7 +124,7 @@ class Resandpay_Reservations {
 				'event_id'         => (int) $event_id,
 				'status'           => $cash ? self::ONSITE : self::PENDING,
 				'pay_choice'       => $cash ? 'cash' : 'transfer',
-				'vs'               => self::format_vs( $seq ),
+				'vs'               => self::format_vs( $seq, $now_ts ),
 				'proforma_no'      => self::format_proforma( $seq, $now_ts ),
 				'token'            => wp_generate_password( 40, false, false ),
 				'customer_name'    => mb_substr( sanitize_text_field( $name ), 0, 190 ),
@@ -188,9 +188,26 @@ class Resandpay_Reservations {
 		}
 	}
 
-	public static function format_vs( $seq ) {
-		$prefix = preg_replace( '/\D/', '', (string) Resandpay_Settings::get( 'vs_prefix' ) );
-		$prefix = substr( $prefix, 0, 4 );
+	/**
+	 * Prefix VS z nastavení s proměnnými: %YYYY% = rok (2026), %YY% = rok dvoumístně (26),
+	 * %MM% = měsíc (01–12) – vyhodnotí se k okamžiku rezervace. Výsledek jen číslice, max. 4.
+	 */
+	public static function vs_prefix( $template = null, $ts = null ) {
+		$t = strtoupper( (string) ( $template ?? Resandpay_Settings::get( 'vs_prefix' ) ) );
+		$t = strtr(
+			$t,
+			array(
+				'%YYYY%' => wp_date( 'Y', $ts ?? time() ),
+				'%YY%'   => wp_date( 'y', $ts ?? time() ),
+				'%MM%'   => wp_date( 'm', $ts ?? time() ),
+			)
+		);
+		return preg_replace( '/\D/', '', $t );
+	}
+
+	/** VS = prefix + pořadové číslo. Řada pořadových čísel se nikdy nevrací, VS je tedy vždy jedinečný. */
+	public static function format_vs( $seq, $ts = null ) {
+		$prefix = substr( self::vs_prefix( null, $ts ), 0, 4 );
 		$len    = max( 6, 10 - strlen( $prefix ) - 2 );
 		return substr( $prefix . str_pad( (string) $seq, $len, '0', STR_PAD_LEFT ), 0, 10 );
 	}

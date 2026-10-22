@@ -1178,6 +1178,26 @@ rap_t( false !== strpos( $dd4, 'Přijaté platby' ) && false !== strpos( $dd4, '
 rap_t( false !== strpos( $pp4, 'Odpárovat od rezervace' ), 'stránka Platby: odpárování spárovaného avíza' );
 Resandpay_Settings::update( array( 'bank_account' => '123456789/2700' ) );
 
+echo "== 0.7.5: dynamický prefix VS\n";
+$t26 = Resandpay_Events::ts( '2026-10-22 12:00:00' );
+$t27 = Resandpay_Events::ts( '2027-01-05 12:00:00' );
+rap_t( '26' === Resandpay_Reservations::vs_prefix( '%YY%', $t26 ) && '27' === Resandpay_Reservations::vs_prefix( '%yy%', $t27 ) && '2027' === Resandpay_Reservations::vs_prefix( '%YYYY%', $t27 ) && '2601' === Resandpay_Reservations::vs_prefix( '%YY%01', $t26 ) && '2701' === Resandpay_Reservations::vs_prefix( '%YY%%MM%', $t27 ), 'proměnné %YY%, %YYYY%, %MM% a číslice' );
+Resandpay_Settings::update( array( 'vs_prefix' => '%YY%' ) );
+rap_t( '26000123' === Resandpay_Reservations::format_vs( 123, $t26 ) && '27000124' === Resandpay_Reservations::format_vs( 124, $t27 ), '%YY%: VS 26000123 letos, 27000124 příští rok' );
+Resandpay_Settings::update( array( 'vs_prefix' => '%YYYY%' ) );
+rap_t( '2027000124' === Resandpay_Reservations::format_vs( 124, $t27 ), '%YYYY%: VS 2027000124 (10 číslic)' );
+$vsE = rap_event( 'VS prefix', $now + 70 * $day, $now + 70 * $day + 3600, 5 );
+$vr  = Resandpay_Reservations::create( $vsE, rap_person( 180 ), array( 'notify' => false ) );
+rap_t( 0 === strpos( $vr['vs'], wp_date( 'Y' ) ) && 10 === strlen( $vr['vs'] ) && (int) $vr['id'] === (int) Resandpay_Reservations::find_by_vs_input( $vr['vs'] )['id'], 'rezervace dostane VS s aktuálním rokem a lze ji podle něj najít' );
+rap_t( false !== strpos( Resandpay_QR::spd( $vr ), '*X-VS:' . $vr['vs'] ), 'QR platba nese VS s prefixem' );
+$san = Resandpay_Admin_Settings::sanitize( array_merge( Resandpay_Settings::all(), array( '__form' => 1, 'vs_prefix' => ' %yy% ' ) ) );
+rap_t( '%YY%' === $san['vs_prefix'], 'nastavení: proměnná se uloží (velká písmena, bez mezer)' );
+$san = Resandpay_Admin_Settings::sanitize( array_merge( Resandpay_Settings::all(), array( '__form' => 1, 'vs_prefix' => '%YYYY%9' ) ) );
+rap_t( '%YYYY%' === $san['vs_prefix'], 'nastavení: víc než 4 číslice po dosazení → ponechán původní prefix' );
+$san = Resandpay_Admin_Settings::sanitize( array_merge( Resandpay_Settings::all(), array( '__form' => 1, 'vs_prefix' => 'AB%DD%' ) ) );
+rap_t( '%YYYY%' === $san['vs_prefix'], 'nastavení: neznámá proměnná nebo písmena → ponechán původní prefix' );
+Resandpay_Settings::update( array( 'vs_prefix' => '26' ) );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );

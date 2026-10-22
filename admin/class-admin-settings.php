@@ -53,7 +53,7 @@ class Resandpay_Admin_Settings {
 				'reminder_days'     => array( __( 'Připomínka před splatností (dní)', 'reserveandpay' ), 'number', __( 'Kolik dní před splatností poslat zákazníkovi připomínku nezaplacené rezervace (i 1. části a doplatku). 0 = nepřipomínat.', 'reserveandpay' ) ),
 				'cash_enabled'      => array( __( 'Povolit platbu v hotovosti na místě', 'reserveandpay' ), 'checkbox', __( 'Doplňková možnost k platbě převodem (QR), která zůstává předvybraná. U akce i služby lze přepsat.', 'reserveandpay' ) ),
 				'last_minute_hours' => array( __( 'Hranice pro platbu na místě (hodin před začátkem)', 'reserveandpay' ), 'number', __( 'Rezervace vytvořená později než tato hranice dostane i možnost zaplatit na místě a po splatnosti neexpiruje. Výchozí 24 h.', 'reserveandpay' ) ),
-				'vs_prefix'         => array( __( 'Prefix variabilního symbolu', 'reserveandpay' ), $text, __( 'Číslice na začátku VS (např. rok 26). VS je vždy jedinečný a nikdy se nepoužije znovu.', 'reserveandpay' ) ),
+				'vs_prefix'         => array( __( 'Prefix variabilního symbolu', 'reserveandpay' ), $text, sprintf( /* translators: 1: příklad VS, 2: příklad VS příští rok */ __( 'Číslice a proměnné na začátku VS: %%YYYY%% = rok (2026), %%YY%% = rok dvoumístně (26), %%MM%% = měsíc (01–12); vyhodnotí se k okamžiku rezervace, takže se prefix s novým rokem změní sám. Po dosazení nejvýš 4 číslice. Pořadové číslo za prefixem běží dál a nikdy se nevrací – VS je vždy jedinečný. Příští rezervace dostane VS %1$s, stejná rezervace za rok by dostala %2$s.', 'reserveandpay' ), Resandpay_Reservations::format_vs( (int) get_option( 'resandpay_sequence' ) + 1 ), Resandpay_Reservations::format_vs( (int) get_option( 'resandpay_sequence' ) + 1, strtotime( '+1 year' ) ) ) ),
 				'gdpr_page'         => array( __( 'Stránka se zásadami zpracování osobních údajů', 'reserveandpay' ), 'page' ),
 				'terms_page'        => array( __( 'Stránka s obchodními a stornopodmínkami', 'reserveandpay' ), 'page' ),
 				'events_page'       => array( __( 'Stránka s přehledem akcí', 'reserveandpay' ), 'page', __( 'Stránka se shortcodem [reserveandpay_program]. Archiv /akce/ a kategorie se na ni přesměrují a detail akce na ni odkazuje.', 'reserveandpay' ) ),
@@ -180,7 +180,14 @@ class Resandpay_Admin_Settings {
 			}
 		}
 		$out['currency']  = strtoupper( substr( preg_replace( '/[^A-Za-z]/', '', $out['currency'] ), 0, 3 ) ) ?: 'CZK';
-		$out['vs_prefix'] = substr( preg_replace( '/\D/', '', $out['vs_prefix'] ), 0, 4 );
+		$vs_tpl = strtoupper( preg_replace( '/\s+/', '', (string) $out['vs_prefix'] ) );
+		if ( preg_replace( '/%(YYYY|YY|MM)%|\d/', '', $vs_tpl ) !== '' || strlen( Resandpay_Reservations::vs_prefix( $vs_tpl ) ) > 4 ) {
+			if ( function_exists( 'add_settings_error' ) ) {
+				add_settings_error( Resandpay_Settings::OPTION, 'vs_prefix', __( 'Prefix VS může obsahovat jen číslice a proměnné %YYYY%, %YY%, %MM% a po dosazení mít nejvýš 4 číslice – ponechán původní.', 'reserveandpay' ) );
+			}
+			$vs_tpl = (string) Resandpay_Settings::get( 'vs_prefix' );
+		}
+		$out['vs_prefix'] = $vs_tpl;
 		$out['iban']      = strtoupper( preg_replace( '/\s+/', '', $out['iban'] ) );
 		$out['imap_port']        = max( 1, min( 65535, (int) $out['imap_port'] ) ) ?: 993;
 		$out['payment_batch']    = max( 1, min( 500, (int) $out['payment_batch'] ) );
