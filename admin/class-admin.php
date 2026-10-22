@@ -19,7 +19,7 @@ class Resandpay_Admin {
 		$cap = resandpay_cap_reservations();
 		add_menu_page(
 			__( 'ReserveAndPay', 'reserveandpay' ),
-			__( 'Rezervace', 'reserveandpay' ),
+			__( 'ResAndPay', 'reserveandpay' ), // Název v menu (SWD kap. 14.5: ReserveAndPay / ResAndPay / RAP).
 			$cap,
 			'reserveandpay',
 			array( 'Resandpay_Admin_Reservations', 'page_list' ),

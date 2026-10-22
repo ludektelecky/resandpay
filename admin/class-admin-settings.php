@@ -58,7 +58,7 @@ class Resandpay_Admin_Settings {
 				'events_page'       => array( __( 'Stránka s přehledem akcí', 'reserveandpay' ), 'page', __( 'Stránka se shortcodem [reserveandpay_program]. Archiv /akce/ a kategorie se na ni přesměrují a detail akce na ni odkazuje.', 'reserveandpay' ) ),
 			),
 			__( 'Kontrola plateb', 'reserveandpay' ) => array(
-				'payment_mode'         => array( __( 'Režim kontroly plateb', 'reserveandpay' ), 'select', __( 'Automaticky = při volání CRONu, když uplynul interval. Ručně = jen tlačítkem v Rezervace → Platby.', 'reserveandpay' ), array( 'auto' => __( 'Automaticky v intervalu', 'reserveandpay' ), 'manual' => __( 'Jen ručně', 'reserveandpay' ) ) ),
+				'payment_mode'         => array( __( 'Režim kontroly plateb', 'reserveandpay' ), 'select', __( 'Automaticky = při volání CRONu, když uplynul interval. Ručně = jen tlačítkem v ResAndPay → Platby.', 'reserveandpay' ), array( 'auto' => __( 'Automaticky v intervalu', 'reserveandpay' ), 'manual' => __( 'Jen ručně', 'reserveandpay' ) ) ),
 				'payment_interval'     => array( __( 'Interval kontroly', 'reserveandpay' ), 'select', __( 'Nejkratší reálný interval je dán krokem CRONu na hostingu (doporučeno */15).', 'reserveandpay' ), array( '15' => '15 min', '30' => '30 min', '60' => '60 min', '120' => '2 h', '240' => '4 h', '1440' => __( '1× denně', 'reserveandpay' ) ) ),
 				'imap_host'            => array( __( 'IMAP server', 'reserveandpay' ), $text, __( 'Active24/Websupport: imap.websupport.cz', 'reserveandpay' ) ),
 				'imap_port'            => array( __( 'Port', 'reserveandpay' ), 'number', __( '993 (SSL/TLS)', 'reserveandpay' ) ),

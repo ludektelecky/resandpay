@@ -305,7 +305,7 @@ class Resandpay_Mailer {
 		}
 		$orig            = is_array( $args['to'] ) ? implode( ', ', $args['to'] ) : $args['to'];
 		$args['to']      = $test;
-		$args['subject'] = '[TEST → ' . $orig . '] ' . $args['subject'];
+		$args['subject'] = '[RAP TEST → ' . $orig . '] ' . $args['subject'];
 		$note = __( 'TESTOVACÍ REŽIM – původní příjemce:', 'reserveandpay' ) . ' ' . $orig;
 		if ( false !== stripos( (string) $args['message'], '<body' ) ) {
 			$args['message'] = preg_replace( '/(<body[^>]*>)/i', '$1<div style="background:#fcf0f1;color:#8a2424;padding:10px 14px;font:13px Arial,sans-serif;">' . esc_html( $note ) . '</div>', $args['message'], 1 );

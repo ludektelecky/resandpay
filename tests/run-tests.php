@@ -192,7 +192,7 @@ $received = array_filter( $GLOBALS['rap_mails'], fn( $m ) => false !== strpos( $
 $first    = reset( $received );
 rap_t( count( $received ) >= 3, 'e-mail o přijetí rezervace se odesílá' );
 rap_t( $first && 'tester@example.com' === $first['to'], 'v testovacím režimu jde e-mail jen na testovací adresu' );
-rap_t( $first && false !== strpos( $first['subject'], '[TEST → osoba' ), 'předmět obsahuje původního příjemce' );
+rap_t( $first && false !== strpos( $first['subject'], '[RAP TEST → osoba' ), 'předmět obsahuje zkratku RAP a původního příjemce' );
 rap_t( $first && (bool) preg_match( '/Variabilní symbol<\/td><td[^>]*>26\d+/', $first['message'] ), 'e-mail obsahuje variabilní symbol v platebních údajích' );
 rap_t( $first && false !== strpos( $first['message'], '123456789/2700' ), 'text obsahuje číslo účtu z nastavení' );
 rap_t( (bool) array_filter( $GLOBALS['rap_mails'], fn( $m ) => false !== strpos( $m['subject'], 'Nová rezervace' ) ), 'správce dostává upozornění na novou rezervaci' );
@@ -698,6 +698,15 @@ $_GET = array();
 wp_set_current_user( 0 );
 rap_t( false !== strpos( $pg, 'Zkontrolovat platby nyní' ) && false !== strpos( $pg, 'Přiřadit k rezervaci' ) && false !== strpos( $pg, 'rap_cron=' ), 'stránka Platby: stav, ruční kontrola, přiřazení, CRON' );
 Resandpay_Settings::update( array( 'bank_account' => '123456789/2700' ) );
+
+echo "== 0.5.1: název v menu\n";
+global $menu;
+$menu = array();
+wp_set_current_user( 1 );
+Resandpay_Admin::menu();
+$top = array_values( array_filter( (array) $menu, fn( $m ) => 'reserveandpay' === ( $m[2] ?? '' ) ) );
+wp_set_current_user( 0 );
+rap_t( $top && 'ResAndPay' === $top[0][0] && 'ReserveAndPay' === $top[0][3], 'menu: „ResAndPay“, titulek stránky „ReserveAndPay“' );
 
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 

@@ -258,7 +258,7 @@ class Resandpay_PDF {
 			$pdf->MultiCell( $w, 4, trim( $s['pdf_footer'] . ( $contact ? ' · ' . implode( ' · ', $contact ) : '' ), ' ·' ), 0, 'C', false, 1 );
 			return $pdf->Output( '', 'S' );
 		} catch ( Exception $e ) {
-			error_log( 'ReserveAndPay PDF: ' . $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
+			error_log( 'RAP PDF: ' . $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
 			return '';
 		}
 	}

@@ -19,3 +19,9 @@ Starší verze se nepřepisují.
 ## Verze dokumentace
 - Analytické zadání uvádí na titulní straně „Verze X.Y · datum · plugin ReserveAndPay A.B.C“ a v historii verzí sloupec „Verze pluginu“ – verze pluginu, ke které byla dokumentace vydána.
 - README uvádí aktuální verzi pluginu a verzi zadání; DEVLOG je členěn podle verzí pluginu.
+
+## Pojmenování (SWD kap. 14.5)
+- Plný název **ReserveAndPay** – kde se pojmenovává produkt (seznam pluginů, titulky stránek, dokumentace, CRON, PDF).
+- **ResAndPay** – název v menu administrace a repozitář; cesty v textech psát „ResAndPay → Platby“.
+- **RAP** – jen kde je nutné nejkratší označení (předmět testovacích e-mailů, log, technické předpony).
+- Technické identifikátory neměnit (reserveandpay, resandpay_, shortcody).

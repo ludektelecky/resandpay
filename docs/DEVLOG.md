@@ -1,5 +1,12 @@
 # Vývojový deník ReserveAndPay
 
+## 0.5.1 (22. 10. 2026)
+
+- Položka v menu administrace se jmenuje **ResAndPay** (dříve „Rezervace“); titulky stránek nesou plný název **ReserveAndPay**
+- Zkratka **RAP**: předmět e-mailů v testovacím režimu `[RAP TEST → příjemce]`, technické záznamy v logu
+- Pravidla pojmenování zapsána do analytického zadání (v2.5, kap. 14.5), README a pokynů projektu; technické identifikátory beze změny
+- Pozn.: starší záznamy deníku uvádějí cesty „Rezervace → …“ – dnes „ResAndPay → …“
+
 ## 0.5.0 – Etapa E5 (22. 10. 2026)
 
 - **Kontrola plateb z avíz Raiffeisenbank** (Rezervace → Platby): čtení schránky přes IMAP, rozpoznání avíza „Pohyb na účtě“, ověření pravosti, párování podle VS a částky, rezervace → Zaplaceno + potvrzení zákaznici
