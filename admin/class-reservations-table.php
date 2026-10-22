@@ -49,6 +49,7 @@ class Resandpay_Reservations_Table extends WP_List_Table {
 		return array(
 			'cancel'        => __( 'Zrušit (s e-mailem zákaznici)', 'reserveandpay' ),
 			'cancel_silent' => __( 'Zrušit (bez e-mailu)', 'reserveandpay' ),
+			'delete'        => __( 'Smazat trvale (jen zrušené)', 'reserveandpay' ),
 		);
 	}
 
@@ -129,6 +130,9 @@ class Resandpay_Reservations_Table extends WP_List_Table {
 		$actions = array( 'detail' => '<a href="' . esc_url( $detail ) . '">' . esc_html__( 'Detail', 'reserveandpay' ) . '</a>' );
 		foreach ( Resandpay_Admin_Reservations::row_actions_for( $item ) as $key => $label ) {
 			$confirm         = 'cancel' === $key ? ' onclick="return confirm(\'' . esc_js( __( 'Zrušit rezervaci, uvolnit místo a poslat zákaznici e-mail?', 'reserveandpay' ) ) . '\')"' : '';
+			if ( 'delete' === $key ) {
+				$confirm = ' class="submitdelete" onclick="return confirm(\'' . esc_js( __( 'Trvale smazat rezervaci? Tuto akci nelze vrátit.', 'reserveandpay' ) ) . '\')"';
+			}
 			$actions[ $key ] = '<a href="' . esc_url( Resandpay_Admin_Reservations::action_url( $key, $item['id'] ) ) . '"' . $confirm . '>' . esc_html( $label ) . '</a>';
 		}
 		return $out . $this->row_actions( $actions );

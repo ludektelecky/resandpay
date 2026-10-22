@@ -30,6 +30,9 @@ class Resandpay_Install {
 				global $wpdb;
 				$wpdb->query( "UPDATE {$wpdb->prefix}resandpay_reservations SET amount_paid = amount WHERE status = 'paid' AND amount_paid = 0" );
 			}
+			if ( $from && $from < 8 ) {
+				self::backfill_ledger();
+			}
 			update_option( 'resandpay_codes_backfill', 1, false );
 		}
 	}
@@ -39,6 +42,33 @@ class Resandpay_Install {
 		if ( get_option( 'resandpay_codes_backfill' ) ) {
 			Resandpay_Codes::backfill();
 			delete_option( 'resandpay_codes_backfill' );
+		}
+	}
+
+	/** 0.7.4: evidence plateb u rezervací – převede dosavadní součty „Zaplaceno“ na jednotlivé platby. */
+	public static function backfill_ledger() {
+		global $wpdb;
+		$res  = $wpdb->prefix . 'resandpay_reservations';
+		$led  = $wpdb->prefix . 'resandpay_res_payments';
+		$pay  = $wpdb->prefix . 'resandpay_payments';
+		$rows = $wpdb->get_results( "SELECT * FROM {$res} WHERE amount_paid > 0", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL
+		foreach ( $rows as $r ) {
+			if ( $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$led} WHERE reservation_id = %d", $r['id'] ) ) ) { // phpcs:ignore WordPress.DB.PreparedSQL
+				continue;
+			}
+			$left = (float) $r['amount_paid'];
+			$avs  = $wpdb->get_results( $wpdb->prepare( "SELECT id, amount, matched_at FROM {$pay} WHERE reservation_id = %d AND status IN ('matched','manual') ORDER BY id", $r['id'] ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL
+			foreach ( $avs as $a ) {
+				$amt = min( $left, (float) $a['amount'] );
+				if ( $amt <= 0 ) {
+					break;
+				}
+				$wpdb->insert( $led, array( 'reservation_id' => $r['id'], 'created_at' => $a['matched_at'] ?: $r['updated_at'], 'amount' => $amt, 'method' => $r['paid_method'] ?: 'transfer_auto', 'payment_id' => $a['id'], 'note' => 'převedeno při aktualizaci 0.7.4' ) );
+				$left -= $amt;
+			}
+			if ( $left > 0.009 ) {
+				$wpdb->insert( $led, array( 'reservation_id' => $r['id'], 'created_at' => $r['paid_at'] ?: $r['updated_at'], 'amount' => round( $left, 2 ), 'method' => $r['paid_method'] ?: 'transfer_manual', 'note' => 'převedeno při aktualizaci 0.7.4' ) );
+			}
 		}
 	}
 
@@ -143,6 +173,22 @@ class Resandpay_Install {
 			error varchar(255) NOT NULL DEFAULT '',
 			PRIMARY KEY  (id),
 			KEY started_at (started_at)
+		) {$charset};
+		CREATE TABLE {$wpdb->prefix}resandpay_res_payments (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			reservation_id bigint(20) unsigned NOT NULL,
+			created_at datetime NOT NULL,
+			amount decimal(12,2) NOT NULL DEFAULT 0,
+			method varchar(30) NOT NULL DEFAULT '',
+			payment_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			note varchar(255) NOT NULL DEFAULT '',
+			voided_at datetime NULL,
+			voided_by bigint(20) unsigned NOT NULL DEFAULT 0,
+			void_reason varchar(255) NOT NULL DEFAULT '',
+			PRIMARY KEY  (id),
+			KEY reservation_id (reservation_id),
+			KEY payment_id (payment_id)
 		) {$charset};
 		CREATE TABLE {$wpdb->prefix}resandpay_mails (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,

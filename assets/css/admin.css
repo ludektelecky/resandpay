@@ -75,3 +75,7 @@ td.rap-box .rap-payfields { max-width: 520px; }
 .rap-maillog .rap-ok { color: #2e6b34; white-space: nowrap; }
 .rap-maillog .rap-err { color: #a12b2b; }
 .rap-maillog small { color: #646970; }
+.rap-ledger .rap-ok { color: #2e6b34; }
+.rap-ledger .rap-err { color: #a12b2b; }
+.rap-ledger--void td { color: #8c8f94; }
+.rap-ledger--void td strong { text-decoration: line-through; }

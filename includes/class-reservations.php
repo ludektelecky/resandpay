@@ -335,6 +335,7 @@ class Resandpay_Reservations {
 					'method'         => $method,
 					'notify'         => false,
 					'allow_overbook' => ! empty( $opts['allow_overbook'] ),
+					'no_ledger'      => true,
 				)
 			);
 			if ( is_wp_error( $res ) ) {
@@ -352,6 +353,7 @@ class Resandpay_Reservations {
 		);
 		$new                 = self::get( $id );
 		$new['last_payment'] = $amount;
+		$new['ledger_id']    = self::ledger_add( $id, $amount, $method, (int) ( $opts['payment_id'] ?? 0 ), (string) ( $opts['note'] ?? '' ) );
 		do_action( 'resandpay_payment_added', $new, $amount, $method );
 		if ( $opts['notify'] ) {
 			if ( $full ) {
@@ -582,6 +584,10 @@ class Resandpay_Reservations {
 				$update['paid_by']     = get_current_user_id();
 				// Ruční „zaplaceno“ (převod / hotově) = uhrazen celý zbytek.
 				$update['amount_paid'] = max( (float) $r['amount_paid'], (float) $r['amount'] );
+				$rest                  = round( (float) $r['amount'] - (float) $r['amount_paid'], 2 );
+				if ( $rest > 0 && empty( $args['no_ledger'] ) ) {
+					self::ledger_add( $id, $rest, $update['paid_method'] );
+				}
 			}
 			if ( self::CANCELLED === $status ) {
 				$update['cancelled_at']  = $now;
@@ -606,11 +612,168 @@ class Resandpay_Reservations {
 		return $new;
 	}
 
+	/* ---------------------------------------------------------------------
+	 * Evidence plateb u rezervace (0.7.4) – jednotlivé platby, odpárování, smazání
+	 * ------------------------------------------------------------------- */
+
+	public static function ledger_table() {
+		global $wpdb;
+		return $wpdb->prefix . 'resandpay_res_payments';
+	}
+
+	/** Zapíše platbu do evidence rezervace. @return int ID záznamu. */
+	public static function ledger_add( $reservation_id, $amount, $method, $payment_id = 0, $note = '' ) {
+		global $wpdb;
+		$wpdb->insert(
+			self::ledger_table(),
+			array(
+				'reservation_id' => (int) $reservation_id,
+				'created_at'     => current_time( 'mysql' ),
+				'amount'         => round( (float) $amount, 2 ),
+				'method'         => sanitize_key( $method ),
+				'payment_id'     => (int) $payment_id,
+				'user_id'        => get_current_user_id(),
+				'note'           => mb_substr( sanitize_text_field( $note ), 0, 255 ),
+			)
+		);
+		return (int) $wpdb->insert_id;
+	}
+
+	/** Platby rezervace (i odpárované). */
+	public static function ledger( $reservation_id ) {
+		global $wpdb;
+		return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::ledger_table() . ' WHERE reservation_id = %d ORDER BY id', $reservation_id ), ARRAY_A );
+	}
+
+	public static function ledger_get( $ledger_id ) {
+		global $wpdb;
+		return $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::ledger_table() . ' WHERE id = %d', $ledger_id ), ARRAY_A );
+	}
+
+	/** Platná (neodpárovaná) platba spárovaná s avízem. */
+	public static function ledger_by_payment( $payment_id ) {
+		global $wpdb;
+		return $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::ledger_table() . ' WHERE payment_id = %d AND voided_at IS NULL ORDER BY id DESC LIMIT 1', $payment_id ), ARRAY_A );
+	}
+
+	/**
+	 * Odpárování platby: odečte částku, přepočítá stav rezervace a avízo (je-li) vrátí k ruční kontrole.
+	 * Místo zůstává rezervované. Uplynula-li splatnost, rezervaci při další kontrole zpracuje běžná
+	 * logika splatnosti (expirace / Po splatnosti).
+	 *
+	 * @param array $opts notify (bool) – poslat zákazníkovi aktuální platební údaje.
+	 * @return array|WP_Error Rezervace po odpárování (klíč due_passed = splatnost už uplynula).
+	 */
+	public static function void_payment( $ledger_id, $reason, array $opts = array() ) {
+		global $wpdb;
+		$reason = trim( sanitize_text_field( (string) $reason ) );
+		$l      = self::ledger_get( $ledger_id );
+		if ( ! $l || $l['voided_at'] ) {
+			return new WP_Error( 'state', __( 'Platba nenalezena nebo už byla odpárována.', 'reserveandpay' ) );
+		}
+		if ( '' === $reason ) {
+			return new WP_Error( 'reason', __( 'Uveďte důvod odpárování.', 'reserveandpay' ) );
+		}
+		$r = self::get( $l['reservation_id'] );
+		if ( ! $r ) {
+			return new WP_Error( 'not_found', __( 'Rezervace nenalezena.', 'reserveandpay' ) );
+		}
+		$now      = current_time( 'mysql' );
+		$new_paid = round( max( 0, (float) $r['amount_paid'] - (float) $l['amount'] ), 2 );
+		$update   = array(
+			'amount_paid' => $new_paid,
+			'updated_at'  => $now,
+		);
+		if ( self::CANCELLED !== $r['status'] ) {
+			if ( $new_paid + 0.009 >= (float) $r['amount'] ) {
+				$status = self::PAID;
+			} elseif ( $new_paid > 0 ) {
+				$status = self::PARTIAL;
+			} else {
+				$status = 'cash' === $r['pay_choice'] ? self::ONSITE : self::PENDING;
+			}
+			$update['status'] = $status;
+			if ( self::PAID !== $status ) {
+				$update['paid_at']     = null;
+				$update['paid_method'] = $new_paid > 0 ? $r['paid_method'] : '';
+				$update['reminded_at'] = null;
+			}
+		}
+		$wpdb->update( self::table(), $update, array( 'id' => (int) $r['id'] ) );
+		$wpdb->update(
+			self::ledger_table(),
+			array(
+				'voided_at'   => $now,
+				'voided_by'   => get_current_user_id(),
+				'void_reason' => mb_substr( $reason, 0, 255 ),
+			),
+			array( 'id' => (int) $l['id'] )
+		);
+		if ( $l['payment_id'] ) {
+			$wpdb->update(
+				Resandpay_Payments::table(),
+				array(
+					'status'         => Resandpay_Payments::REVIEW,
+					'reservation_id' => 0,
+					'matched_at'     => null,
+					/* translators: 1: VS, 2: důvod */
+					'reason'         => mb_substr( sprintf( __( 'Odpárováno od rezervace VS %1$s: %2$s', 'reserveandpay' ), $r['vs'], $reason ), 0, 255 ),
+					'updated_at'     => $now,
+				),
+				array( 'id' => (int) $l['payment_id'] )
+			);
+		}
+		$new = self::get( $r['id'] );
+		do_action( 'resandpay_payment_voided', $new, $l, $reason );
+		if ( ! empty( $opts['notify'] ) && self::CANCELLED !== $new['status'] && self::PAID !== $new['status'] ) {
+			Resandpay_Mailer::send_template( $new['email'], 'reminder', $new );
+		}
+		$due               = Resandpay_Events::ts( self::due_now( $new ) );
+		$new['due_passed'] = self::PAID !== $new['status'] && self::CANCELLED !== $new['status'] && $due && $due < time();
+		return $new;
+	}
+
+	/** Lze rezervaci trvale smazat? Jen zrušenou a bez platné platby. @return true|WP_Error */
+	public static function can_delete( array $r ) {
+		global $wpdb;
+		if ( self::CANCELLED !== $r['status'] ) {
+			return new WP_Error( 'state', __( 'Trvale smazat lze jen zrušenou rezervaci.', 'reserveandpay' ) );
+		}
+		$active = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . self::ledger_table() . ' WHERE reservation_id = %d AND voided_at IS NULL', $r['id'] ) );
+		$linked = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . Resandpay_Payments::table() . " WHERE reservation_id = %d AND status IN ('matched','manual')", $r['id'] ) );
+		if ( $active || $linked || (float) $r['amount_paid'] > 0 ) {
+			/* translators: %s: VS */
+			return new WP_Error( 'paid', sprintf( __( 'Rezervace VS %s má přijatou platbu – nejdřív platbu odpárujte (a avízo vyřešte, např. „vráceno“), aby po ní zůstala stopa.', 'reserveandpay' ), $r['vs'] ) );
+		}
+		return true;
+	}
+
+	/** Trvalé smazání zrušené rezervace vč. jejích e-mailů v seznamu odeslaných. @return true|WP_Error */
+	public static function delete( $id ) {
+		global $wpdb;
+		$r = self::get( $id );
+		if ( ! $r ) {
+			return new WP_Error( 'not_found', __( 'Rezervace nenalezena.', 'reserveandpay' ) );
+		}
+		$ok = self::can_delete( $r );
+		if ( is_wp_error( $ok ) ) {
+			return $ok;
+		}
+		// Avíza, která k rezervaci jen ukazovala (k ruční kontrole / vyřešená), si nechají poznámku.
+		$wpdb->query( $wpdb->prepare( 'UPDATE ' . Resandpay_Payments::table() . " SET reservation_id = 0, note = LEFT(CONCAT(note, IF(note = '', '', ' · '), %s), 255) WHERE reservation_id = %d", sprintf( 'rezervace VS %s smazána', $r['vs'] ), $r['id'] ) );
+		$wpdb->delete( self::ledger_table(), array( 'reservation_id' => (int) $r['id'] ) );
+		$wpdb->delete( Resandpay_Mailer::log_table(), array( 'reservation_id' => (int) $r['id'] ) );
+		$wpdb->delete( self::table(), array( 'id' => (int) $r['id'] ) );
+		do_action( 'resandpay_reservation_deleted', $r );
+		return true;
+	}
+
 	/** Smaže všechny rezervace a vynuluje řadu VS (jen nástroj pro úklid testovacích dat). */
 	public static function delete_all() {
 		global $wpdb;
 		$wpdb->query( 'DELETE FROM ' . self::table() );
 		$wpdb->query( 'DELETE FROM ' . Resandpay_Mailer::log_table() . ' WHERE reservation_id > 0' );
+		$wpdb->query( 'DELETE FROM ' . self::ledger_table() );
 		delete_option( 'resandpay_sequence' );
 	}
 }

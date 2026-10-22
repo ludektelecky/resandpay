@@ -1,5 +1,16 @@
 # Vývojový deník ReserveAndPay
 
+## 0.7.4 (22. 10. 2026)
+
+- **Evidence plateb u rezervace** (detail rezervace → Přijaté platby): každá platba zvlášť – datum, částka, způsob, vazba na avízo, kdo ji zapsal; dosavadní platby se při aktualizaci převedou automaticky
+- **Odpárování platby** – v ResAndPay → Platby u spárovaného avíza („Odpárovat od rezervace“) i v detailu rezervace u konkrétní platby (také ruční / hotovostní); s potvrzením a povinným důvodem
+  - částka se odečte, stav se přepočítá (Částečně zaplaceno / Čeká na platbu / u hotovosti Platba na místě), avízo se vrátí **k ruční kontrole** a lze ho přiřadit jiné rezervaci; platba zůstane v evidenci jako odpárovaná (kdy, kdo, proč)
+  - místo zůstává; volitelně zákazníkovi aktuální platební údaje
+  - po splatnosti upozornění, že rezervaci bez platby při další kontrole zpracuje logika splatnosti (expirace / Po splatnosti)
+- **Trvalé smazání rezervace** – „Smazat trvale“ v seznamu (i hromadně) a v detailu, **jen u stavu Zrušeno a bez platné platby**; smaže i evidenci plateb a e-maily v seznamu odeslaných; VS se znovu nepoužije
+- Databáze verze 8 (evidence plateb)
+- Testy: 378 kontrol + souběh; analytické zadání v3.2 (nová kap. 7.3, kap. 8, 13)
+
 ## 0.7.3 (22. 10. 2026)
 
 - **Ochrana rezervačního formuláře proti robotům** (SWD kap. 9.1), jen pro rezervace z webu:

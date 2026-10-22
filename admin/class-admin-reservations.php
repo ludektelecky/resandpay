@@ -48,6 +48,11 @@ class Resandpay_Admin_Reservations {
 			case Resandpay_Reservations::PAID:
 				$a['cancel']      = __( 'Zrušit', 'reserveandpay' );
 				break;
+			case Resandpay_Reservations::CANCELLED:
+				if ( true === Resandpay_Reservations::can_delete( $r ) ) {
+					$a['delete'] = __( 'Smazat trvale', 'reserveandpay' );
+				}
+				break;
 		}
 		return $a;
 	}
@@ -89,6 +94,10 @@ class Resandpay_Admin_Reservations {
 				$amount = round( (float) str_replace( ',', '.', (string) ( $_REQUEST['amount'] ?? 0 ) ), 2 ); // phpcs:ignore WordPress.Security.NonceVerification -- ověřeno v handle_action.
 				$method = 'cash' === ( $_REQUEST['method'] ?? '' ) ? 'cash' : 'transfer_manual'; // phpcs:ignore WordPress.Security.NonceVerification
 				return Resandpay_Reservations::add_payment( $id, $amount, $method, array( 'allow_overbook' => true ) );
+			case 'delete':
+				return Resandpay_Reservations::delete( $id );
+			case 'void_payment':
+				return Resandpay_Reservations::void_payment( absint( $_REQUEST['ledger'] ?? 0 ), $reason, array( 'notify' => ! empty( $_REQUEST['notify'] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification -- ověřeno v handle_action.
 			case 'resend':
 				$r = Resandpay_Reservations::get( $id );
 				if ( ! $r ) {
@@ -115,6 +124,17 @@ class Resandpay_Admin_Reservations {
 		$res    = self::do_action( $do, $id, $reason );
 		if ( is_wp_error( $res ) ) {
 			Resandpay_Admin::flash( $res->get_error_message(), 'error' );
+		} elseif ( 'delete' === $do ) {
+			Resandpay_Admin::flash( __( 'Rezervace byla trvale smazána.', 'reserveandpay' ) );
+			wp_safe_redirect( admin_url( 'admin.php?page=reserveandpay' ) );
+			exit;
+		} elseif ( 'void_payment' === $do ) {
+			/* translators: 1: stav, 2: zbývá */
+			$msg = sprintf( __( 'Platba odpárována. Stav rezervace: %1$s, zbývá zaplatit %2$s.', 'reserveandpay' ), Resandpay_Reservations::status_labels()[ $res['status'] ] ?? $res['status'], Resandpay_Events::format_price( Resandpay_Reservations::remaining( $res ), $res['currency'] ) );
+			if ( ! empty( $res['due_passed'] ) ) {
+				$msg .= ' ' . __( 'Pozor: splatnost už uplynula – při další kontrole (do 15 min) rezervace bez platby vyprší, příp. přejde do stavu Po splatnosti. Pokud to nechcete, připište platbu nebo upravte rezervaci hned.', 'reserveandpay' );
+			}
+			Resandpay_Admin::flash( $msg, empty( $res['due_passed'] ) ? 'success' : 'warning' );
 		} else {
 			Resandpay_Admin::flash( 'resend' === $do ? __( 'Platební údaje byly znovu odeslány.', 'reserveandpay' ) : __( 'Rezervace byla aktualizována.', 'reserveandpay' ) );
 		}
@@ -130,21 +150,29 @@ class Resandpay_Admin_Reservations {
 		if ( '-1' === $action || '' === $action ) {
 			$action = sanitize_key( $_REQUEST['action2'] ?? '' );
 		}
-		if ( ! in_array( $action, array( 'cancel', 'cancel_silent' ), true ) ) {
+		if ( ! in_array( $action, array( 'cancel', 'cancel_silent', 'delete' ), true ) ) {
 			return;
 		}
 		if ( ! current_user_can( resandpay_cap_reservations() ) ) {
 			wp_die( esc_html__( 'Nemáte oprávnění.', 'reserveandpay' ) );
 		}
 		check_admin_referer( 'bulk-reservations' );
-		$ok = 0;
+		$ok   = 0;
+		$skip = 0;
 		foreach ( array_map( 'absint', (array) $_REQUEST['ids'] ) as $id ) {
 			if ( ! is_wp_error( self::do_action( $action, $id ) ) ) {
 				++$ok;
+			} else {
+				++$skip;
 			}
 		}
-		/* translators: %d: počet */
-		Resandpay_Admin::flash( sprintf( __( 'Zrušeno rezervací: %d', 'reserveandpay' ), $ok ) );
+		if ( 'delete' === $action ) {
+			/* translators: 1: smazáno, 2: přeskočeno */
+			Resandpay_Admin::flash( sprintf( __( 'Trvale smazáno rezervací: %1$d. Přeskočeno (nejsou zrušené nebo mají platbu): %2$d.', 'reserveandpay' ), $ok, $skip ), $skip ? 'warning' : 'success' );
+		} else {
+			/* translators: %d: počet */
+			Resandpay_Admin::flash( sprintf( __( 'Zrušeno rezervací: %d', 'reserveandpay' ), $ok ) );
+		}
 		wp_safe_redirect( remove_query_arg( array( 'ids', 'action', 'action2', '_wpnonce', '_wp_http_referer' ), wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ) ) );
 		exit;
 	}
@@ -221,7 +249,8 @@ class Resandpay_Admin_Reservations {
 				if ( 'cancel' === $k ) {
 					continue;
 				}
-				echo '<a class="button" href="' . esc_url( self::action_url( $k, $r['id'] ) ) . '">' . esc_html( $l ) . '</a> ';
+				$conf = 'delete' === $k ? ' onclick="return confirm(\'' . esc_js( __( 'Trvale smazat rezervaci? Tuto akci nelze vrátit.', 'reserveandpay' ) ) . '\')"' : '';
+				echo '<a class="button' . ( 'delete' === $k ? ' button-link-delete' : '' ) . '" href="' . esc_url( self::action_url( $k, $r['id'] ) ) . '"' . $conf . '>' . esc_html( $l ) . '</a> '; // phpcs:ignore WordPress.Security.EscapeOutput
 			}
 			echo '</p>';
 			if ( Resandpay_Reservations::CANCELLED !== $r['status'] && Resandpay_Reservations::PAID !== $r['status'] ) {
@@ -244,6 +273,7 @@ class Resandpay_Admin_Reservations {
 				echo '</form>';
 			}
 		}
+		self::render_ledger( $r );
 		echo '<h2>' . esc_html__( 'Odeslané e-maily', 'reserveandpay' ) . '</h2>';
 		$mails = Resandpay_Mailer::log_rows( array( 'reservation_id' => (int) $r['id'], 'limit' => 100 ) );
 		if ( $mails['rows'] ) {
@@ -252,6 +282,39 @@ class Resandpay_Admin_Reservations {
 			echo '<p>' . esc_html__( 'K této rezervaci zatím není zaznamenaný žádný e-mail (seznam se vede od verze 0.7.2).', 'reserveandpay' ) . '</p>';
 		}
 		echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=reserveandpay' ) ) . '">&larr; ' . esc_html__( 'Zpět na seznam', 'reserveandpay' ) . '</a></p></div>';
+	}
+
+	/** Přijaté platby rezervace s možností odpárování. */
+	private static function render_ledger( array $r ) {
+		$rows = Resandpay_Reservations::ledger( $r['id'] );
+		echo '<h2>' . esc_html__( 'Přijaté platby', 'reserveandpay' ) . '</h2>';
+		if ( ! $rows ) {
+			echo '<p>' . esc_html__( 'K rezervaci zatím není zapsaná žádná platba.', 'reserveandpay' ) . '</p>';
+			return;
+		}
+		$methods = Resandpay_Reservations::paid_method_labels();
+		echo '<table class="widefat striped rap-ledger"><thead><tr><th>' . esc_html__( 'Zapsáno', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Částka', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Způsob', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Avízo / poznámka', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Stav', 'reserveandpay' ) . '</th></tr></thead><tbody>';
+		foreach ( $rows as $l ) {
+			$who = $l['user_id'] ? get_the_author_meta( 'display_name', (int) $l['user_id'] ) : '';
+			echo '<tr' . ( $l['voided_at'] ? ' class="rap-ledger--void"' : '' ) . '><td>' . esc_html( wp_date( 'j. n. Y H:i', Resandpay_Events::ts( $l['created_at'] ) ) ) . ( $who ? '<br><small>' . esc_html( $who ) . '</small>' : '' ) . '</td>';
+			echo '<td><strong>' . esc_html( Resandpay_Events::format_price( $l['amount'], $r['currency'] ) ) . '</strong></td>';
+			echo '<td>' . esc_html( $methods[ $l['method'] ] ?? $l['method'] ) . '</td>';
+			echo '<td>' . ( $l['payment_id'] ? '<a href="' . esc_url( admin_url( 'admin.php?page=reserveandpay-payments&status=all' ) ) . '">' . esc_html( sprintf( /* translators: %d: ID */ __( 'avízo č. %d', 'reserveandpay' ), (int) $l['payment_id'] ) ) . '</a>' : '' ) . ( $l['note'] ? ( $l['payment_id'] ? '<br>' : '' ) . '<small>' . esc_html( $l['note'] ) . '</small>' : '' ) . '</td><td>';
+			if ( $l['voided_at'] ) {
+				/* translators: 1: datum, 2: důvod */
+				echo '<span class="rap-err">' . esc_html( sprintf( __( 'odpárováno %1$s – %2$s', 'reserveandpay' ), wp_date( 'j. n. Y H:i', Resandpay_Events::ts( $l['voided_at'] ) ), $l['void_reason'] ) ) . '</span>';
+			} else {
+				echo '<span class="rap-ok">✓ ' . esc_html__( 'platná', 'reserveandpay' ) . '</span>';
+				echo '<details class="rap-assign"><summary>' . esc_html__( 'Odpárovat', 'reserveandpay' ) . '</summary><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+				echo '<input type="hidden" name="action" value="resandpay_res_action"><input type="hidden" name="do" value="void_payment"><input type="hidden" name="id" value="' . (int) $r['id'] . '"><input type="hidden" name="ledger" value="' . (int) $l['id'] . '">';
+				wp_nonce_field( 'resandpay_res_void_payment_' . (int) $r['id'] );
+				echo '<p><input type="text" name="reason" required placeholder="' . esc_attr__( 'důvod, např. platba patří jiné rezervaci', 'reserveandpay' ) . '" class="regular-text"></p>';
+				echo '<p><label><input type="checkbox" name="notify" value="1"> ' . esc_html__( 'poslat zákazníkovi aktuální platební údaje', 'reserveandpay' ) . '</label></p>';
+				echo '<p><button class="button" onclick="return confirm(\'' . esc_js( __( 'Odpárovat platbu? Částka se odečte a avízo se vrátí k ruční kontrole.', 'reserveandpay' ) ) . '\')">' . esc_html__( 'Odpárovat platbu', 'reserveandpay' ) . '</button></p></form></details>';
+			}
+			echo '</td></tr>';
+		}
+		echo '</tbody></table>';
 	}
 
 	public static function page_new() {

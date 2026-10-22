@@ -218,7 +218,7 @@ class Resandpay_Payments {
 			return self::store( $row + array( 'status' => self::REVIEW, 'reason' => $paid->get_error_message(), 'reservation_id' => (int) $r['id'] ), null );
 		}
 		$left = Resandpay_Reservations::remaining( $paid );
-		return self::store(
+		$out  = self::store(
 			$row + array(
 				'status'         => self::MATCHED,
 				/* translators: 1: zaplaceno, 2: celkem */
@@ -228,6 +228,10 @@ class Resandpay_Payments {
 			),
 			$r
 		);
+		if ( ! empty( $paid['ledger_id'] ) && $out['payment_id'] ) {
+			$wpdb->update( Resandpay_Reservations::ledger_table(), array( 'payment_id' => $out['payment_id'] ), array( 'id' => (int) $paid['ledger_id'] ) );
+		}
+		return $out;
 	}
 
 	/**
@@ -327,6 +331,8 @@ class Resandpay_Payments {
 			array(
 				'force'          => $force,
 				'allow_overbook' => true,
+				'payment_id'     => (int) $payment_id,
+				'note'           => $note,
 			)
 		);
 		if ( is_wp_error( $paid ) ) {
@@ -345,6 +351,19 @@ class Resandpay_Payments {
 			array( 'id' => (int) $payment_id )
 		);
 		return $paid;
+	}
+
+	/** Odpárování spárovaného avíza od rezervace (vrátí ho k ruční kontrole). */
+	public static function unassign( $payment_id, $reason, array $opts = array() ) {
+		$p = self::get( $payment_id );
+		if ( ! $p || ! in_array( $p['status'], array( self::MATCHED, self::MANUAL ), true ) ) {
+			return new WP_Error( 'state', __( 'Avízo není spárované s rezervací.', 'reserveandpay' ) );
+		}
+		$l = Resandpay_Reservations::ledger_by_payment( $payment_id );
+		if ( ! $l ) {
+			return new WP_Error( 'ledger', __( 'Platbu se nepodařilo dohledat v evidenci plateb rezervace – odpárujte ji v detailu rezervace.', 'reserveandpay' ) );
+		}
+		return Resandpay_Reservations::void_payment( $l['id'], $reason, $opts );
 	}
 
 	/** Označí avízo jako vyřešené bez přiřazení (např. vrácená platba, platba mimo rezervace). */
