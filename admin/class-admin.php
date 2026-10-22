@@ -72,7 +72,7 @@ class Resandpay_Admin {
 	/** Zobrazí jednorázovou zprávu i na seznamech akcí/služeb (např. po generování termínů). */
 	public static function cpt_flash() {
 		$screen = get_current_screen();
-		if ( $screen && 'edit' === $screen->base && in_array( $screen->post_type, array( Resandpay_Post_Types::EVENT, Resandpay_Post_Types::SERVICE ), true ) ) {
+		if ( $screen && in_array( $screen->base, array( 'edit', 'post' ), true ) && in_array( $screen->post_type, array( Resandpay_Post_Types::EVENT, Resandpay_Post_Types::SERVICE ), true ) ) {
 			self::render_flash();
 		}
 	}

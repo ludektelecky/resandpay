@@ -1,5 +1,15 @@
 # Vývojový deník ReserveAndPay
 
+## 0.3.2 (22. 10. 2026)
+
+- Služba má nové pole **Počet míst na termín** (1–500, výchozí 1). Masáž = 1 místo, skupinová lekce (např. Sound Healing) = více míst; generátor ho propíše do každého termínu
+- Termín skupinové služby zůstává ve volných termínech, dokud se nezaplní; na stránce termínů je u času počet volných míst („13 volných míst“) a v záhlaví „max. 15 osob“; detail termínu ukazuje „Volná místa 13 z 15“
+- Karta služby v přehledu akcí u skupinové služby ukazuje volná místa nejbližšího termínu („Nejbližší: volno 13 z 15“)
+- Volba **Změnu promítnout i do nadcházejících termínů**: termíny s víc rezervacemi, než je nový počet míst, se nezmění a administrace je vypíše
+- Počet míst lze upravit i u jednotlivého termínu (pole Kapacita už není u termínu uzamčené na 1)
+- Seznam služeb ukazuje počet míst, generátor ho uvádí u názvu služby; hromadné rušení vypíše všechny rezervace obsazeného termínu
+- Analytické zadání v1.9; testy rozšířeny na 108 kontrol
+
 ## 0.3.1 (21. 10. 2026)
 
 - Přehled akcí: služby (např. Bukální masáž) se zobrazí jako jedna souhrnná karta – nejbližší volný termín (den, čas, délka, místo), cena, počet volných termínů a „Vybrat termín →“ na stránku s volnými termíny; karty se řadí podle data spolu s akcemi

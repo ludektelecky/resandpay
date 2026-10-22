@@ -217,7 +217,7 @@ class Resandpay_Frontend {
 			echo '</dd>';
 		}
 		echo '<dt>' . esc_html__( 'Cena', 'reserveandpay' ) . '</dt><dd>' . esc_html( Resandpay_Events::format_price( $ev['price'], $ev['currency'] ) ) . ( 'multiday' === $ev['type'] ? ' <small>' . esc_html__( '(za celou akci)', 'reserveandpay' ) . '</small>' : '' ) . '</dd>';
-		if ( 'slot' === $ev['type'] ) {
+		if ( 'slot' === $ev['type'] && $ev['capacity'] <= 1 ) {
 			echo '<dt>' . esc_html__( 'Termín', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev['cancelled'] ? __( 'zrušen', 'reserveandpay' ) : ( $free > 0 ? __( 'volný', 'reserveandpay' ) : __( 'obsazený', 'reserveandpay' ) ) ) . '</dd>';
 		} else {
 			echo '<dt>' . esc_html__( 'Volná místa', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev['cancelled'] ? __( 'akce zrušena', 'reserveandpay' ) : ( $free > 0 ? sprintf( /* translators: 1: volno, 2: kapacita */ __( '%1$d z %2$d', 'reserveandpay' ), $free, $ev['capacity'] ) : __( 'obsazeno', 'reserveandpay' ) ) ) . '</dd>';

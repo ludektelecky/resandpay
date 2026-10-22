@@ -40,13 +40,19 @@ class Resandpay_Admin_Services {
 			)
 		);
 		?>
-		<p class="description"><?php esc_html_e( 'Popis služby výše se zobrazí u každého termínu na webu. Délka a pauza jsou pevné – zákaznice délku nevolí. Jejich změna platí jen pro nově vygenerované termíny.', 'reserveandpay' ); ?></p>
+		<p class="description"><?php esc_html_e( 'Popis služby výše se zobrazí u každého termínu na webu. Délka, pauza a počet míst jsou pevné – zákaznice je nevolí. Jejich změna platí pro nově vygenerované termíny.', 'reserveandpay' ); ?></p>
 		<table class="form-table">
 			<tr><th><label for="rap_duration"><?php esc_html_e( 'Délka termínu', 'reserveandpay' ); ?></label></th>
 				<td><input type="number" min="5" step="5" id="rap_duration" name="rap_duration" value="<?php echo esc_attr( $svc['duration'] ); ?>" class="small-text"> <?php esc_html_e( 'minut', 'reserveandpay' ); ?></td></tr>
 			<tr><th><label for="rap_pause"><?php esc_html_e( 'Pauza mezi termíny', 'reserveandpay' ); ?></label></th>
 				<td><input type="number" min="0" step="5" id="rap_pause" name="rap_pause" value="<?php echo esc_attr( $svc['pause'] ); ?>" class="small-text"> <?php esc_html_e( 'minut', 'reserveandpay' ); ?></td></tr>
-			<tr><th><label for="rap_price"><?php esc_html_e( 'Cena za termín', 'reserveandpay' ); ?></label></th>
+			<tr><th><label for="rap_capacity"><?php esc_html_e( 'Počet míst na termín', 'reserveandpay' ); ?></label></th>
+				<td><input type="number" min="1" max="500" step="1" id="rap_capacity" name="rap_capacity" value="<?php echo esc_attr( $svc['capacity'] ); ?>" class="small-text">
+					<p class="description"><?php esc_html_e( '1 = individuální služba (např. masáž). Více = skupinová lekce (např. Sound Healing 15) – termín zůstává volný, dokud se nezaplní.', 'reserveandpay' ); ?></p>
+					<?php if ( 'auto-draft' !== $post->post_status ) : ?>
+					<label><input type="checkbox" name="rap_capacity_apply" value="1"> <?php esc_html_e( 'Změnu promítnout i do nadcházejících termínů', 'reserveandpay' ); ?></label>
+					<?php endif; ?></td></tr>
+			<tr><th><label for="rap_price"><?php esc_html_e( 'Cena za místo', 'reserveandpay' ); ?></label></th>
 				<td><input type="number" min="0" step="any" id="rap_price" name="rap_price" value="<?php echo esc_attr( $svc['price'] ); ?>" class="regular-text" style="width:10em">
 					<input type="text" name="rap_currency" value="<?php echo esc_attr( $svc['currency'] ); ?>" class="small-text" maxlength="3" aria-label="<?php esc_attr_e( 'Měna', 'reserveandpay' ); ?>"></td></tr>
 			<tr><th><label for="rap_location"><?php esc_html_e( 'Místo konání', 'reserveandpay' ); ?></label></th>
@@ -87,7 +93,22 @@ class Resandpay_Admin_Services {
 		if ( ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) || ! current_user_can( 'edit_post', $post_id ) ) {
 			return;
 		}
-		self::save_service_meta( $post_id, wp_unslash( $_POST ) );
+		$in  = wp_unslash( $_POST );
+		$old = (int) get_post_meta( $post_id, '_rap_capacity', true );
+		self::save_service_meta( $post_id, $in );
+		$cap = Resandpay_Services::get( $post_id )['capacity'];
+		if ( ! empty( $in['rap_capacity_apply'] ) ) {
+			$res = Resandpay_Services::apply_capacity( $post_id, $cap );
+			/* translators: %d: počet */
+			$msg = sprintf( __( 'Počet míst upraven u nadcházejících termínů: %d.', 'reserveandpay' ), $res['updated'] );
+			if ( $res['skipped'] ) {
+				/* translators: %s: seznam termínů */
+				$msg .= ' ' . sprintf( __( 'Beze změny (víc rezervací než nová kapacita): %s.', 'reserveandpay' ), implode( ', ', array_map( array( 'Resandpay_Events', 'format_date' ), $res['skipped'] ) ) );
+			}
+			Resandpay_Admin::flash( $msg, $res['skipped'] ? 'warning' : 'success' );
+		} elseif ( $old && $old !== $cap ) {
+			Resandpay_Admin::flash( __( 'Nový počet míst platí pro nově vygenerované termíny. Stávající termíny zůstaly beze změny.', 'reserveandpay' ), 'info' );
+		}
 	}
 
 	public static function save_service_meta( $post_id, array $in ) {
@@ -95,6 +116,7 @@ class Resandpay_Admin_Services {
 		$due      = trim( (string) ( $in['rap_due_days'] ?? '' ) );
 		update_post_meta( $post_id, '_rap_duration', max( 5, (int) ( $in['rap_duration'] ?? 60 ) ) );
 		update_post_meta( $post_id, '_rap_pause', max( 0, (int) ( $in['rap_pause'] ?? 15 ) ) );
+		update_post_meta( $post_id, '_rap_capacity', min( 500, max( 1, (int) ( $in['rap_capacity'] ?? 1 ) ) ) );
 		update_post_meta( $post_id, '_rap_price', round( max( 0, (float) str_replace( ',', '.', (string) ( $in['rap_price'] ?? 0 ) ) ), 2 ) );
 		update_post_meta( $post_id, '_rap_currency', 3 === strlen( $currency ) ? $currency : Resandpay_Settings::get( 'currency' ) );
 		update_post_meta( $post_id, '_rap_location', absint( $in['rap_location'] ?? 0 ) );
@@ -105,7 +127,7 @@ class Resandpay_Admin_Services {
 	public static function columns( $cols ) {
 		$date = $cols['date'] ?? null;
 		unset( $cols['date'] );
-		$cols['rap_params'] = __( 'Délka · pauza · cena', 'reserveandpay' );
+		$cols['rap_params'] = __( 'Délka · pauza · míst · cena', 'reserveandpay' );
 		$cols['rap_slots']  = __( 'Nadcházející termíny', 'reserveandpay' );
 		return $cols;
 	}
@@ -113,7 +135,7 @@ class Resandpay_Admin_Services {
 	public static function column( $col, $post_id ) {
 		$svc = Resandpay_Services::get( $post_id );
 		if ( 'rap_params' === $col ) {
-			echo esc_html( $svc['duration'] . ' min · ' . $svc['pause'] . ' min · ' . Resandpay_Events::format_price( $svc['price'], $svc['currency'] ) );
+			echo esc_html( $svc['duration'] . ' min · ' . $svc['pause'] . ' min · ' . $svc['capacity'] . ' · ' . Resandpay_Events::format_price( $svc['price'], $svc['currency'] ) );
 		} elseif ( 'rap_slots' === $col ) {
 			$now   = new DateTimeImmutable( 'now', wp_timezone() );
 			$slots = Resandpay_Services::slots( $post_id, $now, $now->modify( '+1 year' ) );
@@ -234,7 +256,7 @@ class Resandpay_Admin_Services {
 			<table class="form-table">
 				<tr><th><label for="service"><?php esc_html_e( 'Služba', 'reserveandpay' ); ?></label></th><td><select name="service" id="service">
 					<?php foreach ( $services as $s ) : ?>
-						<option value="<?php echo (int) $s['id']; ?>" <?php selected( $sid, $s['id'] ); ?>><?php echo esc_html( $s['title'] . ' (' . $s['duration'] . ' min + ' . $s['pause'] . ' min pauza)' ); ?></option>
+						<option value="<?php echo (int) $s['id']; ?>" <?php selected( $sid, $s['id'] ); ?>><?php echo esc_html( $s['title'] . ' (' . $s['duration'] . ' min + ' . $s['pause'] . ' min pauza, ' . sprintf( /* translators: %d: počet */ _n( '%d místo', '%d míst', $s['capacity'], 'reserveandpay' ), $s['capacity'] ) . ')' ); ?></option>
 					<?php endforeach; ?>
 				</select></td></tr>
 				<tr><th><?php esc_html_e( 'Dny v týdnu', 'reserveandpay' ); ?></th><td>
@@ -321,7 +343,7 @@ class Resandpay_Admin_Services {
 						Resandpay_Reservations::query(
 							array(
 								'event_id' => $ev['id'],
-								'per_page' => 10,
+								'per_page' => 100,
 							)
 						)['items'],
 						fn( $r ) => in_array( $r['status'], Resandpay_Reservations::active_statuses(), true )

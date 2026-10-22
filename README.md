@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> Zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 1.8** (21. 10. 2026) – viz `docs/`.
+> Zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 1.9** (22. 10. 2026) – viz `docs/`.
 
 ---
 
@@ -12,7 +12,7 @@ Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a 
 
 ### Akce a termíny
 - Jednodenní akce, vícedenní akce (rezervuje se vždy celá akce) a krátké akce od–do
-- Individuální termíny (např. masáže) jako akce s kapacitou 1
+- Služby s termíny z generátoru: masáže (1 místo na termín) i pravidelné skupinové lekce (např. Sound Healing, 15 míst)
   - pevná délka termínu a pauza jako nastavitelné parametry služby (výchozí 60 + 15 min)
   - generátor termínů (dny v týdnu, časové okno, období) s náhledem a hromadným rušením
 - Překrývání akcí je povoleno – systém pouze upozorní
@@ -103,7 +103,7 @@ resandpay/
 | E0 | Doprecizování otázek, vzorek bankovního avíza, ověření hostingu Active24 | ⏳ |
 | E1 | Jádro rezervací: akce, kapacita, formulář, stavy, administrace, e-maily, testovací režim | ✅ 0.1.0 (testuje se) |
 | E2 | Kalendář a výpis akcí na webu, styling dle grafického manuálu | ✅ 0.2.0 (testuje se) |
-| E3 | Služby a individuální termíny, generátor termínů | ✅ 0.3.0 (testuje se) |
+| E3 | Služby a jejich termíny (1 i více míst), generátor termínů | ✅ 0.3.2 (testuje se) |
 | E4 | QR platební pokyn (SPD), variabilní symbol, PDF | ⏳ |
 | E5 | Kontrola plateb (IMAP, párování, ruční/automatický režim, CRON) | ⏳ |
 | E6 | Expirace, platba na místě, Ultimate Member, MailerLite | ⏳ |

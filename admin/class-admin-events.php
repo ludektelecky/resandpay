@@ -123,9 +123,7 @@ class Resandpay_Admin_Events {
 			function pad( n ) { return ( n < 10 ? '0' : '' ) + n; }
 			function fmt( d ) { return d.getFullYear() + '-' + pad( d.getMonth() + 1 ) + '-' + pad( d.getDate() ) + 'T' + pad( d.getHours() ) + ':' + pad( d.getMinutes() ); }
 			function onType() {
-				var slot = type.value === 'slot';
-				if ( slot ) { cap.value = 1; }
-				cap.readOnly = slot;
+				if ( type.value === 'slot' && ! cap.value ) { cap.value = 1; }
 			}
 			s.addEventListener( 'change', function () {
 				if ( ! s.value ) { return; }

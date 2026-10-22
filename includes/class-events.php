@@ -226,7 +226,7 @@ class Resandpay_Events {
 			$end = $start;
 		}
 		$capacity = max( 0, (int) ( $in['rap_capacity'] ?? 0 ) );
-		if ( 'slot' === $type ) {
+		if ( 'slot' === $type && $capacity < 1 ) {
 			$capacity = 1;
 		}
 		$currency = strtoupper( preg_replace( '/[^A-Za-z]/', '', (string) ( $in['rap_currency'] ?? '' ) ) );

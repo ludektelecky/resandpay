@@ -96,6 +96,9 @@
 .rap-slots__date { margin: 0; font-family: var(--rap-font-heading); font-size: 19px; color: var(--rap-accent-2); }
 .rap-slots__times { display: flex; flex-wrap: wrap; gap: .5rem; }
 .rap-slot { min-width: 64px; text-align: center; font-weight: 600; }
+.rap-slot--group { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.2; padding-top: .45rem; padding-bottom: .45rem; }
+.rap-slot__free { display: block; font-size: 12px; font-weight: 400; color: var(--rap-ink-soft); }
+.rap-slot--group:hover .rap-slot__free, .rap-slot--group:focus .rap-slot__free { color: inherit; }
 .rap-slots__nav { display: flex; gap: .75rem; flex-wrap: wrap; margin-top: 1.25rem; }
 
 /* Detail akce */

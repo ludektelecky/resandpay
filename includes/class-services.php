@@ -3,8 +3,10 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Služby (např. Bukální masáž) a jejich individuální termíny.
- * Termín = akce typu „slot“ s kapacitou 1 (SWD kap. 3.4). Délka a pauza jsou
- * pevné parametry služby; změna se projeví jen u nově generovaných termínů.
+ * Termín = akce typu „slot“ s kapacitou podle služby (masáž 1, skupinová lekce
+ * např. 15; SWD kap. 3.4). Délka, pauza a kapacita jsou pevné parametry služby;
+ * změna se projeví u nově generovaných termínů (kapacitu lze volitelně
+ * promítnout i do nadcházejících termínů).
  */
 class Resandpay_Services {
 
@@ -23,6 +25,7 @@ class Resandpay_Services {
 			'status'      => $post->post_status,
 			'duration'    => max( 5, (int) $m( 'duration', 60 ) ),
 			'pause'       => max( 0, (int) $m( 'pause', 15 ) ),
+			'capacity'    => max( 1, (int) $m( 'capacity', 1 ) ),
 			'price'       => (float) $m( 'price', 0 ),
 			'currency'    => $m( 'currency', Resandpay_Settings::get( 'currency' ) ),
 			'location_id' => (int) $m( 'location', 0 ),
@@ -198,7 +201,7 @@ class Resandpay_Services {
 					'rap_start'       => $dt->format( 'Y-m-d H:i' ),
 					'rap_end'         => $dt->modify( '+' . $svc['duration'] . ' minutes' )->format( 'Y-m-d H:i' ),
 					'rap_location'    => $svc['location_id'],
-					'rap_capacity'    => 1,
+					'rap_capacity'    => $svc['capacity'],
 					'rap_price'       => $svc['price'],
 					'rap_currency'    => $svc['currency'],
 					'rap_due_days'    => $svc['due_days'],
@@ -308,6 +311,34 @@ class Resandpay_Services {
 		return array(
 			'free'   => $free,
 			'booked' => $booked,
+		);
+	}
+
+	/**
+	 * Promítne kapacitu služby do nadcházejících termínů.
+	 * Termín, který má víc aktivních rezervací než nová kapacita, se nemění.
+	 *
+	 * @return array{updated:int, skipped:array} skipped = termíny ponechané beze změny.
+	 */
+	public static function apply_capacity( $service_id, $capacity ) {
+		$capacity = max( 1, (int) $capacity );
+		$now      = new DateTimeImmutable( 'now', wp_timezone() );
+		$updated  = 0;
+		$skipped  = array();
+		foreach ( self::slots( $service_id, $now, $now->modify( '+2 years' ), false ) as $ev ) {
+			if ( (int) $ev['capacity'] === $capacity ) {
+				continue;
+			}
+			if ( Resandpay_Reservations::count_active( $ev['id'] ) > $capacity ) {
+				$skipped[] = $ev;
+				continue;
+			}
+			update_post_meta( $ev['id'], '_rap_capacity', $capacity );
+			++$updated;
+		}
+		return array(
+			'updated' => $updated,
+			'skipped' => $skipped,
 		);
 	}
 }

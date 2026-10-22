@@ -181,7 +181,19 @@ class Resandpay_Views {
 			</div>
 			<div class="rap-item__side">
 				<p class="rap-item__price"><?php echo esc_html( Resandpay_Events::format_price( $next['price'], $next['currency'] ) ); ?></p>
-				<p class="rap-item__free"><?php echo esc_html( sprintf( /* translators: %d: počet */ _n( '%d volný termín', 'Volných termínů: %d', $it['free'], 'reserveandpay' ), $it['free'] ) ); ?></p>
+				<p class="rap-item__free"><?php
+				if ( $next['capacity'] > 1 ) {
+					$n = Resandpay_Events::free_places( $next['id'] );
+					/* translators: 1: volná místa, 2: kapacita */
+					echo esc_html( sprintf( __( 'Nejbližší: volno %1$d z %2$d', 'reserveandpay' ), $n, $next['capacity'] ) );
+					if ( $it['free'] > 1 ) {
+						/* translators: %d: počet termínů */
+						echo '<br>' . esc_html( sprintf( __( 'Termínů s volnem: %d', 'reserveandpay' ), $it['free'] ) );
+					}
+				} else {
+					echo esc_html( sprintf( /* translators: %d: počet */ _n( '%d volný termín', 'Volných termínů: %d', $it['free'], 'reserveandpay' ), $it['free'] ) );
+				}
+				?></p>
 				<a class="rap-button" href="<?php echo esc_url( $it['url'] ); ?>"><?php esc_html_e( 'Vybrat termín →', 'reserveandpay' ); ?></a>
 			</div>
 		</article>
@@ -394,6 +406,22 @@ class Resandpay_Views {
 	 *
 	 * @param array $args service (ID/slug), days (počet dní dopředu na stránku).
 	 */
+	/** „1 volné místo“ / „3 volná místa“ / „12 volných míst“ (české skloňování). */
+	public static function places_label( $n ) {
+		$n = (int) $n;
+		if ( 1 === $n ) {
+			/* translators: %d: 1 */
+			$f = __( '%d volné místo', 'reserveandpay' );
+		} elseif ( $n >= 2 && $n <= 4 ) {
+			/* translators: %d: 2–4 */
+			$f = __( '%d volná místa', 'reserveandpay' );
+		} else {
+			/* translators: %d: 0 nebo 5+ */
+			$f = __( '%d volných míst', 'reserveandpay' );
+		}
+		return sprintf( $f, $n );
+	}
+
 	public static function render_slots( array $args ) {
 		$svc = Resandpay_Services::find( $args['service'] );
 		if ( ! $svc ) {
@@ -418,7 +446,11 @@ class Resandpay_Views {
 		ob_start();
 		echo '<div class="rap-program-view rap-slots" id="rap-slots">';
 		echo '<p class="rap-slots__info"><span class="rap-eyebrow">' . esc_html( $svc['title'] ) . '</span> ';
-		echo esc_html( sprintf( /* translators: 1: délka, 2: cena */ __( '%1$d min · %2$s', 'reserveandpay' ), $svc['duration'], Resandpay_Events::format_price( $svc['price'], $svc['currency'] ) ) ) . '</p>';
+		echo esc_html( sprintf( /* translators: 1: délka, 2: cena */ __( '%1$d min · %2$s', 'reserveandpay' ), $svc['duration'], Resandpay_Events::format_price( $svc['price'], $svc['currency'] ) ) );
+		if ( $svc['capacity'] > 1 ) {
+			echo esc_html( ' · ' . sprintf( /* translators: %d: kapacita */ __( 'max. %d osob', 'reserveandpay' ), $svc['capacity'] ) );
+		}
+		echo '</p>';
 		if ( ! $by ) {
 			echo '<p class="rap-empty">' . esc_html__( 'V tomto období nejsou volné termíny. Zkuste další týdny, nebo mi napište – rádi se domluvíme.', 'reserveandpay' ) . '</p>';
 		}
@@ -426,8 +458,14 @@ class Resandpay_Views {
 			$d = date_create_immutable( $day . ' 00:00:00', $tz );
 			echo '<div class="rap-slots__day"><p class="rap-slots__date">' . esc_html( $wd[ (int) $d->format( 'w' ) ] . ' ' . $d->format( 'j. n.' ) ) . '</p><div class="rap-slots__times">';
 			foreach ( $items as $ev ) {
-				$t = date_create_immutable( $ev['start'], $tz )->format( 'G:i' );
-				echo '<a class="rap-chip rap-slot" href="' . esc_url( get_permalink( $ev['id'] ) . '#rap-booking' ) . '" aria-label="' . esc_attr( sprintf( /* translators: 1: den, 2: čas */ __( 'Rezervovat %1$s v %2$s', 'reserveandpay' ), $d->format( 'j. n.' ), $t ) ) . '">' . esc_html( $t ) . '</a>';
+				$t     = date_create_immutable( $ev['start'], $tz )->format( 'G:i' );
+				$label = sprintf( /* translators: 1: den, 2: čas */ __( 'Rezervovat %1$s v %2$s', 'reserveandpay' ), $d->format( 'j. n.' ), $t );
+				$places = '';
+				if ( $ev['capacity'] > 1 ) {
+					$places = self::places_label( Resandpay_Events::free_places( $ev['id'] ) );
+					$label .= ', ' . $places;
+				}
+				echo '<a class="rap-chip rap-slot' . ( $places ? ' rap-slot--group' : '' ) . '" href="' . esc_url( get_permalink( $ev['id'] ) . '#rap-booking' ) . '" aria-label="' . esc_attr( $label ) . '">' . esc_html( $t ) . ( $places ? '<small class="rap-slot__free">' . esc_html( $places ) . '</small>' : '' ) . '</a>'; // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno.
 			}
 			echo '</div></div>';
 		}

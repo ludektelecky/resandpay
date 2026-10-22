@@ -168,8 +168,8 @@ $md = rap_event( 'Jógový pobyt Estepona', Resandpay_Events::ts( '2027-05-10 15
 rap_t( '10. 5. 2027 15:00 – 15. 5. 2027 11:00' === Resandpay_Events::format_date( Resandpay_Events::get( $md ) ), 'vícedenní akce: ' . Resandpay_Events::format_date( Resandpay_Events::get( $md ) ) );
 $sh = rap_event( 'Večer 20. 1.', Resandpay_Events::ts( '2027-01-20 16:00' ), Resandpay_Events::ts( '2027-01-20 18:00' ), 10, array( 'rap_type' => 'short' ) );
 rap_t( '20. 1. 2027, 16:00–18:00' === Resandpay_Events::format_date( Resandpay_Events::get( $sh ) ), 'krátká akce: ' . Resandpay_Events::format_date( Resandpay_Events::get( $sh ) ) );
-$sl = rap_event( 'Termín masáže', $now + 4 * $day, $now + 4 * $day + HOUR_IN_SECONDS, 5, array( 'rap_type' => 'slot' ) );
-rap_t( 1 === Resandpay_Events::get( $sl )['capacity'], 'individuální termín má vždy kapacitu 1' );
+$sl = rap_event( 'Termín masáže', $now + 4 * $day, $now + 4 * $day + HOUR_IN_SECONDS, 0, array( 'rap_type' => 'slot' ) );
+rap_t( 1 === Resandpay_Events::get( $sl )['capacity'], 'individuální termín bez kapacity dostane kapacitu 1' );
 
 echo "== Překryvy (jen upozornění)\n";
 $ov = rap_event( 'Překrývající workshop', $now + 10 * $day + HOUR_IN_SECONDS, $now + 10 * $day + 3 * HOUR_IN_SECONDS, 5 );
@@ -295,6 +295,45 @@ Resandpay_Services::bulk_cancel( $svc_id, date_create_immutable( '2027-03-01 00:
 rap_t( 5 === count( Resandpay_Services::slots( $svc_id, date_create_immutable( '2027-03-01 00:00:00', $tzz ), date_create_immutable( '2027-03-15 00:00:00', $tzz ) ) ), 'volné termíny v období odstraněny (zbývá 5)' );
 rap_t( Resandpay_Events::get( $s0['id'] )['cancelled'] && 'cancelled' === Resandpay_Reservations::get( $bk['id'] )['status'], 'obsazený termín zrušen včetně rezervace' );
 rap_t( (bool) array_filter( $GLOBALS['rap_mails'], fn( $m ) => false !== strpos( $m['subject'], 'Rezervace zrušena' ) && false !== strpos( $m['message'], 'nemoc' ) ), 'zákaznice dostane e-mail o zrušení s důvodem' );
+
+echo "== 0.3.2: počet míst na termín služby (skupinové lekce)\n";
+rap_t( 1 === Resandpay_Services::get( $svc_id )['capacity'], 'služba bez nastavení má 1 místo (masáž)' );
+$grp = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::SERVICE, 'post_status' => 'publish', 'post_title' => 'Sound Healing', 'post_content' => 'Zvuková lázeň.' ) );
+Resandpay_Admin_Services::save_service_meta( $grp, array( 'rap_duration' => 90, 'rap_pause' => 30, 'rap_capacity' => 15, 'rap_price' => '450', 'rap_currency' => 'CZK', 'rap_location' => $loc ) );
+rap_t( 15 === Resandpay_Services::get( $grp )['capacity'], 'služba Sound Healing má 15 míst' );
+$gpv = Resandpay_Services::preview( $grp, array( 'weekdays' => array( 3 ), 'time_from' => '18:00', 'time_to' => '19:30', 'date_from' => '2027-04-01', 'date_to' => '2027-04-30' ) );
+$gcr = Resandpay_Services::create_slots( $grp, wp_list_pluck( $gpv, 'start' ) );
+$gsl = Resandpay_Services::slots( $grp, date_create_immutable( '2027-04-01 00:00:00', $tzz ), date_create_immutable( '2027-05-01 00:00:00', $tzz ) );
+$g0  = reset( $gsl );
+rap_t( 4 === $gcr['created'] && 15 === $g0['capacity'], 'generátor: 4 středy v dubnu, každý termín s 15 místy' );
+$GLOBALS['rap_mails'] = array();
+$gb1 = Resandpay_Reservations::create( $g0['id'], rap_person( 30 ) );
+$gb2 = Resandpay_Reservations::create( $g0['id'], rap_person( 31 ) );
+rap_t( is_array( $gb1 ) && is_array( $gb2 ) && $gb1['vs'] !== $gb2['vs'] && 13 === Resandpay_Events::free_places( $g0['id'] ), 'dvě rezervace na stejný termín, každá s vlastním VS, zbývá 13 míst' );
+rap_t( 4 === count( Resandpay_Services::free_slots( $grp, date_create_immutable( '2027-04-01 00:00:00', $tzz ), date_create_immutable( '2027-05-01 00:00:00', $tzz ) ) ), 'částečně obsazený termín zůstává mezi volnými' );
+$_GET['rap_from'] = '2027-04-01';
+$ghtml = Resandpay_Views::render_slots( array( 'service' => $grp, 'days' => 30 ) );
+unset( $_GET['rap_from'] );
+rap_t( false !== strpos( $ghtml, '13 volných míst' ) && false !== strpos( $ghtml, '15 volných míst' ) && false !== strpos( $ghtml, 'max. 15 osob' ), 'stránka termínů ukazuje volná místa a kapacitu' );
+rap_t( false === strpos( Resandpay_Views::render_slots( array( 'service' => $svc_id, 'days' => 30 ) ), 'volných míst' ), 'u masáže (1 místo) se počet míst neukazuje' );
+rap_t( '1 volné místo' === Resandpay_Views::places_label( 1 ) && '3 volná místa' === Resandpay_Views::places_label( 3 ) && '5 volných míst' === Resandpay_Views::places_label( 5 ), 'české skloňování počtu míst' );
+$glist = Resandpay_Views::render_list( array( 'limit' => 100, 'category' => '' ) );
+rap_t( false !== strpos( $glist, 'Nejbližší: volno 13 z 15' ), 'karta skupinové služby ukazuje volná místa nejbližšího termínu' );
+$_GET['rap_done'] = '';
+$det = Resandpay_Frontend::render_details( $g0['id'] );
+rap_t( false !== strpos( $det, '13 z 15' ), 'detail termínu ukazuje „Volná místa 13 z 15“' );
+for ( $i = 0; $i < 13; $i++ ) {
+	Resandpay_Reservations::create( $g0['id'], rap_person( 40 + $i ) );
+}
+rap_t( is_wp_error( Resandpay_Reservations::create( $g0['id'], rap_person( 60 ) ) ) && 3 === count( Resandpay_Services::free_slots( $grp, date_create_immutable( '2027-04-01 00:00:00', $tzz ), date_create_immutable( '2027-05-01 00:00:00', $tzz ) ) ), 'po zaplnění 15 míst termín zmizí z volných a další rezervace je odmítnuta' );
+Resandpay_Admin_Services::save_service_meta( $grp, array( 'rap_duration' => 90, 'rap_pause' => 30, 'rap_capacity' => 12, 'rap_price' => '450', 'rap_currency' => 'CZK', 'rap_location' => $loc ) );
+rap_t( 15 === Resandpay_Events::get( $g0['id'] )['capacity'], 'změna kapacity služby bez volby nemění existující termíny' );
+$ap = Resandpay_Services::apply_capacity( $grp, 12 );
+rap_t( 3 === $ap['updated'] && 1 === count( $ap['skipped'] ) && 15 === Resandpay_Events::get( $g0['id'] )['capacity'] && 12 === Resandpay_Events::get( $gsl[ array_keys( $gsl )[1] ]['id'] )['capacity'], 'promítnutí kapacity: 3 termíny upraveny, plně obsazený (15 > 12) ponechán' );
+Resandpay_Admin_Services::save_service_meta( $grp, array( 'rap_capacity' => 0 ) );
+$c0 = Resandpay_Services::get( $grp )['capacity'];
+Resandpay_Admin_Services::save_service_meta( $grp, array( 'rap_capacity' => 9999 ) );
+rap_t( 1 === $c0 && 500 === Resandpay_Services::get( $grp )['capacity'], 'kapacita služby je omezena na 1–500' );
 
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
