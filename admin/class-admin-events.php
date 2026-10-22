@@ -94,11 +94,18 @@ class Resandpay_Admin_Events {
 				<p class="rap-row__cur"><label for="rap_currency"><?php esc_html_e( 'Měna', 'reserveandpay' ); ?></label>
 					<input type="text" id="rap_currency" name="rap_currency" value="<?php echo esc_attr( $ev['currency'] ); ?>" maxlength="3"></p>
 			</div>
-			<details class="rap-more" <?php echo ( '' !== $raw_due || $ev['close_hours'] || $ev['members_only'] || $ev['cancelled'] ) ? 'open' : ''; ?>>
+			<details class="rap-more" <?php echo ( '' !== $raw_due || '' !== get_post_meta( $post->ID, '_rap_due_mode', true ) || '' !== get_post_meta( $post->ID, '_rap_cash', true ) || $ev['close_hours'] || $ev['members_only'] || $ev['cancelled'] ) ? 'open' : ''; ?>>
 				<summary><?php esc_html_e( 'Další nastavení', 'reserveandpay' ); ?></summary>
-				<p><label for="rap_due_days"><?php esc_html_e( 'Splatnost (dní)', 'reserveandpay' ); ?></label>
-					<input type="number" min="0" step="1" id="rap_due_days" name="rap_due_days" value="<?php echo esc_attr( $raw_due ); ?>" placeholder="<?php echo esc_attr( Resandpay_Settings::get( 'due_days' ) ); ?>">
-					<span class="rap-hint"><?php esc_html_e( 'Prázdné = výchozí z nastavení; nikdy po začátku akce.', 'reserveandpay' ); ?></span></p>
+				<?php
+				self::payment_fields(
+					array(
+						'due_mode'   => get_post_meta( $post->ID, '_rap_due_mode', true ),
+						'due_days'   => $raw_due,
+						'due_offset' => get_post_meta( $post->ID, '_rap_due_offset', true ),
+						'cash'       => get_post_meta( $post->ID, '_rap_cash', true ),
+					)
+				);
+				?>
 				<p><label for="rap_close_hours"><?php esc_html_e( 'Uzávěrka rezervací (hodin před začátkem)', 'reserveandpay' ); ?></label>
 					<input type="number" min="0" step="0.5" id="rap_close_hours" name="rap_close_hours" value="<?php echo esc_attr( $ev['close_hours'] ?: '' ); ?>" placeholder="0">
 					<span class="rap-hint"><?php esc_html_e( 'Prázdné = rezervovat lze až do začátku.', 'reserveandpay' ); ?></span></p>
@@ -136,6 +143,53 @@ class Resandpay_Admin_Events {
 			} );
 			type.addEventListener( 'change', onType );
 			onType();
+		} )();
+		</script>
+		<?php
+	}
+
+	/**
+	 * Pole „Splatnost a platba“ (sdílené editací akce a služby).
+	 * Prázdná hodnota = výchozí z nastavení.
+	 *
+	 * @param array $raw due_mode, due_days, due_offset, cash – hodnoty uložené u akce/služby.
+	 */
+	public static function payment_fields( array $raw ) {
+		$s     = Resandpay_Settings::all();
+		$modes = Resandpay_Events::due_mode_labels();
+		$def   = Resandpay_Events::due_rule_text( Resandpay_Events::default_due_mode(), $s['due_days'], $s['due_offset'] );
+		$uid   = wp_unique_id( 'rap-pay-' );
+		?>
+		<div class="rap-payfields" id="<?php echo esc_attr( $uid ); ?>">
+			<p><label for="<?php echo esc_attr( $uid ); ?>-mode"><?php esc_html_e( 'Splatnost', 'reserveandpay' ); ?></label>
+				<select id="<?php echo esc_attr( $uid ); ?>-mode" name="rap_due_mode" data-rap-due-mode>
+					<option value=""><?php echo esc_html( sprintf( /* translators: %s: výchozí pravidlo */ __( 'Výchozí z nastavení (%s)', 'reserveandpay' ), $def ) ); ?></option>
+					<?php foreach ( $modes as $k => $l ) : ?>
+						<option value="<?php echo esc_attr( $k ); ?>" <?php selected( (string) $raw['due_mode'], $k ); ?>><?php echo esc_html( $l ); ?></option>
+					<?php endforeach; ?>
+				</select></p>
+			<p data-rap-due="booking"><label for="<?php echo esc_attr( $uid ); ?>-days"><?php esc_html_e( 'Dní od rezervace', 'reserveandpay' ); ?></label>
+				<input type="number" min="0" step="1" id="<?php echo esc_attr( $uid ); ?>-days" name="rap_due_days" value="<?php echo esc_attr( (string) $raw['due_days'] ); ?>" placeholder="<?php echo esc_attr( $s['due_days'] ); ?>" class="small-text"></p>
+			<p data-rap-due="event"><label for="<?php echo esc_attr( $uid ); ?>-off"><?php esc_html_e( 'Dní vůči termínu', 'reserveandpay' ); ?></label>
+				<input type="number" min="-365" max="365" step="1" id="<?php echo esc_attr( $uid ); ?>-off" name="rap_due_offset" value="<?php echo esc_attr( (string) $raw['due_offset'] ); ?>" placeholder="<?php echo esc_attr( $s['due_offset'] ); ?>" class="small-text">
+				<span class="rap-hint"><?php esc_html_e( '−1 = den před termínem, 0 = v den termínu, +1 = den po termínu. Splatnost je vždy do konce dne.', 'reserveandpay' ); ?></span></p>
+			<p><label for="<?php echo esc_attr( $uid ); ?>-cash"><?php esc_html_e( 'Platba v hotovosti na místě', 'reserveandpay' ); ?></label>
+				<select id="<?php echo esc_attr( $uid ); ?>-cash" name="rap_cash">
+					<option value=""><?php echo esc_html( $s['cash_enabled'] ? __( 'Výchozí z nastavení (povolena)', 'reserveandpay' ) : __( 'Výchozí z nastavení (vypnuta)', 'reserveandpay' ) ); ?></option>
+					<option value="1" <?php selected( (string) $raw['cash'], '1' ); ?>><?php esc_html_e( 'Povolit jako doplňkovou možnost', 'reserveandpay' ); ?></option>
+					<option value="0" <?php selected( (string) $raw['cash'], '0' ); ?>><?php esc_html_e( 'Nepovolit', 'reserveandpay' ); ?></option>
+				</select>
+				<span class="rap-hint"><?php esc_html_e( 'Převod (QR) je vždy hlavní a předvybraná možnost.', 'reserveandpay' ); ?></span></p>
+		</div>
+		<script>
+		( function () {
+			var box = document.getElementById( '<?php echo esc_js( $uid ); ?>' ), sel = box.querySelector( '[data-rap-due-mode]' ), def = '<?php echo esc_js( Resandpay_Events::default_due_mode() ); ?>';
+			function upd() {
+				var m = sel.value || def;
+				box.querySelector( '[data-rap-due="booking"]' ).hidden = m === 'event';
+				box.querySelector( '[data-rap-due="event"]' ).hidden = m === 'booking';
+			}
+			sel.addEventListener( 'change', upd ); upd();
 		} )();
 		</script>
 		<?php
@@ -219,6 +273,14 @@ class Resandpay_Admin_Events {
 		if ( $post->post_status !== 'auto-draft' ) {
 			echo '<p><a class="button" href="' . esc_url( admin_url( 'admin.php?page=reserveandpay&event_id=' . $post->ID ) ) . '">' . esc_html__( 'Seznam účastnic', 'reserveandpay' ) . '</a> ';
 			echo '<a class="button" href="' . esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=resandpay_export&event_id=' . $post->ID ), 'resandpay_export' ) ) . '">' . esc_html__( 'Export CSV', 'reserveandpay' ) . '</a></p>';
+			$cash = array_filter( Resandpay_Reservations::for_event( $post->ID ), fn( $r ) => Resandpay_Reservations::PAID !== $r['status'] && 'cash' === ( $r['pay_choice'] ?? '' ) );
+			if ( $cash ) {
+				/* translators: 1: počet, 2: částka */
+				echo '<p>' . esc_html( sprintf( __( 'Zvolilo hotovost: %1$d (%2$s)', 'reserveandpay' ), count( $cash ), Resandpay_Events::format_price( array_sum( wp_list_pluck( $cash, 'amount' ) ), $ev['currency'] ) ) ) . '</p>';
+			}
+			if ( $ev['start'] ) {
+				echo '<p><a class="button" href="' . esc_url( Resandpay_Admin_Checkin::url( array( 'day' => substr( $ev['start'], 0, 10 ) ) ) ) . '">' . esc_html__( 'Odbavení na místě', 'reserveandpay' ) . '</a></p>';
+			}
 			echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=reserveandpay-new&event_id=' . $post->ID ) ) . '">' . esc_html__( '+ Přidat rezervaci ručně', 'reserveandpay' ) . '</a><br>';
 			echo '<a href="' . esc_url( self::duplicate_url( $post->ID ) ) . '">' . esc_html__( 'Duplikovat akci (nový termín)', 'reserveandpay' ) . '</a></p>';
 		}

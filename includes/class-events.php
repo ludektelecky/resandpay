@@ -8,6 +8,77 @@ class Resandpay_Events {
 
 	const TYPES = array( 'single', 'multiday', 'short', 'slot' );
 
+	/** Režimy splatnosti: od rezervace / vůči termínu / dřívější z obou. */
+	const DUE_MODES = array( 'booking', 'event', 'combined' );
+
+	public static function due_mode_labels() {
+		return array(
+			'booking'  => __( 'Počet dní od rezervace (nejpozději začátek termínu)', 'reserveandpay' ),
+			'event'    => __( 'Vůči termínu (−1 den před, 0 v den termínu, +1 den po)', 'reserveandpay' ),
+			'combined' => __( 'Kombinace – dřívější z obou', 'reserveandpay' ),
+		);
+	}
+
+	public static function default_due_mode() {
+		$m = Resandpay_Settings::get( 'due_mode' );
+		return in_array( $m, self::DUE_MODES, true ) ? $m : 'booking';
+	}
+
+	/** Lidsky čitelné pravidlo splatnosti (pro administraci). */
+	public static function due_rule_text( $mode, $days, $offset ) {
+		$off = 0 === (int) $offset ? __( 'v den termínu', 'reserveandpay' ) : sprintf(
+			/* translators: %s: např. -1 den / +2 dny */
+			__( 'termín %s', 'reserveandpay' ),
+			sprintf( '%+d', $offset ) . ' ' . ( 1 === abs( (int) $offset ) ? __( 'den', 'reserveandpay' ) : ( abs( (int) $offset ) < 5 ? __( 'dny', 'reserveandpay' ) : __( 'dní', 'reserveandpay' ) ) )
+		);
+		/* translators: %d: počet dní */
+		$bk = sprintf( __( '%d dní od rezervace', 'reserveandpay' ), (int) $days );
+		if ( 'event' === $mode ) {
+			return $off;
+		}
+		if ( 'combined' === $mode ) {
+			/* translators: 1: dny od rezervace, 2: vůči termínu */
+			return sprintf( __( '%1$s, nejpozději %2$s', 'reserveandpay' ), $bk, $off );
+		}
+		return $bk;
+	}
+
+	/**
+	 * Vypočte splatnost rezervace podle pravidla akce (SWD v2.0, kap. 3.6).
+	 * Splatnost je vždy konec dne (23:59:59). Vůči termínu se počítá od data začátku.
+	 * Vyjde-li splatnost před začátek termínu a rezervuje se na poslední chvíli
+	 * (nebo by splatnost už uplynula), splatnost = začátek a lze platit na místě.
+	 *
+	 * @return array{due_ts:int, last_minute:bool}
+	 */
+	public static function compute_due( array $ev, $now_ts ) {
+		$tz       = wp_timezone();
+		$start_ts = self::ts( $ev['start'] );
+		$now      = ( new DateTimeImmutable( '@' . (int) $now_ts ) )->setTimezone( $tz );
+		$by_booking = $now->modify( '+' . max( 0, (int) $ev['due_days'] ) . ' days' )->setTime( 23, 59, 59 )->getTimestamp();
+		$start_day  = date_create_immutable( substr( (string) $ev['start'], 0, 10 ) . ' 23:59:59', $tz );
+		$by_event   = $start_day ? $start_day->modify( sprintf( '%+d days', (int) $ev['due_offset'] ) )->getTimestamp() : $start_ts;
+		switch ( $ev['due_mode'] ) {
+			case 'event':
+				$due = $by_event;
+				break;
+			case 'combined':
+				$due = min( $by_booking, $by_event );
+				break;
+			default:
+				$due = min( $by_booking, $start_ts );
+		}
+		$lm_secs     = (int) round( (float) Resandpay_Settings::get( 'last_minute_hours' ) * HOUR_IN_SECONDS );
+		$last_minute = $due <= $start_ts && ( ( $start_ts - $now_ts ) < $lm_secs || $due < $now_ts );
+		if ( $last_minute ) {
+			$due = $start_ts;
+		}
+		return array(
+			'due_ts'      => (int) $due,
+			'last_minute' => $last_minute,
+		);
+	}
+
 	public static function type_labels() {
 		return array(
 			'single'   => __( 'Jednodenní akce', 'reserveandpay' ),
@@ -41,6 +112,9 @@ class Resandpay_Events {
 			'price'         => (float) $m( 'price', 0 ),
 			'currency'      => $m( 'currency', Resandpay_Settings::get( 'currency' ) ),
 			'due_days'      => '' === $m( 'due_days' ) ? (int) Resandpay_Settings::get( 'due_days' ) : (int) $m( 'due_days' ),
+			'due_mode'      => in_array( $m( 'due_mode' ), self::DUE_MODES, true ) ? $m( 'due_mode' ) : self::default_due_mode(),
+			'due_offset'    => '' === $m( 'due_offset' ) ? (int) Resandpay_Settings::get( 'due_offset' ) : (int) $m( 'due_offset' ),
+			'cash'          => '' === $m( 'cash' ) ? (bool) Resandpay_Settings::get( 'cash_enabled' ) : (bool) (int) $m( 'cash' ),
 			'close_hours'   => (float) $m( 'close_hours', 0 ),
 			'cancelled'     => (bool) $m( 'cancelled', 0 ),
 			'members_only'  => (bool) $m( 'members_only', 0 ),
@@ -239,6 +313,12 @@ class Resandpay_Events {
 		update_post_meta( $post_id, '_rap_currency', strlen( $currency ) === 3 ? $currency : Resandpay_Settings::get( 'currency' ) );
 		$due = (string) ( $in['rap_due_days'] ?? '' );
 		update_post_meta( $post_id, '_rap_due_days', '' === trim( $due ) ? '' : max( 0, (int) $due ) );
+		$mode = (string) ( $in['rap_due_mode'] ?? '' );
+		update_post_meta( $post_id, '_rap_due_mode', in_array( $mode, self::DUE_MODES, true ) ? $mode : '' );
+		$off = trim( (string) ( $in['rap_due_offset'] ?? '' ) );
+		update_post_meta( $post_id, '_rap_due_offset', '' === $off ? '' : max( -365, min( 365, (int) $off ) ) );
+		$cash = (string) ( $in['rap_cash'] ?? '' );
+		update_post_meta( $post_id, '_rap_cash', in_array( $cash, array( '0', '1' ), true ) ? $cash : '' );
 		update_post_meta( $post_id, '_rap_close_hours', max( 0, (float) str_replace( ',', '.', (string) ( $in['rap_close_hours'] ?? 0 ) ) ) );
 		update_post_meta( $post_id, '_rap_members_only', empty( $in['rap_members_only'] ) ? 0 : 1 );
 		update_post_meta( $post_id, '_rap_cancelled', empty( $in['rap_cancelled'] ) ? 0 : 1 );

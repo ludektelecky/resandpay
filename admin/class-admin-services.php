@@ -60,9 +60,9 @@ class Resandpay_Admin_Services {
 					<?php foreach ( $locations as $loc ) : ?>
 						<option value="<?php echo (int) $loc->ID; ?>" <?php selected( $svc['location_id'], $loc->ID ); ?>><?php echo esc_html( $loc->post_title ); ?></option>
 					<?php endforeach; ?></select></td></tr>
-			<tr><th><label for="rap_due_days"><?php esc_html_e( 'Splatnost (dní)', 'reserveandpay' ); ?></label></th>
-				<td><input type="number" min="0" step="1" id="rap_due_days" name="rap_due_days" value="<?php echo esc_attr( $svc['due_days'] ); ?>" class="small-text" placeholder="<?php echo esc_attr( Resandpay_Settings::get( 'due_days' ) ); ?>">
-					<p class="description"><?php esc_html_e( 'Prázdné = výchozí z nastavení. Termín lze rezervovat až do začátku; nestihne-li platba dorazit, platí se na místě.', 'reserveandpay' ); ?></p></td></tr>
+			<tr><th><?php esc_html_e( 'Splatnost a platba', 'reserveandpay' ); ?></th>
+				<td class="rap-box"><?php Resandpay_Admin_Events::payment_fields( $svc ); ?>
+					<p class="description"><?php esc_html_e( 'Platí pro nově generované termíny. Termín lze rezervovat až do začátku; nestihne-li platba dorazit, platí se na místě.', 'reserveandpay' ); ?></p></td></tr>
 			<tr><th><label for="rap_page"><?php esc_html_e( 'Stránka s volnými termíny', 'reserveandpay' ); ?></label></th>
 				<td><?php wp_dropdown_pages( array( 'name' => 'rap_page', 'id' => 'rap_page', 'selected' => $svc['page_id'], 'show_option_none' => '— ' . __( 'nevybráno', 'reserveandpay' ) . ' —', 'option_none_value' => 0 ) ); ?>
 					<p class="description"><?php echo esc_html( sprintf( /* translators: %s: shortcode */ __( 'Na stránku vložte shortcode %s. Detail termínu na ni odkazuje.', 'reserveandpay' ), '[reserveandpay_slots service="' . ( $post->post_name ?: $post->ID ) . '"]' ) ); ?></p></td></tr>
@@ -122,6 +122,12 @@ class Resandpay_Admin_Services {
 		update_post_meta( $post_id, '_rap_location', absint( $in['rap_location'] ?? 0 ) );
 		update_post_meta( $post_id, '_rap_due_days', '' === $due ? '' : max( 0, (int) $due ) );
 		update_post_meta( $post_id, '_rap_page', absint( $in['rap_page'] ?? 0 ) );
+		$mode = (string) ( $in['rap_due_mode'] ?? '' );
+		update_post_meta( $post_id, '_rap_due_mode', in_array( $mode, Resandpay_Events::DUE_MODES, true ) ? $mode : '' );
+		$off = trim( (string) ( $in['rap_due_offset'] ?? '' ) );
+		update_post_meta( $post_id, '_rap_due_offset', '' === $off ? '' : max( -365, min( 365, (int) $off ) ) );
+		$cash = (string) ( $in['rap_cash'] ?? '' );
+		update_post_meta( $post_id, '_rap_cash', in_array( $cash, array( '0', '1' ), true ) ? $cash : '' );
 	}
 
 	public static function columns( $cols ) {

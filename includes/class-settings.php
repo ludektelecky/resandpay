@@ -21,7 +21,14 @@ class Resandpay_Settings {
 			'admin_email'         => get_option( 'admin_email' ),
 			// Rezervace.
 			'currency'            => 'CZK',
+			// Splatnost: booking = N dní od rezervace (nejpozději začátek termínu),
+			// event = termín ± N dní (-1 den před, 0 v den termínu, +1 den po),
+			// combined = dřívější z obou.
+			'due_mode'            => 'booking',
 			'due_days'            => 7,
+			'due_offset'          => -1,
+			// Hotovost jako doplňková volba k platbě převodem (QR).
+			'cash_enabled'        => 0,
 			'last_minute_hours'   => 24,
 			'gdpr_page'           => 0,
 			'terms_page'          => 0,
@@ -38,6 +45,10 @@ class Resandpay_Settings {
 			'tpl_received_subject' => 'Rezervace přijata: {event}',
 			'tpl_received_body'    => "Dobrý den, {name},\n\nděkujeme za rezervaci akce {event} ({date}, {location}).\n\nRezervace bude potvrzena po přijetí platby:\n\nČíslo účtu: {account}\nIBAN: {iban}\nČástka: {amount}\nVariabilní symbol: {vs}\nSplatnost: {due_date}\n{last_minute_note}\nProsíme, uveďte variabilní symbol – podle něj platbu přiřadíme k Vaší rezervaci. Každé místo má vlastní variabilní symbol.\n\nČíslo platebního pokynu: {proforma}\n\nS pozdravem\n{company}",
 			'tpl_lastminute_note'  => "\nRezervujete krátce před začátkem akce. Pokud platba převodem nestihne dorazit, můžete zaplatit na místě.\n",
+			'tpl_received_cash_subject' => 'Rezervace přijata: {event}',
+			'tpl_received_cash_body'    => "Dobrý den, {name},\n\nděkujeme za rezervaci akce {event} ({date}, {location}).\n\nZvolili jste platbu v hotovosti na místě ({amount}). Pokud Vám to vyhovuje, můžete pohodlně zaplatit předem převodem – na místě pak nemusíte řešit hotovost:\n\nČíslo účtu: {account}\nIBAN: {iban}\nČástka: {amount}\nVariabilní symbol: {vs}\n\nVariabilní symbol prosím mějte u sebe i na místě – podle něj Vás rychle odbavíme.\n\nS pozdravem\n{company}",
+			'tpl_overdue_subject'  => 'Připomínka platby: {event}',
+			'tpl_overdue_body'     => "Dobrý den, {name},\n\nk rezervaci akce {event} ({date}) jsme zatím neobdrželi platbu. Splatnost byla {due_date}.\n\nČíslo účtu: {account}\nIBAN: {iban}\nČástka: {amount}\nVariabilní symbol: {vs}\n\nPokud jste již zaplatili, považujte prosím tento e-mail za bezpředmětný.\n\nS pozdravem\n{company}",
 			'tpl_paid_subject'     => 'Platba přijata – rezervace potvrzena: {event}',
 			'tpl_paid_body'        => "Dobrý den, {name},\n\nVaše platba za akci {event} byla přijata a rezervace je potvrzena.\n\nTermín: {date}\nMísto: {location}\nVariabilní symbol: {vs}\n\nTěšíme se na Vás.\n\nS pozdravem\n{company}",
 			'tpl_cancelled_subject' => 'Rezervace zrušena: {event}',

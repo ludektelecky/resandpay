@@ -63,7 +63,8 @@ class Resandpay_Mailer {
 			'{company}'          => $s['company_name'] ?: get_bloginfo( 'name' ),
 			'{free}'             => (string) Resandpay_Events::free_places( $r['event_id'] ),
 			'{reason}'           => $r['cancel_reason'] ? "\n" . __( 'Důvod:', 'reserveandpay' ) . ' ' . $r['cancel_reason'] . "\n" : '',
-			'{last_minute_note}' => ! empty( $r['last_minute'] ) ? $s['tpl_lastminute_note'] : '',
+			'{last_minute_note}' => ! empty( $r['last_minute'] ) && 'cash' !== ( $r['pay_choice'] ?? '' ) ? $s['tpl_lastminute_note'] : '',
+			'{pay_choice}'       => Resandpay_Reservations::pay_choice_labels()[ $r['pay_choice'] ?? 'transfer' ] ?? '',
 		);
 	}
 
@@ -102,8 +103,13 @@ class Resandpay_Mailer {
 		return $ok ? true : new WP_Error( 'mail', self::$last_error ?: __( 'Funkce wp_mail() vrátila chybu bez popisu.', 'reserveandpay' ) );
 	}
 
+	/** Šablona potvrzení rezervace podle zvoleného způsobu platby. */
+	public static function received_key( array $r ) {
+		return 'cash' === ( $r['pay_choice'] ?? '' ) ? 'received_cash' : 'received';
+	}
+
 	public static function send_received( array $r ) {
-		$ok = self::send_template( $r['email'], 'received', $r );
+		$ok = self::send_template( $r['email'], self::received_key( $r ), $r );
 		if ( Resandpay_Settings::get( 'notify_admin' ) && is_email( Resandpay_Settings::get( 'admin_email' ) ) ) {
 			self::send_template( Resandpay_Settings::get( 'admin_email' ), 'admin', $r );
 		}

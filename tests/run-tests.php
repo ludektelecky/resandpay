@@ -57,7 +57,8 @@ function rap_person( $n ) {
 	);
 }
 
-foreach ( array( 'class-admin-events.php', 'class-admin-settings.php', 'class-admin-services.php' ) as $f ) {
+require_once ABSPATH . 'wp-admin/includes/template.php';
+foreach ( array( 'class-admin.php', 'class-admin-events.php', 'class-admin-settings.php', 'class-admin-services.php', 'class-admin-checkin.php' ) as $f ) {
 	require_once RESANDPAY_DIR . 'admin/' . $f;
 }
 
@@ -84,7 +85,10 @@ Resandpay_Settings::update(
 		'company_name'      => 'Testovací provozovatel',
 		'bank_account'      => '123456789/2700',
 		'iban'              => 'CZ6527000000000123456789',
+		'due_mode'          => 'booking',
 		'due_days'          => 7,
+		'due_offset'        => -1,
+		'cash_enabled'      => 0,
 		'last_minute_hours' => 24,
 		'vs_prefix'         => '26',
 		'notify_admin'      => 1,
@@ -334,6 +338,98 @@ Resandpay_Admin_Services::save_service_meta( $grp, array( 'rap_capacity' => 0 ) 
 $c0 = Resandpay_Services::get( $grp )['capacity'];
 Resandpay_Admin_Services::save_service_meta( $grp, array( 'rap_capacity' => 9999 ) );
 rap_t( 1 === $c0 && 500 === Resandpay_Services::get( $grp )['capacity'], 'kapacita služby je omezena na 1–500' );
+
+echo "== 0.3.3: pravidla splatnosti\n";
+$ts  = fn( $s ) => Resandpay_Events::ts( $s );
+$dE  = rap_event( 'Lekce 10. 6.', $ts( '2027-06-10 18:00:00' ), $ts( '2027-06-10 19:30:00' ), 20 );
+$n0  = $ts( '2027-06-01 10:00:00' );
+$due = function ( $over ) use ( $dE, $n0 ) {
+	$ev = array_merge( Resandpay_Events::get( $dE ), $over );
+	return wp_date( 'Y-m-d H:i:s', Resandpay_Events::compute_due( $ev, $n0 )['due_ts'] );
+};
+rap_t( '2027-06-08 23:59:59' === $due( array( 'due_mode' => 'booking', 'due_days' => 7 ) ), 'od rezervace: 1. 6. + 7 dní = 8. 6. do konce dne' );
+rap_t( '2027-06-10 18:00:00' === $due( array( 'due_mode' => 'booking', 'due_days' => 30 ) ), 'od rezervace: nejpozději začátek termínu' );
+rap_t( '2027-06-09 23:59:59' === $due( array( 'due_mode' => 'event', 'due_offset' => -1 ) ), 'vůči termínu −1: den před termínem' );
+rap_t( '2027-06-10 23:59:59' === $due( array( 'due_mode' => 'event', 'due_offset' => 0 ) ), 'vůči termínu 0: v den termínu' );
+rap_t( '2027-06-11 23:59:59' === $due( array( 'due_mode' => 'event', 'due_offset' => 1 ) ), 'vůči termínu +1: den po termínu' );
+rap_t( '2027-06-07 23:59:59' === $due( array( 'due_mode' => 'combined', 'due_days' => 7, 'due_offset' => -3 ) ), 'kombinace: dřívější z (8. 6., 7. 6.)' );
+$lmE = Resandpay_Events::compute_due( array_merge( Resandpay_Events::get( $dE ), array( 'due_mode' => 'event', 'due_offset' => -1 ) ), $ts( '2027-06-10 10:00:00' ) );
+rap_t( $lmE['last_minute'] && $ts( '2027-06-10 18:00:00' ) === $lmE['due_ts'], 'vůči termínu −1, rezervace v den termínu → poslední chvíle, splatnost = začátek' );
+$lmP = Resandpay_Events::compute_due( array_merge( Resandpay_Events::get( $dE ), array( 'due_mode' => 'event', 'due_offset' => 1 ) ), $ts( '2027-06-10 16:00:00' ) );
+rap_t( ! $lmP['last_minute'] && '2027-06-11 23:59:59' === wp_date( 'Y-m-d H:i:s', $lmP['due_ts'] ), 'platba po termínu (+1): krátce před začátkem není „poslední chvíle“' );
+Resandpay_Settings::update( array( 'due_mode' => 'event', 'due_offset' => -2 ) );
+rap_t( 'event' === Resandpay_Events::get( $dE )['due_mode'] && -2 === Resandpay_Events::get( $dE )['due_offset'], 'akce bez vlastního pravidla přebírá výchozí z nastavení' );
+$rD = Resandpay_Reservations::create( $dE, rap_person( 70 ), array( 'now' => $n0 ) );
+rap_t( '2027-06-08 23:59:59' === $rD['due_at'], 'rezervace dostane splatnost podle nastavení (termín −2 dny)' );
+Resandpay_Admin_Events::save_event_meta( $dE, array( 'rap_type' => 'single', 'rap_start' => '2027-06-10 18:00', 'rap_end' => '2027-06-10 19:30', 'rap_capacity' => 20, 'rap_price' => 500, 'rap_currency' => 'CZK', 'rap_due_mode' => 'event', 'rap_due_offset' => '1' ) );
+$rD2 = Resandpay_Reservations::create( $dE, rap_person( 71 ), array( 'now' => $n0 ) );
+rap_t( '2027-06-11 23:59:59' === $rD2['due_at'], 'pravidlo uložené u akce přepíše nastavení (+1 den po termínu)' );
+Resandpay_Settings::update( array( 'due_mode' => 'booking', 'due_offset' => -1 ) );
+rap_t( 'termín +1 den' === Resandpay_Events::due_rule_text( 'event', 7, 1 ) && 'v den termínu' === Resandpay_Events::due_rule_text( 'event', 7, 0 ), 'čitelný popis pravidla' );
+
+echo "== 0.3.3: stav Po splatnosti\n";
+$past = rap_event( 'Proběhlá lekce', $now - 3 * $day, $now - 3 * $day + HOUR_IN_SECONDS, 10, array( 'rap_due_mode' => 'event', 'rap_due_offset' => '1' ) );
+$rO   = Resandpay_Reservations::create( $past, rap_person( 72 ), array( 'now' => $now - 6 * $day, 'notify' => false ) );
+$pastB = rap_event( 'Proběhlá lekce B', $now - 3 * $day, $now - 3 * $day + HOUR_IN_SECONDS, 10, array( 'rap_due_mode' => 'booking', 'rap_due_days' => '1' ) );
+$rB   = Resandpay_Reservations::create( $pastB, rap_person( 73 ), array( 'now' => $now - 6 * $day, 'notify' => false ) );
+$rL   = Resandpay_Reservations::create( $pastB, rap_person( 74 ), array( 'now' => $now - 3 * $day - HOUR_IN_SECONDS, 'notify' => false ) );
+$GLOBALS['rap_mails'] = array();
+$cnt  = Resandpay_Reservations::process_due();
+$rO   = Resandpay_Reservations::get( $rO['id'] );
+rap_t( 1 === $cnt && 'overdue' === $rO['status'] && $rO['reminded_at'], 'nezaplacená rezervace se splatností po termínu → Po splatnosti' );
+rap_t( 1 === count( array_filter( $GLOBALS['rap_mails'], fn( $m ) => false !== strpos( $m['subject'], 'Připomínka platby' ) && false !== strpos( $m['message'], $rO['vs'] ) ) ), 'zákaznice dostane jednu připomínku s VS' );
+rap_t( 'pending' === Resandpay_Reservations::get( $rB['id'] )['status'], 'splatnost před termínem → Po splatnosti se nepoužije (expirace v E6)' );
+rap_t( 1 === (int) $rL['last_minute'] && 'onsite' === Resandpay_Reservations::get( $rL['id'] )['status'], 'rezervace na poslední chvíli bez platby → Platba na místě' );
+$GLOBALS['rap_mails'] = array();
+Resandpay_Reservations::process_due();
+rap_t( ! $GLOBALS['rap_mails'], 'opakovaný běh připomínku znovu neposílá' );
+rap_t( 2 === Resandpay_Reservations::count_active( $pastB ) && 1 === Resandpay_Reservations::count_active( $past ), 'rezervace Po splatnosti dál blokuje místo' );
+rap_t( 'paid' === Resandpay_Reservations::set_status( $rO['id'], Resandpay_Reservations::PAID )['status'], 'po splatnosti → zaplaceno je povoleno' );
+
+echo "== 0.3.3: platba v hotovosti\n";
+$cE = rap_event( 'Sound Healing večer', $now + 12 * $day, $now + 12 * $day + 2 * HOUR_IN_SECONDS, 15 );
+$GLOBALS['rap_mails'] = array();
+$rT = Resandpay_Reservations::create( $cE, array_merge( rap_person( 80 ), array( 'pay_choice' => 'cash' ) ) );
+rap_t( 'pending' === $rT['status'] && 'transfer' === $rT['pay_choice'], 'hotovost vypnutá: volba hotovosti z webu se ignoruje (převod)' );
+rap_t( false === strpos( Resandpay_Frontend::render_booking( $cE ), 'rap_pay' ), 'hotovost vypnutá: formulář volbu platby neukazuje' );
+Resandpay_Settings::update( array( 'cash_enabled' => 1 ) );
+$form = Resandpay_Frontend::render_booking( $cE );
+rap_t( (bool) preg_match( '/value="transfer"\s+checked/', $form ) && ! preg_match( '/value="cash"\s+checked/', $form ) && strpos( $form, 'value="transfer"' ) < strpos( $form, 'value="cash"' ), 'hotovost zapnutá: převod je první a předvybraný, hotovost doplňková' );
+$GLOBALS['rap_mails'] = array();
+$rC = Resandpay_Reservations::create( $cE, array_merge( rap_person( 81 ), array( 'pay_choice' => 'cash' ) ) );
+rap_t( 'onsite' === $rC['status'] && 'cash' === $rC['pay_choice'] && 13 === Resandpay_Events::free_places( $cE ), 'volba hotovosti → stav Platba na místě, místo blokováno' );
+$mc = $GLOBALS['rap_mails'][0] ?? array( 'message' => '', 'subject' => '' );
+rap_t( false !== strpos( $mc['message'], 'hotovosti na místě' ) && false !== strpos( $mc['message'], '123456789/2700' ) && false !== strpos( $mc['message'], $rC['vs'] ), 'e-mail u hotovosti: potvrzení + údaje pro převod předem (QR v E4)' );
+update_post_meta( $cE, '_rap_cash', '0' );
+rap_t( 'transfer' === Resandpay_Reservations::create( $cE, array_merge( rap_person( 82 ), array( 'pay_choice' => 'cash' ) ), array( 'notify' => false ) )['pay_choice'], 'u akce lze hotovost vypnout i při zapnutém nastavení' );
+Resandpay_Settings::update( array( 'cash_enabled' => 0 ) );
+update_post_meta( $cE, '_rap_cash', '1' );
+rap_t( Resandpay_Events::get( $cE )['cash'], 'u akce lze hotovost zapnout i při vypnutém nastavení' );
+$svc2 = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::SERVICE, 'post_status' => 'publish', 'post_title' => 'Masáž s hotovostí' ) );
+Resandpay_Admin_Services::save_service_meta( $svc2, array( 'rap_duration' => 60, 'rap_pause' => 15, 'rap_capacity' => 1, 'rap_price' => 1300, 'rap_due_mode' => 'event', 'rap_due_offset' => '0', 'rap_cash' => '1' ) );
+$pv5 = Resandpay_Services::preview( $svc2, array( 'weekdays' => array( 1 ), 'time_from' => '09:00', 'time_to' => '10:00', 'date_from' => '2027-07-05', 'date_to' => '2027-07-05' ) );
+Resandpay_Services::create_slots( $svc2, wp_list_pluck( $pv5, 'start' ) );
+$sl5 = array_values( Resandpay_Services::slots( $svc2, date_create_immutable( '2027-07-05 00:00:00', $tzz ), date_create_immutable( '2027-07-06 00:00:00', $tzz ) ) );
+rap_t( $sl5 && $sl5[0]['cash'] && 'event' === $sl5[0]['due_mode'] && 0 === $sl5[0]['due_offset'], 'termín služby převezme pravidlo splatnosti a hotovost ze služby' );
+
+echo "== 0.3.3: odbavení na místě\n";
+rap_t( (int) $rC['id'] === (int) Resandpay_Reservations::find_by_vs_input( $rC['vs'] )['id'], 'vyhledání podle VS' );
+rap_t( (int) $rC['id'] === (int) Resandpay_Reservations::find_by_vs_input( 'SPD*1.0*ACC:CZ6527000000000123456789*AM:500.00*CC:CZK*X-VS:' . $rC['vs'] . '*MSG:test' )['id'], 'vyhledání z textu QR platby (X-VS)' );
+rap_t( (int) $rC['id'] === (int) Resandpay_Reservations::find_by_vs_input( ' ' . chunk_split( $rC['vs'], 4, ' ' ) )['id'], 'VS s mezerami' );
+rap_t( null === Resandpay_Reservations::find_by_vs_input( '999' ) && null === Resandpay_Reservations::find_by_vs_input( 'abc' ), 'neexistující VS nic nenajde' );
+$_GET = array( 'page' => 'reserveandpay-checkin', 'day' => wp_date( 'Y-m-d', $now + 12 * $day ), 'vs' => $rC['vs'] );
+ob_start();
+Resandpay_Admin_Checkin::page();
+$ck = ob_get_clean();
+$_GET = array();
+rap_t( false !== strpos( $ck, 'Test Osoba 81' ) && false !== strpos( $ck, 'Zaplaceno hotově' ) && false !== strpos( $ck, 'Hotově na místě' ), 'stránka odbavení ukáže kartu rezervace s tlačítky' );
+rap_t( false !== strpos( $ck, 'Sound Healing večer' ) && false !== strpos( $ck, 'k vybrání na místě: 1' ), 'přehled dne: rezervace akce a částka k vybrání' );
+$pd = Resandpay_Admin_Checkin::mark_paid( $rC['id'], 'cash' );
+rap_t( 'paid' === $pd['status'] && 'cash' === $pd['paid_method'], 'odbavení: zaplaceno hotově' );
+rap_t( is_wp_error( Resandpay_Admin_Checkin::mark_paid( $rC['id'], 'cash' ) ), 'opakované odbavení zaplacené rezervace je odmítnuto' );
+$pt = Resandpay_Admin_Checkin::mark_paid( $rT['id'], 'transfer' );
+rap_t( 'paid' === $pt['status'] && 'transfer_manual' === $pt['paid_method'], 'odbavení: zaplaceno převodem (ověřeno na místě)' );
+rap_t( is_wp_error( Resandpay_Admin_Checkin::mark_paid( $r1['id'], 'cash' ) ), 'zrušenou rezervaci nelze odbavit' );
 
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 

@@ -30,3 +30,28 @@
 .rap-muted { color: #8c8f94; }
 .rap-preview { max-width: 760px; }
 .rap-preview td, .rap-preview th { vertical-align: middle; }
+/* Splatnost a platba (akce i služba) */
+.rap-payfields p[hidden] { display: none; }
+td.rap-box .rap-payfields { max-width: 520px; }
+/* Odbavení na místě */
+.rap-checkin { max-width: 720px; }
+.rap-checkin__form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 12px 0 16px; }
+.rap-checkin__form input[type="text"] { font-size: 20px; padding: 6px 10px; width: 14em; max-width: 100%; letter-spacing: .05em; }
+.rap-checkin__card { background: #fff; border: 1px solid #c3c4c7; border-left: 4px solid #2271b1; padding: 12px 16px; margin: 0 0 16px; }
+.rap-checkin__card.is-paid { border-left-color: #00a32a; }
+.rap-checkin__card.is-off { border-left-color: #8c8f94; }
+.rap-checkin__card h2 { margin: 0 0 4px; font-size: 18px; }
+.rap-checkin__card dl { display: grid; grid-template-columns: 140px 1fr; gap: 2px 12px; margin: 8px 0 12px; }
+.rap-checkin__card dt { color: #646970; }
+.rap-checkin__card dd { margin: 0; }
+.rap-checkin__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.rap-checkin__actions .button { min-height: 40px; line-height: 38px; padding: 0 16px; font-size: 14px; }
+.rap-checkin__day td, .rap-checkin__day th { vertical-align: middle; }
+.rap-checkin__day code, .rap-checkin__card code { white-space: nowrap; }
+.rap-checkin__day .rap-inline-form { display: inline-block !important; margin: 2px 0; }
+@media (max-width: 600px) { .rap-checkin__day .rap-inline-form { display: block !important; } .rap-checkin__day .rap-inline-form .button { width: 100%; } }
+.rap-tag--cash { display: inline-block; background: #fcf9e8; border: 1px solid #dba617; color: #6b4b00; border-radius: 2px; padding: 0 5px; font-size: 11px; }
+@media (max-width: 600px) {
+	.rap-checkin__card dl { grid-template-columns: 1fr; }
+	.rap-checkin__card dt { margin-top: 6px; }
+}

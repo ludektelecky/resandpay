@@ -30,6 +30,9 @@ class Resandpay_Services {
 			'currency'    => $m( 'currency', Resandpay_Settings::get( 'currency' ) ),
 			'location_id' => (int) $m( 'location', 0 ),
 			'due_days'    => $m( 'due_days', '' ),
+			'due_mode'    => $m( 'due_mode', '' ),
+			'due_offset'  => $m( 'due_offset', '' ),
+			'cash'        => $m( 'cash', '' ),
 			'close_hours' => (float) $m( 'close_hours', 0 ),
 			'page_id'     => (int) $m( 'page', 0 ),
 		);
@@ -205,6 +208,9 @@ class Resandpay_Services {
 					'rap_price'       => $svc['price'],
 					'rap_currency'    => $svc['currency'],
 					'rap_due_days'    => $svc['due_days'],
+					'rap_due_mode'    => $svc['due_mode'],
+					'rap_due_offset'  => $svc['due_offset'],
+					'rap_cash'        => $svc['cash'],
 					'rap_close_hours' => $svc['close_hours'],
 				)
 			);

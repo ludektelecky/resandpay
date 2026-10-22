@@ -154,3 +154,10 @@
 	.rap-slots__day { grid-template-columns: 1fr; gap: .5rem; }
 }
 @media (prefers-reduced-motion: reduce) { .rap-button, .rap-chip { transition: none; } }
+
+/* Způsob platby (převod předvybraný, hotovost doplňková) */
+.rap-pay-choice { border: 1px solid var(--rap-line); border-radius: var(--rap-radius, 2px); padding: .75rem 1rem; margin: 0 0 1rem; }
+.rap-pay-choice legend { padding: 0 .35rem; font-weight: 600; }
+.rap-radio { display: flex; gap: .6rem; align-items: flex-start; margin: .4rem 0; cursor: pointer; }
+.rap-radio input { margin-top: .3rem; accent-color: var(--rap-accent); }
+.rap-radio small { display: block; color: var(--rap-ink-soft); font-size: 13px; }

@@ -152,6 +152,9 @@ class Resandpay_Reservations_Table extends WP_List_Table {
 		if ( $item['last_minute'] && Resandpay_Reservations::PENDING === $item['status'] ) {
 			$out .= '<br><small>' . esc_html__( 'na poslední chvíli', 'reserveandpay' ) . '</small>';
 		}
+		if ( 'cash' === ( $item['pay_choice'] ?? '' ) && Resandpay_Reservations::PAID !== $item['status'] ) {
+			$out .= '<br><span class="rap-tag--cash">' . esc_html__( 'zvolila hotovost', 'reserveandpay' ) . '</span>';
+		}
 		if ( Resandpay_Reservations::PAID === $item['status'] && $item['paid_method'] ) {
 			$out .= '<br><small>' . esc_html( Resandpay_Reservations::paid_method_labels()[ $item['paid_method'] ] ?? $item['paid_method'] ) . '</small>';
 		}

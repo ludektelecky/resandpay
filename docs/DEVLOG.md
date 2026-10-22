@@ -1,5 +1,15 @@
 # Vývojový deník ReserveAndPay
 
+## 0.3.3 (22. 10. 2026)
+
+- **Pravidla splatnosti** (Nastavení, přepsání u akce i služby): počet dní od rezervace (dosavadní chování, nejpozději začátek termínu), **vůči termínu** (−1 = den před, 0 = v den termínu, +1 = den po termínu, vždy do konce dne) nebo kombinace (dřívější z obou); termíny služby pravidlo převezmou ze služby
+- Nový stav **Po splatnosti**: nezaplacená rezervace se splatností v den termínu nebo po něm po splatnosti nepropadne, dál blokuje místo a zákaznice dostane jednu připomínku (nová šablona e-mailu). Rezervace na poslední chvíli bez platby přejde po začátku na „Platba na místě“. Spouští hodinový plánovač WordPressu
+- **Platba v hotovosti** jako doplňková možnost (Nastavení, u akce i služby výchozí / povolit / nepovolit): ve formuláři je převod (QR) první a předvybraný, hotovost druhá; rezervace s hotovostí je ve stavu „Platba na místě“ a dostane vlastní e-mail s údaji pro platbu převodem předem
+- **Odbavení na místě** (Rezervace → Odbavení, i pro telefon): vyhledání podle VS (i bez úvodních nul, s mezerami nebo z textu QR platby), karta rezervace s tlačítky „Zaplaceno hotově“ / „Zaplaceno převodem“, přehled dne s částkou k vybrání a rychlým odbavením; odkaz z detailu akce
+- Seznam, detail a CSV export rezervací ukazují zvolený způsob platby a způsob úhrady („Hotově na místě“); ruční rezervace umí zvolit hotovost
+- Databáze verze 2 (sloupce pay_choice, reminded_at) – migrace proběhne automaticky po aktualizaci
+- Analytické zadání v2.0; testy rozšířeny na 145 kontrol
+
 ## 0.3.2 (22. 10. 2026)
 
 - Služba má nové pole **Počet míst na termín** (1–500, výchozí 1). Masáž = 1 místo, skupinová lekce (např. Sound Healing) = více míst; generátor ho propíše do každého termínu

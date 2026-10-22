@@ -48,7 +48,7 @@ class Resandpay_Admin {
 	public static function assets( $hook ) {
 		$screen = get_current_screen();
 		$ours   = false !== strpos( (string) $hook, 'reserveandpay' )
-			|| ( $screen && in_array( $screen->post_type, array( Resandpay_Post_Types::EVENT, Resandpay_Post_Types::LOCATION ), true ) );
+			|| ( $screen && in_array( $screen->post_type, array( Resandpay_Post_Types::EVENT, Resandpay_Post_Types::LOCATION, Resandpay_Post_Types::SERVICE ), true ) );
 		if ( $ours ) {
 			wp_enqueue_style( 'reserveandpay-admin', RESANDPAY_URL . 'assets/css/admin.css', array(), RESANDPAY_VERSION );
 		}

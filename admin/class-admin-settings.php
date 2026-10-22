@@ -40,7 +40,10 @@ class Resandpay_Admin_Settings {
 			),
 			__( 'Rezervace a platby', 'reserveandpay' ) => array(
 				'currency'          => array( __( 'Výchozí měna', 'reserveandpay' ), $text, __( 'Třípísmenný kód, např. CZK.', 'reserveandpay' ) ),
-				'due_days'          => array( __( 'Výchozí splatnost (dní)', 'reserveandpay' ), 'number' ),
+				'due_mode'          => array( __( 'Výchozí pravidlo splatnosti', 'reserveandpay' ), 'select', __( 'U akce i služby lze pravidlo přepsat. Splatnost je vždy do konce dne.', 'reserveandpay' ), Resandpay_Events::due_mode_labels() ),
+				'due_days'          => array( __( 'Splatnost – dní od rezervace', 'reserveandpay' ), 'number' ),
+				'due_offset'        => array( __( 'Splatnost – dní vůči termínu', 'reserveandpay' ), 'int', __( '−1 = den před termínem, 0 = v den termínu, +1 = den po termínu. Nezaplacená rezervace se splatností v den termínu nebo po něm přejde po splatnosti do stavu „Po splatnosti“ a zákazník dostane připomínku.', 'reserveandpay' ) ),
+				'cash_enabled'      => array( __( 'Povolit platbu v hotovosti na místě', 'reserveandpay' ), 'checkbox', __( 'Doplňková možnost k platbě převodem (QR), která zůstává předvybraná. U akce i služby lze přepsat.', 'reserveandpay' ) ),
 				'last_minute_hours' => array( __( 'Hranice pro platbu na místě (hodin před začátkem)', 'reserveandpay' ), 'number', __( 'Rezervace vytvořená později než tato hranice dostane i možnost zaplatit na místě a po splatnosti neexpiruje. Výchozí 24 h.', 'reserveandpay' ) ),
 				'vs_prefix'         => array( __( 'Prefix variabilního symbolu', 'reserveandpay' ), $text, __( 'Číslice na začátku VS (např. rok 26). VS je vždy jedinečný a nikdy se nepoužije znovu.', 'reserveandpay' ) ),
 				'gdpr_page'         => array( __( 'Stránka se zásadami zpracování osobních údajů', 'reserveandpay' ), 'page' ),
@@ -52,6 +55,10 @@ class Resandpay_Admin_Settings {
 				'mail_from_email'       => array( __( 'E-mail odesílatele', 'reserveandpay' ), 'email' ),
 				'tpl_received_subject'  => array( __( 'Přijetí rezervace – předmět', 'reserveandpay' ), $text ),
 				'tpl_received_body'     => array( __( 'Přijetí rezervace – text', 'reserveandpay' ), 'textarea' ),
+				'tpl_received_cash_subject' => array( __( 'Přijetí rezervace (hotovost) – předmět', 'reserveandpay' ), $text ),
+				'tpl_received_cash_body'    => array( __( 'Přijetí rezervace (hotovost) – text', 'reserveandpay' ), 'textarea', __( 'Posílá se, když zákazník zvolí platbu hotově; obsahuje i údaje pro platbu převodem předem.', 'reserveandpay' ) ),
+				'tpl_overdue_subject'   => array( __( 'Připomínka platby po splatnosti – předmět', 'reserveandpay' ), $text ),
+				'tpl_overdue_body'      => array( __( 'Připomínka platby po splatnosti – text', 'reserveandpay' ), 'textarea' ),
 				'tpl_lastminute_note'   => array( __( 'Doplněk pro rezervaci na poslední chvíli', 'reserveandpay' ), 'textarea', __( 'Vkládá se místo {last_minute_note}.', 'reserveandpay' ) ),
 				'tpl_paid_subject'      => array( __( 'Potvrzení platby – předmět', 'reserveandpay' ), $text ),
 				'tpl_paid_body'         => array( __( 'Potvrzení platby – text', 'reserveandpay' ), 'textarea' ),
@@ -85,6 +92,12 @@ class Resandpay_Admin_Settings {
 					case 'number':
 						$out[ $key ] = max( 0, (float) str_replace( ',', '.', (string) $val ) );
 						break;
+					case 'int':
+						$out[ $key ] = max( -365, min( 365, (int) $val ) );
+						break;
+					case 'select':
+						$out[ $key ] = isset( $def[3][ $val ] ) ? (string) $val : (string) array_key_first( $def[3] );
+						break;
 					case 'page':
 						$out[ $key ] = absint( $val );
 						break;
@@ -115,7 +128,7 @@ class Resandpay_Admin_Settings {
 		foreach ( self::fields() as $title => $section ) {
 			echo '<h2>' . esc_html( $title ) . '</h2>';
 			if ( __( 'E-maily', 'reserveandpay' ) === $title ) {
-				echo '<p class="description">' . esc_html__( 'Proměnné:', 'reserveandpay' ) . ' <code>{name} {email} {phone} {note} {event} {date} {location} {amount} {vs} {proforma} {due_date} {account} {iban} {company} {free} {reason} {last_minute_note}</code></p>';
+				echo '<p class="description">' . esc_html__( 'Proměnné:', 'reserveandpay' ) . ' <code>{name} {email} {phone} {note} {event} {date} {location} {amount} {vs} {proforma} {due_date} {account} {iban} {company} {free} {reason} {last_minute_note} {pay_choice}</code></p>';
 			}
 			echo '<table class="form-table">';
 			foreach ( $section as $key => $def ) {
@@ -140,6 +153,16 @@ class Resandpay_Admin_Settings {
 								'option_none_value' => 0,
 							)
 						);
+						break;
+					case 'select':
+						echo '<select id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '">';
+						foreach ( $def[3] as $ok => $ol ) {
+							echo '<option value="' . esc_attr( $ok ) . '" ' . selected( (string) $val, (string) $ok, false ) . '>' . esc_html( $ol ) . '</option>';
+						}
+						echo '</select>';
+						break;
+					case 'int':
+						echo '<input type="number" step="1" min="-365" max="365" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" value="' . esc_attr( $val ) . '" class="small-text">';
 						break;
 					case 'number':
 						echo '<input type="number" step="0.5" min="0" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" value="' . esc_attr( $val ) . '" class="small-text">';

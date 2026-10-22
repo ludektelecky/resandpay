@@ -48,6 +48,7 @@ class Resandpay_Frontend {
 			'consent_gdpr'  => ! empty( $_POST['rap_gdpr'] ),
 			'consent_terms' => ! empty( $_POST['rap_terms'] ),
 			'newsletter'    => ! empty( $_POST['rap_newsletter'] ),
+			'pay_choice'    => 'cash' === ( $_POST['rap_pay'] ?? '' ) ? 'cash' : 'transfer',
 		);
 		$errors   = array();
 
@@ -337,7 +338,16 @@ class Resandpay_Frontend {
 			<p class="rap-check"><label><input type="checkbox" name="rap_gdpr" value="1" <?php checked( ! empty( $values['consent_gdpr'] ) ); ?> required> <?php echo wp_kses_post( sprintf( /* translators: %s: odkaz */ __( 'Souhlasím se %s *', 'reserveandpay' ), $link( $gdpr, __( 'zpracováním osobních údajů', 'reserveandpay' ) ) ) ); ?></label></p>
 			<p class="rap-check"><label><input type="checkbox" name="rap_terms" value="1" <?php checked( ! empty( $values['consent_terms'] ) ); ?> required> <?php echo wp_kses_post( sprintf( /* translators: %s: odkaz */ __( 'Souhlasím s %s *', 'reserveandpay' ), $link( $terms, __( 'obchodními a stornopodmínkami', 'reserveandpay' ) ) ) ); ?></label></p>
 			<p class="rap-check"><label><input type="checkbox" name="rap_newsletter" value="1" <?php checked( ! empty( $values['newsletter'] ) ); ?>> <?php esc_html_e( 'Chci dostávat novinky e-mailem', 'reserveandpay' ); ?></label></p>
+			<?php if ( $ev['cash'] ) : ?>
+			<fieldset class="rap-pay-choice">
+				<legend><?php esc_html_e( 'Způsob platby', 'reserveandpay' ); ?></legend>
+				<label class="rap-radio"><input type="radio" name="rap_pay" value="transfer" <?php checked( 'cash' !== ( $values['pay_choice'] ?? '' ) ); ?>> <span><strong><?php esc_html_e( 'Převodem – QR platba', 'reserveandpay' ); ?></strong> <small><?php esc_html_e( 'doporučujeme · platební údaje a QR kód obdržíte e-mailem, na místě pak nic neřešíte', 'reserveandpay' ); ?></small></span></label>
+				<label class="rap-radio"><input type="radio" name="rap_pay" value="cash" <?php checked( 'cash' === ( $values['pay_choice'] ?? '' ) ); ?>> <span><strong><?php esc_html_e( 'Hotově na místě', 'reserveandpay' ); ?></strong> <small><?php esc_html_e( 'i tak dostanete e-mailem QR kód, kdybyste se rozhodli zaplatit předem', 'reserveandpay' ); ?></small></span></label>
+			</fieldset>
+			<p class="rap-summary"><?php echo esc_html( sprintf( /* translators: %s: cena */ __( 'Cena za jedno místo: %s.', 'reserveandpay' ), Resandpay_Events::format_price( $ev['price'], $ev['currency'] ) ) ); ?></p>
+			<?php else : ?>
 			<p class="rap-summary"><?php echo esc_html( sprintf( /* translators: %s: cena */ __( 'Cena za jedno místo: %s. Platba převodem (QR platba) – platební údaje obdržíte e-mailem.', 'reserveandpay' ), Resandpay_Events::format_price( $ev['price'], $ev['currency'] ) ) ); ?></p>
+			<?php endif; ?>
 			<p><button type="submit" class="rap-button"><?php esc_html_e( 'Závazně rezervovat místo →', 'reserveandpay' ); ?></button></p>
 		</form>
 		<?php
@@ -349,8 +359,14 @@ class Resandpay_Frontend {
 		$s = Resandpay_Settings::all();
 		echo '<div class="rap-success" role="status">';
 		echo '<h2>' . esc_html__( 'Děkujeme, rezervace je přijata', 'reserveandpay' ) . '</h2>';
-		/* translators: %s: e-mail */
-		echo '<p>' . esc_html( sprintf( __( 'Platební údaje jsme poslali také na e-mail %s.', 'reserveandpay' ), $r['email'] ) ) . '</p>';
+		$cash = 'cash' === ( $r['pay_choice'] ?? '' );
+		if ( $cash ) {
+			/* translators: 1: částka, 2: e-mail */
+			echo '<p>' . esc_html( sprintf( __( 'Zvolili jste platbu hotově na místě (%1$s). Potvrzení jsme poslali na e-mail %2$s – najdete v něm i údaje pro platbu převodem, kdybyste chtěli zaplatit předem.', 'reserveandpay' ), Resandpay_Events::format_price( $r['amount'], $r['currency'] ), $r['email'] ) ) . '</p>';
+		} else {
+			/* translators: %s: e-mail */
+			echo '<p>' . esc_html( sprintf( __( 'Platební údaje jsme poslali také na e-mail %s.', 'reserveandpay' ), $r['email'] ) ) . '</p>';
+		}
 		echo '<dl class="rap-pay">';
 		echo '<dt>' . esc_html__( 'Akce', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev['title'] . ' – ' . Resandpay_Events::format_date( $ev ) ) . '</dd>';
 		if ( $s['bank_account'] ) {
@@ -358,9 +374,13 @@ class Resandpay_Frontend {
 		}
 		echo '<dt>' . esc_html__( 'Částka', 'reserveandpay' ) . '</dt><dd>' . esc_html( Resandpay_Events::format_price( $r['amount'], $r['currency'] ) ) . '</dd>';
 		echo '<dt>' . esc_html__( 'Variabilní symbol', 'reserveandpay' ) . '</dt><dd><strong>' . esc_html( $r['vs'] ) . '</strong></dd>';
-		echo '<dt>' . esc_html__( 'Splatnost', 'reserveandpay' ) . '</dt><dd>' . esc_html( wp_date( 'j. n. Y G:i', Resandpay_Events::ts( $r['due_at'] ) ) ) . '</dd>';
+		if ( ! $cash ) {
+			echo '<dt>' . esc_html__( 'Splatnost', 'reserveandpay' ) . '</dt><dd>' . esc_html( wp_date( 'j. n. Y G:i', Resandpay_Events::ts( $r['due_at'] ) ) ) . '</dd>';
+		}
 		echo '</dl>';
-		if ( $r['last_minute'] ) {
+		if ( $cash ) {
+			echo '<p class="rap-small">' . esc_html__( 'Variabilní symbol mějte prosím u sebe i na místě – podle něj Vás rychle odbavíme.', 'reserveandpay' ) . '</p>';
+		} elseif ( $r['last_minute'] ) {
 			echo '<p>' . esc_html__( 'Rezervujete krátce před začátkem. Pokud platba nestihne dorazit, můžete zaplatit na místě.', 'reserveandpay' ) . '</p>';
 		}
 		if ( Resandpay_Events::free_places( $ev['id'] ) > 0 ) {

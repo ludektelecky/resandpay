@@ -16,6 +16,7 @@ class Resandpay_Install {
 	}
 
 	public static function deactivate() {
+		wp_clear_scheduled_hook( 'resandpay_cron_due' );
 		flush_rewrite_rules();
 	}
 
@@ -51,7 +52,9 @@ class Resandpay_Install {
 			last_minute tinyint(1) NOT NULL DEFAULT 0,
 			due_at datetime NULL,
 			paid_at datetime NULL,
+			pay_choice varchar(20) NOT NULL DEFAULT 'transfer',
 			paid_method varchar(30) NOT NULL DEFAULT '',
+			reminded_at datetime NULL,
 			paid_by bigint(20) unsigned NOT NULL DEFAULT 0,
 			cancelled_at datetime NULL,
 			cancel_reason varchar(190) NOT NULL DEFAULT '',
@@ -66,7 +69,8 @@ class Resandpay_Install {
 			UNIQUE KEY vs (vs),
 			UNIQUE KEY token (token),
 			KEY event_status (event_id,status),
-			KEY email (email)
+			KEY email (email),
+			KEY status_due (status,due_at)
 		) {$charset};
 		CREATE TABLE {$locks} (
 			lock_name varchar(100) NOT NULL,
