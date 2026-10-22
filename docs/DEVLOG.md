@@ -4,7 +4,7 @@
 
 - **Oprava: klíč CRONu se ve verzích 0.5.0–0.5.2 neukládal** – stránka Platby při každém otevření ukázala nový klíč, který web neznal; CRON úloha s dříve zkopírovanou adresou proto nefungovala. Od 0.5.3 se klíč ukládá a nemění – **adresu v CRON úloze je potřeba jednou zkopírovat znovu**
 - Oprava dvojitého šifrování hesla rozšířena: ve verzích 0.5.0–0.5.2 přidalo každé otevření stránky Platby jednu vrstvu šifrování; heslo se nyní přečte při libovolném počtu vrstev a uloží se znovu jako jedna vrstva
-- Testy rozšířeny na 249 kontrol
+- Testy rozšířeny na 249 kontrol (nezávislé na stavu z předchozího běhu)
 
 ## 0.5.3 (22. 10. 2026)
 

@@ -624,7 +624,7 @@ rap_t( 1 === $cn['matched'] && 1 === $cn['manual'] && 1 === $cn['resolved'] && 2
 echo "== E5: heslo, CRON, interval\n";
 $enc = Resandpay_Payments::encrypt( 'tajne-heslo' );
 rap_t( 0 === strpos( $enc, 'v1:' ) && false === strpos( $enc, 'tajne' ) && 'tajne-heslo' === Resandpay_Payments::decrypt( $enc ), 'heslo se ukládá šifrovaně a jde dešifrovat' );
-update_option( Resandpay_Settings::OPTION, Resandpay_Admin_Settings::sanitize( array( 'imap_password' => 'tajne-heslo' ) ) );
+update_option( Resandpay_Settings::OPTION, Resandpay_Admin_Settings::sanitize( array_merge( Resandpay_Settings::all(), array( '__form' => 1, 'imap_password' => 'tajne-heslo' ) ) ) );
 $first = Resandpay_Settings::get( 'imap_password' );
 update_option( Resandpay_Settings::OPTION, Resandpay_Admin_Settings::sanitize( array( '__form' => 1, 'imap_password' => '' ) ) );
 rap_t( 'tajne-heslo' === Resandpay_Payments::imap_password() && $first === Resandpay_Settings::get( 'imap_password' ), 'prázdné pole hesla v nastavení ponechá uložené heslo' );
