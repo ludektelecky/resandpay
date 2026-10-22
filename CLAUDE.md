@@ -15,3 +15,7 @@ Po každé nové verzi pluginu nebo dokumentace uložit soubory také do Google 
 - `Dokumentace/` – zadání .docx, DEVLOG, README
 - `Instalační balíčky/` – `reserveandpay-X.Y.Z.zip`
 Starší verze se nepřepisují.
+
+## Verze dokumentace
+- Analytické zadání uvádí na titulní straně „Verze X.Y · datum · plugin ReserveAndPay A.B.C“ a v historii verzí sloupec „Verze pluginu“ – verze pluginu, ke které byla dokumentace vydána.
+- README uvádí aktuální verzi pluginu a verzi zadání; DEVLOG je členěn podle verzí pluginu.

@@ -8,7 +8,7 @@
 - **Odbavení na místě** (Rezervace → Odbavení, i pro telefon): vyhledání podle VS (i bez úvodních nul, s mezerami nebo z textu QR platby), karta rezervace s tlačítky „Zaplaceno hotově“ / „Zaplaceno převodem“, přehled dne s částkou k vybrání a rychlým odbavením; odkaz z detailu akce
 - Seznam, detail a CSV export rezervací ukazují zvolený způsob platby a způsob úhrady („Hotově na místě“); ruční rezervace umí zvolit hotovost
 - Databáze verze 2 (sloupce pay_choice, reminded_at) – migrace proběhne automaticky po aktualizaci
-- Analytické zadání v2.0; testy rozšířeny na 145 kontrol
+- Analytické zadání v2.0, následně v2.1 (na titulní straně a v historii verzí uvedena verze pluginu); testy rozšířeny na 145 kontrol
 
 ## 0.3.2 (22. 10. 2026)
 
