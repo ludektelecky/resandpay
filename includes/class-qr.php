@@ -114,8 +114,8 @@ class Resandpay_QR {
 			&& Resandpay_Reservations::amount_now( $r ) > 0 && '' !== self::spd( $r );
 	}
 
-	/** Druhý QR kód „zaplatit vše najednou“ – jen u rozdělené platby, dokud nic nepřišlo. */
+	/** Druhý QR kód „zaplatit vše najednou“ – jen u rozdělené platby, dokud nic nepřišlo; splatnost = splatnost 1. části (jinak by rezervace expirovala). */
 	public static function spd_full( array $r ) {
-		return Resandpay_Reservations::is_split( $r ) && (float) $r['amount_paid'] <= 0 ? self::spd( $r, (float) $r['amount'], $r['due_at'] ) : '';
+		return Resandpay_Reservations::is_split( $r ) && (float) $r['amount_paid'] <= 0 ? self::spd( $r, (float) $r['amount'], Resandpay_Reservations::due_now( $r ) ) : '';
 	}
 }

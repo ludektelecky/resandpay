@@ -1,5 +1,12 @@
 # Vývojový deník ReserveAndPay
 
+## 0.7.1 (22. 10. 2026)
+
+- **Oprava: QR kód „Nebo zaplaťte vše najednou“** měl splatnost doplatku; nově má splatnost **1. části** (v QR kódu, e-mailu, PDF i na potvrzovací stránce). Kdo by platil vše najednou až ke splatnosti doplatku, tomu by rezervace mezitím expirovala
+- **Starší texty e-mailů**: proměnné `{amount}` a `{due_date}` v e-mailech zákazníkovi znamenají u rozdělené nebo částečně zaplacené platby částku a splatnost, která se platí teď (1. část / zbytek) – dříve uložené texty (např. „Částka: {amount} · Splatnost: {due_date}“ z verze 0.1.0) tak ukazují správné údaje i bez obnovení. Celou cenu a konečnou splatnost dávají `{total}` a `{final_due}`; e-mail správci uvádí celou cenu
+- **Oprava: pomlčka v názvu lokace a akce** se v PDF zobrazovala jako „&#8211;“
+- Testy: 325 kontrol + souběh; analytické zadání v2.9 (kap. 3.9, 13)
+
 ## 0.7.0 (22. 10. 2026)
 
 - **Nový vzhled stránky akce** podle schváleného vzoru („Vzor stránky akce RaS“):

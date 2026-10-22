@@ -144,7 +144,7 @@ class Resandpay_Events {
 		return array(
 			'id'            => (int) $event_id,
 			'code'          => Resandpay_Codes::get( $event_id ),
-			'title'         => get_the_title( $event_id ),
+			'title'         => html_entity_decode( get_the_title( $event_id ), ENT_QUOTES, 'UTF-8' ),
 			'status'        => $post->post_status,
 			'type'          => $m( 'type', 'single' ),
 			'start'         => $m( 'start' ),
@@ -165,7 +165,7 @@ class Resandpay_Events {
 			'program'       => $m( 'program' ),
 			'gallery'       => self::parse_gallery( $m( 'gallery' ) ),
 			'location_id'   => $location_id,
-			'location'      => $location_id ? get_the_title( $location_id ) : '',
+			'location'      => $location_id ? html_entity_decode( get_the_title( $location_id ), ENT_QUOTES, 'UTF-8' ) : '',
 			'location_addr' => $location_id ? (string) get_post_meta( $location_id, '_rap_address', true ) : '',
 			'location_map'  => $location_id ? (string) get_post_meta( $location_id, '_rap_map_url', true ) : '',
 		);

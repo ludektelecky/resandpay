@@ -785,6 +785,10 @@ rap_t( 200.0 === Resandpay_Reservations::amount_now( $s1 ) && $s1['part1_due_at'
 rap_t( false !== strpos( Resandpay_QR::spd( $s1 ), '*AM:200.00*' ) && false !== strpos( Resandpay_QR::spd_full( $s1 ), '*AM:500.00*' ), 'QR na 1. část (200) a druhý QR „vše najednou“ (500)' );
 $m1 = $GLOBALS['rap_mails'][0] ?? array( 'message' => '' );
 rap_t( false !== strpos( $m1['message'], 'Nebo zaplaťte vše najednou' ) && false !== strpos( $m1['message'], '1. část platby' ) && false !== strpos( $m1['message'], 'Platba je rozdělená' ), 'e-mail: rozpis, QR na 1. část i „vše najednou“' );
+rap_t( false !== strpos( Resandpay_QR::spd_full( $s1 ), '*DT:' . wp_date( 'Ymd', $now + 7 * $day ) ) && false !== strpos( $m1['message'], '500 Kč do ' . wp_date( 'j. n. Y', $now + 7 * $day ) ), 'QR „vše najednou“: splatnost 1. části (0.6.2)' );
+$legacy = Resandpay_Mailer::render( 'Částka: {amount} · Splatnost: {due_date}', $s1, 'received' );
+rap_t( false !== strpos( $legacy, 'Částka: 200 Kč' ) && false !== strpos( $legacy, wp_date( 'j. n. Y', $now + 7 * $day ) . ' 23:59' ), 'starší text e-mailu: {amount} a {due_date} = 1. část' );
+rap_t( false !== strpos( Resandpay_Mailer::render( '{amount}', $s1, 'admin' ), '500 Kč' ), 'e-mail správci: {amount} = celá cena' );
 $pdf1 = Resandpay_PDF::render( $s1 );
 rap_t( 0 === strpos( $pdf1, '%PDF' ) && strlen( $pdf1 ) > 5000, 'platební pokyn PDF s rozpisem a dvěma QR' );
 $conf = new ReflectionMethod( 'Resandpay_Frontend', 'render_confirmation' );
@@ -823,6 +827,10 @@ $lr = Resandpay_Reservations::create( $lp, rap_person( 125 ), array( 'notify' =>
 rap_t( 'pending' === $lr['status'] && ! $lr['last_minute'] && ! Resandpay_Reservations::is_split( $lr ) && 0 === strpos( $lr['due_at'], wp_date( 'Y-m-d', $now + 7 * $day ) ), 'rezervace 14 dní před pobytem se splatností −30: vše najednou do 7 dní, neplatí se na místě' );
 Resandpay_Reservations::process_due( $now + 8 * $day );
 rap_t( 'expired' === Resandpay_Reservations::get( $lr['id'] )['status'], '… a po splatnosti normálně expiruje' );
+
+$locD = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::LOCATION, 'post_status' => 'publish', 'post_title' => 'Mirošov - chalupa Navrátilka' ) );
+update_post_meta( $lp, '_rap_location', $locD );
+rap_t( 'Mirošov – chalupa Navrátilka' === Resandpay_Events::get( $lp )['location'], 'název lokace s pomlčkou bez HTML entity (PDF, e-mail)' );
 
 echo "== 0.6.0: expirace, po splatnosti, připomínky\n";
 global $wpdb;

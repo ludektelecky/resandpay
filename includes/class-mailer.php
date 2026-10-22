@@ -104,12 +104,20 @@ class Resandpay_Mailer {
 			'{final_due}'        => $r['due_at'] ? wp_date( 'j. n. Y', Resandpay_Events::ts( $r['due_at'] ) ) : '',
 			'{last_payment}'     => isset( $r['last_payment'] ) ? Resandpay_Events::format_price( $r['last_payment'], $r['currency'] ) : '',
 			'{event_url}'        => ! empty( $r['event_id'] ) && get_permalink( $r['event_id'] ) ? get_permalink( $r['event_id'] ) : home_url( '/' ),
-			'{split_note}'       => Resandpay_Reservations::is_split( $r ) ? sprintf( /* translators: 1: 1. část, 2: datum, 3: doplatek, 4: datum */ __( "\nPlatba je rozdělená: 1. část %1\$s do %2\$s, doplatek %3\$s do %4\$s. Zaplacením 1. části je Vaše místo potvrzené. Můžete také zaplatit vše najednou – oba QR kódy najdete níže.\n", 'reserveandpay' ), Resandpay_Events::format_price( $r['part1_amount'], $r['currency'] ), wp_date( 'j. n. Y', Resandpay_Events::ts( $r['part1_due_at'] ) ), Resandpay_Events::format_price( (float) $r['amount'] - (float) $r['part1_amount'], $r['currency'] ), wp_date( 'j. n. Y', Resandpay_Events::ts( $r['due_at'] ) ) ) : '',
+			'{split_note}'       => Resandpay_Reservations::is_split( $r ) ? sprintf( /* translators: 1: 1. část, 2: datum, 3: doplatek, 4: datum */ __( "\nPlatba je rozdělená: 1. část %1\$s do %2\$s, doplatek %3\$s do %4\$s. Zaplacením 1. části je Vaše místo potvrzené. Můžete také zaplatit vše najednou do splatnosti 1. části – oba QR kódy najdete níže.\n", 'reserveandpay' ), Resandpay_Events::format_price( $r['part1_amount'], $r['currency'] ), wp_date( 'j. n. Y', Resandpay_Events::ts( $r['part1_due_at'] ) ), Resandpay_Events::format_price( (float) $r['amount'] - (float) $r['part1_amount'], $r['currency'] ), wp_date( 'j. n. Y', Resandpay_Events::ts( $r['due_at'] ) ) ) : '',
 		);
 	}
 
-	public static function render( $template, array $r ) {
-		$ph = apply_filters( 'resandpay_mail_placeholders', self::placeholders( $r ), $r );
+	public static function render( $template, array $r, $key = '' ) {
+		$ph = self::placeholders( $r );
+		// E-maily zákazníkovi: u rozdělené nebo částečně zaplacené platby znamená {amount} a {due_date}
+		// to, co se platí teď (1. část / zbytek) – i ve starších uložených textech. Správce vidí celou cenu.
+		if ( 'admin' !== $key && ( Resandpay_Reservations::is_split( $r ) || (float) ( $r['amount_paid'] ?? 0 ) > 0 ) && Resandpay_Reservations::PAID !== ( $r['status'] ?? '' ) ) {
+			$dn                = Resandpay_Reservations::due_now( $r );
+			$ph['{amount}']    = Resandpay_Events::format_price( Resandpay_Reservations::amount_now( $r ), $r['currency'] );
+			$ph['{due_date}']  = $dn ? wp_date( 'j. n. Y G:i', Resandpay_Events::ts( $dn ) ) : '';
+		}
+		$ph = apply_filters( 'resandpay_mail_placeholders', $ph, $r );
 		return strtr( (string) $template, $ph );
 	}
 
@@ -119,8 +127,8 @@ class Resandpay_Mailer {
 	 */
 	public static function build( $key, array $r ) {
 		$s       = Resandpay_Settings::all();
-		$subject = self::render( $s[ 'tpl_' . $key . '_subject' ] ?? '', $r );
-		$body    = self::render( $s[ 'tpl_' . $key . '_body' ] ?? '', $r );
+		$subject = self::render( $s[ 'tpl_' . $key . '_subject' ] ?? '', $r, $key );
+		$body    = self::render( $s[ 'tpl_' . $key . '_body' ] ?? '', $r, $key );
 		$parts   = array(
 			'subject'  => $subject,
 			'text'     => $body,
@@ -155,7 +163,7 @@ class Resandpay_Mailer {
 			}
 			if ( $png2 ) {
 				/* translators: 1: celá částka, 2: splatnost */
-				$text .= sprintf( __( 'Nebo vše najednou: %1$s do %2$s (stejný variabilní symbol)', 'reserveandpay' ), Resandpay_Events::format_price( $r['amount'], $r['currency'] ), wp_date( 'j. n. Y', Resandpay_Events::ts( $r['due_at'] ) ) ) . "\n";
+				$text .= sprintf( __( 'Nebo vše najednou: %1$s do %2$s (stejný variabilní symbol)', 'reserveandpay' ), Resandpay_Events::format_price( $r['amount'], $r['currency'] ), wp_date( 'j. n. Y', Resandpay_Events::ts( Resandpay_Reservations::due_now( $r ) ) ) ) . "\n";
 			}
 			$parts['text'] .= $text . __( 'Platební pokyn (PDF):', 'reserveandpay' ) . ' ' . $url . "\n";
 			$box            = self::html_payment_box( $rows, $png ? 'cid:rap-qr' : '', $url, 'cash' === ( $r['pay_choice'] ?? '' ), $png2 ? 'cid:rap-qr2' : '', $r );
@@ -218,7 +226,7 @@ class Resandpay_Mailer {
 		$out .= '</tr></table>';
 		if ( $qr2_src ) {
 			/* translators: 1: celá částka, 2: splatnost */
-			$out .= '<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:14px;border-top:1px solid ' . $c['line'] . ';"><tr><td valign="middle" style="padding:12px 14px 0 0;"><img src="' . esc_attr( $qr2_src ) . '" width="110" height="110" alt="' . esc_attr__( 'QR platba – vše najednou', 'reserveandpay' ) . '" style="display:block;width:110px;height:110px;border:0;background:#fff;"></td><td valign="middle" style="padding-top:12px;font-size:13px;color:' . $c['ink'] . ';"><strong>' . esc_html__( 'Nebo zaplaťte vše najednou', 'reserveandpay' ) . '</strong><br>' . esc_html( sprintf( __( '%1$s do %2$s – stejný variabilní symbol', 'reserveandpay' ), Resandpay_Events::format_price( $r['amount'], $r['currency'] ), wp_date( 'j. n. Y', Resandpay_Events::ts( $r['due_at'] ) ) ) ) . '</td></tr></table>';
+			$out .= '<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:14px;border-top:1px solid ' . $c['line'] . ';"><tr><td valign="middle" style="padding:12px 14px 0 0;"><img src="' . esc_attr( $qr2_src ) . '" width="110" height="110" alt="' . esc_attr__( 'QR platba – vše najednou', 'reserveandpay' ) . '" style="display:block;width:110px;height:110px;border:0;background:#fff;"></td><td valign="middle" style="padding-top:12px;font-size:13px;color:' . $c['ink'] . ';"><strong>' . esc_html__( 'Nebo zaplaťte vše najednou', 'reserveandpay' ) . '</strong><br>' . esc_html( sprintf( __( '%1$s do %2$s – stejný variabilní symbol', 'reserveandpay' ), Resandpay_Events::format_price( $r['amount'], $r['currency'] ), wp_date( 'j. n. Y', Resandpay_Events::ts( Resandpay_Reservations::due_now( $r ) ) ) ) ) . '</td></tr></table>';
 		}
 		$out .= '<p style="margin:16px 0 0;"><a href="' . esc_url( $pdf_url ) . '" style="display:inline-block;background:' . $c['accent'] . ';color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:2px;font-weight:bold;font-size:14px;">' . esc_html__( 'Stáhnout platební pokyn (PDF) →', 'reserveandpay' ) . '</a></p>';
 		return $out . '</td></tr></table>';

@@ -263,7 +263,7 @@ class Resandpay_PDF {
 				self::font( $pdf, 'worksans', 9, self::C_SOFT );
 				$pdf->SetXY( 56, $y2 + 16 );
 				/* translators: 1: celá částka, 2: splatnost */
-				$pdf->Cell( 120, 5, sprintf( __( '%1$s do %2$s – stejný variabilní symbol', 'reserveandpay' ), Resandpay_Events::format_price( $r['amount'], $r['currency'] ), wp_date( 'j. n. Y', Resandpay_Events::ts( $r['due_at'] ) ) ), 0, 0, 'L' );
+				$pdf->Cell( 120, 5, sprintf( __( '%1$s do %2$s – stejný variabilní symbol', 'reserveandpay' ), Resandpay_Events::format_price( $r['amount'], $r['currency'] ), wp_date( 'j. n. Y', Resandpay_Events::ts( Resandpay_Reservations::due_now( $r ) ) ) ), 0, 0, 'L' );
 			}
 			$pdf->SetY( $box_y + $box_h + 7 );
 
@@ -297,7 +297,7 @@ class Resandpay_PDF {
 		} else {
 			$out[] = __( 'Platbu prosím proveďte převodem s uvedeným variabilním symbolem – podle něj ji přiřadíme k Vaší rezervaci. Nejrychlejší je naskenovat QR kód v bankovní aplikaci. Každé místo má vlastní variabilní symbol.', 'reserveandpay' );
 			if ( Resandpay_Reservations::is_split( $r ) && (float) $r['amount_paid'] <= 0 ) {
-				$out[] = __( 'Platba je rozdělená na 1. část a doplatek – obojí posílejte se stejným variabilním symbolem. Můžete také zaplatit vše najednou (druhý QR kód).', 'reserveandpay' );
+				$out[] = __( 'Platba je rozdělená na 1. část a doplatek – obojí posílejte se stejným variabilním symbolem. Můžete také zaplatit vše najednou do splatnosti 1. části (druhý QR kód).', 'reserveandpay' );
 			} elseif ( (float) $r['amount_paid'] > 0 ) {
 				/* translators: 1: zaplaceno, 2: zbývá */
 				$out[] = sprintf( __( 'Evidujeme platbu %1$s. Zbývá zaplatit %2$s – se stejným variabilním symbolem.', 'reserveandpay' ), Resandpay_Events::format_price( $r['amount_paid'], $r['currency'] ), Resandpay_Events::format_price( Resandpay_Reservations::remaining( $r ), $r['currency'] ) );
