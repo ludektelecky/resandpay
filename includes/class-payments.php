@@ -57,12 +57,13 @@ class Resandpay_Payments {
 	}
 
 	/**
-	 * Dešifrování. Opraví i heslo zašifrované omylem vícekrát (chyba verzí 0.5.0–0.5.2):
-	 * dokud výsledek vypadá jako zašifrovaná hodnota, dešifruje se znovu.
+	 * Dešifrování. Opraví i heslo zašifrované omylem vícekrát (chyba verzí 0.5.0–0.5.2 –
+	 * každé otevření stránky Platby přidalo vrstvu): dokud výsledek vypadá jako
+	 * zašifrovaná hodnota, dešifruje se znovu.
 	 */
 	public static function decrypt( $stored ) {
 		$plain = self::decrypt_once( $stored );
-		for ( $i = 0; $i < 3 && 0 === strpos( $plain, 'v1:' ); $i++ ) {
+		for ( $i = 0; $i < 200 && 0 === strpos( $plain, 'v1:' ); $i++ ) {
 			$inner = self::decrypt_once( $plain );
 			if ( '' === $inner ) {
 				break;
@@ -88,7 +89,13 @@ class Resandpay_Payments {
 		if ( defined( 'RESANDPAY_IMAP_PASSWORD' ) ) {
 			return (string) RESANDPAY_IMAP_PASSWORD;
 		}
-		return self::decrypt( Resandpay_Settings::get( 'imap_password' ) );
+		$stored = (string) Resandpay_Settings::get( 'imap_password' );
+		$plain  = self::decrypt( $stored );
+		// Vícevrstvé zašifrování (starší verze) jednou provždy uložit znovu jako jednu vrstvu.
+		if ( '' !== $plain && 0 === strpos( self::decrypt_once( $stored ), 'v1:' ) ) {
+			Resandpay_Settings::update( array( 'imap_password' => self::encrypt( $plain ) ) );
+		}
+		return $plain;
 	}
 
 	/** Tajný klíč pro URL CRONu (vygeneruje se při prvním použití). */

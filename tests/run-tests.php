@@ -633,7 +633,8 @@ Resandpay_Settings::update( array( 'test_mode' => 1, 'notify_admin' => 1, 'bank_
 add_filter( 'sanitize_option_' . Resandpay_Settings::OPTION, array( 'Resandpay_Admin_Settings', 'sanitize' ) );
 Resandpay_Settings::reset_templates();
 Resandpay_Settings::update( array( 'cron_key' => '' ) );
-Resandpay_Payments::cron_key();
+$ck1 = Resandpay_Payments::cron_key();
+rap_t( $ck1 === Resandpay_Settings::get( 'cron_key' ) && $ck1 === Resandpay_Payments::cron_key(), 'klíč CRONu se v administraci uloží a dál se nemění' );
 rap_t( 'tajne-heslo' === Resandpay_Payments::imap_password() && $first === Resandpay_Settings::get( 'imap_password' ), 'interní zápisy nastavení (obnovení textů, klíč CRONu) heslo znovu nešifrují' );
 update_option( Resandpay_Settings::OPTION, array_merge( Resandpay_Settings::all(), array( '__form' => 1, 'imap_password' => 'nove-heslo' ) ) );
 rap_t( 'nove-heslo' === Resandpay_Payments::imap_password(), 'uložení nového hesla formulářem' );
@@ -642,6 +643,15 @@ rap_t( 'nove-heslo' === Resandpay_Payments::imap_password(), 'odeslání formul�
 remove_filter( 'sanitize_option_' . Resandpay_Settings::OPTION, array( 'Resandpay_Admin_Settings', 'sanitize' ) );
 Resandpay_Settings::update( array( 'test_mode' => 1, 'notify_admin' => 1, 'bank_require_auth' => 1 ) );
 rap_t( 'tajne-heslo' === Resandpay_Payments::decrypt( Resandpay_Payments::encrypt( Resandpay_Payments::encrypt( 'tajne-heslo' ) ) ), 'oprava: dvakrát zašifrované heslo (verze 0.5.0–0.5.2) se přečte správně' );
+$multi = 'tajne-heslo';
+for ( $i = 0; $i < 25; $i++ ) {
+	$multi = Resandpay_Payments::encrypt( $multi );
+}
+$keep = Resandpay_Settings::get( 'imap_password' );
+Resandpay_Settings::update( array( 'imap_password' => $multi ) );
+rap_t( 'tajne-heslo' === Resandpay_Payments::imap_password() && 'tajne-heslo' === Resandpay_Payments::decrypt( $multi ), 'oprava: heslo zašifrované 25× se přečte správně' );
+rap_t( strlen( Resandpay_Settings::get( 'imap_password' ) ) < 80, 'a uloží se znovu jako jedna vrstva' );
+Resandpay_Settings::update( array( 'imap_password' => $keep ) );
 Resandpay_Settings::update( array( 'payment_mode' => 'auto', 'payment_interval' => 60, 'cron_key' => '' ) );
 $ck = Resandpay_Payments::cron_key();
 rap_t( strlen( $ck ) >= 32 && $ck === Resandpay_Payments::cron_key() && false !== strpos( Resandpay_Payments::cron_url(), 'rap_cron=' . $ck ), 'tajný klíč a adresa pro CRON' );
