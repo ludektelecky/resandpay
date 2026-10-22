@@ -35,6 +35,13 @@ class Resandpay_Settings {
 			'events_page'         => 0,
 			'vs_prefix'           => gmdate( 'y' ),
 			'notify_admin'        => 1,
+			// Kódy akcí, služeb a termínů (AK-2026-0012, SL-003, TE-2026-0145).
+			'code_prefix_event'   => 'AK',
+			'code_digits_event'   => 4,
+			'code_prefix_service' => 'SL',
+			'code_digits_service' => 3,
+			'code_prefix_slot'    => 'TE',
+			'code_digits_slot'    => 4,
 			// E-maily.
 			'mail_from_name'      => get_option( 'blogname' ),
 			'mail_from_email'     => get_option( 'admin_email' ),

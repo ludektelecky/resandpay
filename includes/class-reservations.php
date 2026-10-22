@@ -319,7 +319,14 @@ class Resandpay_Reservations {
 		if ( $args['status'] && isset( self::status_labels()[ $args['status'] ] ) ) {
 			$where[] = $wpdb->prepare( 'status = %s', $args['status'] );
 		}
-		if ( '' !== $args['search'] ) {
+		if ( '' !== $args['search'] && Resandpay_Codes::looks_like_code( $args['search'] ) && Resandpay_Codes::find( $args['search'] ) ) {
+			// Hledání podle kódu akce/termínu (AK-2026-0012) nebo služby (SL-003 → všechny její termíny).
+			$pid = Resandpay_Codes::find( $args['search'] );
+			$ids = Resandpay_Post_Types::SERVICE === get_post_type( $pid )
+				? get_posts( array( 'post_type' => Resandpay_Post_Types::EVENT, 'post_status' => 'any', 'posts_per_page' => -1, 'fields' => 'ids', 'meta_key' => '_rap_service', 'meta_value' => $pid ) )
+				: array( $pid );
+			$where[] = $ids ? 'event_id IN (' . implode( ',', array_map( 'intval', $ids ) ) . ')' : '1=0';
+		} elseif ( '' !== $args['search'] ) {
 			$like    = '%' . $wpdb->esc_like( $args['search'] ) . '%';
 			$where[] = $wpdb->prepare( '(customer_name LIKE %s OR email LIKE %s OR vs LIKE %s OR phone LIKE %s)', $like, $like, $like, $like );
 		}

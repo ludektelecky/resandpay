@@ -75,6 +75,9 @@ add_filter(
 
 echo "== Příprava\n";
 Resandpay_Reservations::delete_all();
+global $wpdb;
+$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'resandpay\\_code\\_seq\\_%'" );
+wp_cache_flush();
 foreach ( get_posts( array( 'post_type' => array( Resandpay_Post_Types::EVENT, Resandpay_Post_Types::LOCATION, Resandpay_Post_Types::SERVICE ), 'posts_per_page' => -1, 'post_status' => 'any', 'fields' => 'ids' ) ) as $pid ) {
 	wp_delete_post( $pid, true );
 }
@@ -430,6 +433,47 @@ rap_t( is_wp_error( Resandpay_Admin_Checkin::mark_paid( $rC['id'], 'cash' ) ), '
 $pt = Resandpay_Admin_Checkin::mark_paid( $rT['id'], 'transfer' );
 rap_t( 'paid' === $pt['status'] && 'transfer_manual' === $pt['paid_method'], 'odbavení: zaplaceno převodem (ověřeno na místě)' );
 rap_t( is_wp_error( Resandpay_Admin_Checkin::mark_paid( $r1['id'], 'cash' ) ), 'zrušenou rezervaci nelze odbavit' );
+
+echo "== 0.3.4: kódy akcí, služeb a termínů\n";
+$yr = wp_date( 'Y' );
+$ca = Resandpay_Events::get( $a )['code'];
+rap_t( (bool) preg_match( '/^AK-' . $yr . '-\d{4}$/', $ca ), 'akce má kód AK-RRRR-NNNN (' . $ca . ')' );
+rap_t( 'AK-' . $yr . '-0001' === $ca, 'první akce v roce má číslo 0001' );
+$cs = Resandpay_Services::get( $svc_id )['code'];
+rap_t( (bool) preg_match( '/^SL-\d{3}$/', $cs ), 'služba má kód SL-NNN (' . $cs . ')' );
+$ct = $s0['id'] ? Resandpay_Events::get( $s0['id'] )['code'] : '';
+rap_t( (bool) preg_match( '/^TE-' . $yr . '-\d{4}$/', $ct ), 'termín služby má kód TE-RRRR-NNNN (' . $ct . ')' );
+$all_codes = array();
+foreach ( get_posts( array( 'post_type' => array( Resandpay_Post_Types::EVENT, Resandpay_Post_Types::SERVICE ), 'post_status' => 'any', 'posts_per_page' => -1, 'fields' => 'ids' ) ) as $pid ) {
+	$all_codes[] = Resandpay_Codes::get( $pid );
+}
+rap_t( ! in_array( '', $all_codes, true ) && count( $all_codes ) === count( array_unique( $all_codes ) ), 'všechny akce, služby a termíny mají kód a žádný se neopakuje (' . count( $all_codes ) . ')' );
+$before = Resandpay_Events::get( $a )['code'];
+Resandpay_Admin_Events::save_event_meta( $a, array( 'rap_type' => 'short', 'rap_start' => wp_date( 'Y-m-d H:i', $now + 15 * $day ), 'rap_end' => wp_date( 'Y-m-d H:i', $now + 15 * $day + 7200 ), 'rap_capacity' => 3, 'rap_price' => 600, 'rap_currency' => 'CZK' ) );
+wp_update_post( array( 'ID' => $a, 'post_title' => 'Sound healing – přejmenováno' ) );
+rap_t( $before === Resandpay_Events::get( $a )['code'], 'změna termínu, ceny a názvu kód nemění' );
+$dupc = Resandpay_Admin_Events::duplicate( $a );
+rap_t( Resandpay_Codes::get( $dupc ) && Resandpay_Codes::get( $dupc ) !== $before, 'duplikát akce dostane nový kód (' . Resandpay_Codes::get( $dupc ) . ')' );
+$last = Resandpay_Codes::get( $dupc );
+wp_delete_post( $dupc, true );
+$nx = rap_event( 'Po smazání', $now + 40 * $day, $now + 40 * $day + 3600, 5 );
+rap_t( (int) substr( Resandpay_Codes::get( $nx ), -4 ) === (int) substr( $last, -4 ) + 1, 'kód smazané akce se znovu nepoužije (' . $last . ' → ' . Resandpay_Codes::get( $nx ) . ')' );
+rap_t( $a === Resandpay_Codes::find( strtolower( $before ) ) && $svc_id === Resandpay_Codes::find( ' ' . $cs ) && 0 === Resandpay_Codes::find( 'AK-1999-9999' ), 'vyhledání podle kódu (i malými písmeny, s mezerou)' );
+rap_t( 'Bukální masáž' === Resandpay_Services::find( $cs )['title'], 'služba se najde i podle kódu (shortcode service="SL-…")' );
+rap_t( false !== strpos( Resandpay_Frontend::shortcode_booking( array( 'id' => $before ) ), 'rap-booking' ), 'shortcode [reserveandpay_booking id="AK-…"] přijme kód' );
+$rq = Resandpay_Reservations::query( array( 'search' => $cs, 'per_page' => 100 ) );
+rap_t( $rq['total'] > 0 && ! array_filter( $rq['items'], fn( $r ) => 'TE' !== substr( Resandpay_Codes::get( $r['event_id'] ), 0, 2 ) ), 'hledání rezervací podle kódu služby najde rezervace jejích termínů' );
+$rq2 = Resandpay_Reservations::query( array( 'search' => $before, 'per_page' => 100 ) );
+rap_t( $rq2['total'] > 0 && ! array_filter( $rq2['items'], fn( $r ) => (int) $r['event_id'] !== $a ), 'hledání rezervací podle kódu akce' );
+rap_t( false !== strpos( Resandpay_Mailer::render( 'Akce {event_code}', $rq2['items'][0] ), $before ), 'proměnná {event_code} v e-mailech' );
+delete_post_meta( $nx, Resandpay_Codes::META );
+delete_post_meta( $svc2, Resandpay_Codes::META );
+rap_t( 2 === Resandpay_Codes::backfill() && Resandpay_Codes::get( $nx ) && 'SL-' === substr( Resandpay_Codes::get( $svc2 ), 0, 3 ), 'doplnění kódů existujícím položkám (migrace)' );
+Resandpay_Settings::update( array( 'code_prefix_event' => 'EV', 'code_digits_event' => 5 ) );
+$ev5 = rap_event( 'Jiná předpona', $now + 41 * $day, $now + 41 * $day + 3600, 5 );
+rap_t( (bool) preg_match( '/^EV-' . $yr . '-\d{5}$/', Resandpay_Codes::get( $ev5 ) ) && $before === Resandpay_Events::get( $a )['code'], 'předpona a počet číslic z nastavení; stávající kódy beze změny' );
+Resandpay_Settings::update( array( 'code_prefix_event' => 'AK', 'code_digits_event' => 4 ) );
+rap_t( 'TE-2027-0001' === Resandpay_Codes::format( 'slot', 1, 2027 ) && 'SL-012' === Resandpay_Codes::format( 'service', 12, 2027 ), 'formát kódu podle druhu' );
 
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 

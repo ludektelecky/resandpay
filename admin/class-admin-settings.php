@@ -50,6 +50,14 @@ class Resandpay_Admin_Settings {
 				'terms_page'        => array( __( 'Stránka s obchodními a stornopodmínkami', 'reserveandpay' ), 'page' ),
 				'events_page'       => array( __( 'Stránka s přehledem akcí', 'reserveandpay' ), 'page', __( 'Stránka se shortcodem [reserveandpay_program]. Archiv /akce/ a kategorie se na ni přesměrují a detail akce na ni odkazuje.', 'reserveandpay' ) ),
 			),
+			__( 'Kódy akcí, služeb a termínů', 'reserveandpay' ) => array(
+				'code_prefix_event'   => array( __( 'Předpona kódu akce', 'reserveandpay' ), $text, __( 'Např. AK → AK-2026-0012 (rok založení, řada od 1 každý rok).', 'reserveandpay' ) ),
+				'code_digits_event'   => array( __( 'Počet číslic – akce', 'reserveandpay' ), 'number' ),
+				'code_prefix_service' => array( __( 'Předpona kódu služby', 'reserveandpay' ), $text, __( 'Např. SL → SL-003.', 'reserveandpay' ) ),
+				'code_digits_service' => array( __( 'Počet číslic – služba', 'reserveandpay' ), 'number' ),
+				'code_prefix_slot'    => array( __( 'Předpona kódu termínu služby', 'reserveandpay' ), $text, __( 'Např. TE → TE-2026-0145. Změna předpon a číslic platí jen pro nově přidělované kódy; přidělený kód se nikdy nemění.', 'reserveandpay' ) ),
+				'code_digits_slot'    => array( __( 'Počet číslic – termín', 'reserveandpay' ), 'number' ),
+			),
 			__( 'E-maily', 'reserveandpay' )           => array(
 				'mail_from_name'        => array( __( 'Jméno odesílatele', 'reserveandpay' ), $text ),
 				'mail_from_email'       => array( __( 'E-mail odesílatele', 'reserveandpay' ), 'email' ),
@@ -115,6 +123,10 @@ class Resandpay_Admin_Settings {
 		$out['currency']  = strtoupper( substr( preg_replace( '/[^A-Za-z]/', '', $out['currency'] ), 0, 3 ) ) ?: 'CZK';
 		$out['vs_prefix'] = substr( preg_replace( '/\D/', '', $out['vs_prefix'] ), 0, 4 );
 		$out['iban']      = strtoupper( preg_replace( '/\s+/', '', $out['iban'] ) );
+		foreach ( array( 'event' => 'AK', 'service' => 'SL', 'slot' => 'TE' ) as $k => $def ) {
+			$out[ 'code_prefix_' . $k ] = substr( strtoupper( preg_replace( '/[^A-Za-z]/', '', (string) $out[ 'code_prefix_' . $k ] ) ), 0, 6 ) ?: $def;
+			$out[ 'code_digits_' . $k ] = max( 2, min( 8, (int) $out[ 'code_digits_' . $k ] ) );
+		}
 		return $out;
 	}
 
@@ -128,7 +140,7 @@ class Resandpay_Admin_Settings {
 		foreach ( self::fields() as $title => $section ) {
 			echo '<h2>' . esc_html( $title ) . '</h2>';
 			if ( __( 'E-maily', 'reserveandpay' ) === $title ) {
-				echo '<p class="description">' . esc_html__( 'Proměnné:', 'reserveandpay' ) . ' <code>{name} {email} {phone} {note} {event} {date} {location} {amount} {vs} {proforma} {due_date} {account} {iban} {company} {free} {reason} {last_minute_note} {pay_choice}</code></p>';
+				echo '<p class="description">' . esc_html__( 'Proměnné:', 'reserveandpay' ) . ' <code>{name} {email} {phone} {note} {event} {date} {location} {amount} {vs} {proforma} {due_date} {account} {iban} {company} {free} {reason} {last_minute_note} {pay_choice} {event_code}</code></p>';
 			}
 			echo '<table class="form-table">';
 			foreach ( $section as $key => $def ) {

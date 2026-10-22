@@ -120,7 +120,8 @@ class Resandpay_Frontend {
 
 	public static function shortcode_booking( $atts ) {
 		$atts = shortcode_atts( array( 'id' => 0 ), $atts, 'reserveandpay_booking' );
-		$id   = absint( $atts['id'] ) ?: get_the_ID();
+		$id   = Resandpay_Codes::looks_like_code( $atts['id'] ) ? Resandpay_Codes::find( $atts['id'] ) : absint( $atts['id'] );
+		$id   = $id ?: get_the_ID();
 		wp_enqueue_style( 'reserveandpay' );
 		return self::render_details( $id ) . self::render_booking( $id );
 	}

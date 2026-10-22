@@ -180,7 +180,7 @@ class Resandpay_Admin_Reservations {
 		};
 		$rows = array(
 			__( 'Stav', 'reserveandpay' )              => '<span class="rap-status rap-status--' . esc_attr( $r['status'] ) . '">' . esc_html( $labels[ $r['status'] ] ) . '</span>',
-			__( 'Akce', 'reserveandpay' )              => $ev ? '<a href="' . esc_url( admin_url( 'admin.php?page=reserveandpay&event_id=' . $ev['id'] ) ) . '">' . esc_html( $ev['title'] ) . '</a> – ' . esc_html( Resandpay_Events::format_date( $ev ) ) : '—',
+			__( 'Akce', 'reserveandpay' )              => $ev ? '<a href="' . esc_url( admin_url( 'admin.php?page=reserveandpay&event_id=' . $ev['id'] ) ) . '">' . esc_html( $ev['title'] ) . '</a> – ' . esc_html( Resandpay_Events::format_date( $ev ) ) . ( $ev['code'] ? ' · <code>' . esc_html( $ev['code'] ) . '</code>' : '' ) : '—',
 			__( 'Jméno', 'reserveandpay' )             => esc_html( $r['customer_name'] ),
 			__( 'E-mail', 'reserveandpay' )            => '<a href="mailto:' . esc_attr( $r['email'] ) . '">' . esc_html( $r['email'] ) . '</a>',
 			__( 'Telefon', 'reserveandpay' )           => esc_html( $r['phone'] ),
@@ -327,11 +327,12 @@ class Resandpay_Admin_Reservations {
 		$out = fopen( 'php://output', 'w' );
 		fwrite( $out, "\xEF\xBB\xBF" );
 		$labels = Resandpay_Reservations::status_labels();
-		fputcsv( $out, array( 'Jméno', 'E-mail', 'Telefon', 'Firma', 'IČ', 'DIČ', 'Stav', 'VS', 'Částka', 'Měna', 'Zvolená platba', 'Splatnost', 'Zaplaceno', 'Způsob úhrady', 'Poznámka', 'Newsletter', 'Vytvořeno' ), ';' );
+		fputcsv( $out, array( 'Kód akce', 'Jméno', 'E-mail', 'Telefon', 'Firma', 'IČ', 'DIČ', 'Stav', 'VS', 'Částka', 'Měna', 'Zvolená platba', 'Splatnost', 'Zaplaceno', 'Způsob úhrady', 'Poznámka', 'Newsletter', 'Vytvořeno' ), ';' );
 		foreach ( $rows as $r ) {
 			fputcsv(
 				$out,
 				array(
+					Resandpay_Codes::get( $r['event_id'] ),
 					$r['customer_name'],
 					$r['email'],
 					$r['phone'],

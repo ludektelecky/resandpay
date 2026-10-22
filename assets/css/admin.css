@@ -55,3 +55,6 @@ td.rap-box .rap-payfields { max-width: 520px; }
 	.rap-checkin__card dl { grid-template-columns: 1fr; }
 	.rap-checkin__card dt { margin-top: 6px; }
 }
+.rap-code { margin: 0 0 10px; }
+.rap-code code { font-size: 13px; }
+.column-rap_code { width: 120px; }

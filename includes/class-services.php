@@ -21,6 +21,7 @@ class Resandpay_Services {
 		};
 		return array(
 			'id'          => (int) $service_id,
+			'code'        => Resandpay_Codes::get( $service_id ),
 			'title'       => get_the_title( $service_id ),
 			'status'      => $post->post_status,
 			'duration'    => max( 5, (int) $m( 'duration', 60 ) ),
@@ -53,8 +54,11 @@ class Resandpay_Services {
 		return array_filter( array_map( array( __CLASS__, 'get' ), $ids ) );
 	}
 
-	/** Najde službu podle ID nebo slugu. */
+	/** Najde službu podle ID, kódu (SL-003) nebo slugu. */
 	public static function find( $id_or_slug ) {
+		if ( Resandpay_Codes::looks_like_code( $id_or_slug ) ) {
+			return self::get( Resandpay_Codes::find( $id_or_slug ) );
+		}
 		if ( is_numeric( $id_or_slug ) ) {
 			return self::get( (int) $id_or_slug );
 		}
@@ -215,6 +219,7 @@ class Resandpay_Services {
 				)
 			);
 			update_post_meta( $id, '_rap_service', $service_id );
+			Resandpay_Codes::assign( $id );
 			if ( $terms && ! is_wp_error( $terms ) ) {
 				wp_set_object_terms( $id, $terms, Resandpay_Post_Types::CATEGORY );
 			}

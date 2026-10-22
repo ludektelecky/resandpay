@@ -52,6 +52,7 @@ class Resandpay_Mailer {
 			'{phone}'            => $r['phone'],
 			'{note}'             => $r['note'],
 			'{event}'            => $ev['title'],
+			'{event_code}'       => $ev['code'] ?? '',
 			'{date}'             => Resandpay_Events::format_date( $ev ),
 			'{location}'         => trim( $ev['location'] . ( ! empty( $ev['location_addr'] ) ? ', ' . $ev['location_addr'] : '' ) ),
 			'{amount}'           => Resandpay_Events::format_price( $r['amount'], $r['currency'] ),

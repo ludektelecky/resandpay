@@ -10,6 +10,7 @@ class Resandpay_Install {
 		self::create_tables();
 		Resandpay_Post_Types::register();
 		flush_rewrite_rules();
+		update_option( 'resandpay_codes_backfill', 1, false );
 		if ( false === get_option( 'resandpay_settings' ) ) {
 			add_option( 'resandpay_settings', Resandpay_Settings::defaults(), '', false );
 		}
@@ -23,6 +24,15 @@ class Resandpay_Install {
 	public static function maybe_upgrade() {
 		if ( get_option( 'resandpay_db_version' ) !== RESANDPAY_DB_VERSION ) {
 			self::create_tables();
+			update_option( 'resandpay_codes_backfill', 1, false );
+		}
+	}
+
+	/** Po aktualizaci doplní kódy existujícím akcím, službám a termínům (až po registraci typů obsahu). */
+	public static function maybe_backfill_codes() {
+		if ( get_option( 'resandpay_codes_backfill' ) ) {
+			Resandpay_Codes::backfill();
+			delete_option( 'resandpay_codes_backfill' );
 		}
 	}
 

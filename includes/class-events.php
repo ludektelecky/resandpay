@@ -103,6 +103,7 @@ class Resandpay_Events {
 		$location_id = (int) $m( 'location', 0 );
 		return array(
 			'id'            => (int) $event_id,
+			'code'          => Resandpay_Codes::get( $event_id ),
 			'title'         => get_the_title( $event_id ),
 			'status'        => $post->post_status,
 			'type'          => $m( 'type', 'single' ),
@@ -323,6 +324,9 @@ class Resandpay_Events {
 		update_post_meta( $post_id, '_rap_members_only', empty( $in['rap_members_only'] ) ? 0 : 1 );
 		update_post_meta( $post_id, '_rap_cancelled', empty( $in['rap_cancelled'] ) ? 0 : 1 );
 		update_post_meta( $post_id, '_rap_program', wp_kses_post( (string) ( $in['rap_program'] ?? '' ) ) );
+		if ( ! in_array( get_post_status( $post_id ), array( 'auto-draft', 'trash', false ), true ) ) {
+			Resandpay_Codes::assign( $post_id ); // Kód podle typu (akce / termín), jakmile je typ uložen.
+		}
 	}
 
 }

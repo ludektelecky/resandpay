@@ -61,6 +61,8 @@ class Resandpay_Admin_Events {
 			)
 		);
 		$raw_due   = get_post_meta( $post->ID, '_rap_due_days', true );
+		$code      = Resandpay_Codes::get( $post->ID );
+		echo '<p class="rap-code">' . esc_html__( 'Kód:', 'reserveandpay' ) . ' ' . ( $code ? '<code>' . esc_html( $code ) . '</code>' : '<span class="rap-hint">' . esc_html__( 'přidělí se při uložení', 'reserveandpay' ) . '</span>' ) . '</p>';
 		$missing   = 'auto-draft' === $post->post_status ? array() : self::missing( $ev );
 		if ( $missing ) {
 			echo '<p class="rap-missing">' . esc_html( sprintf( /* translators: %s: seznam polí */ __( 'Doplňte: %s – bez nich nelze rezervovat.', 'reserveandpay' ), implode( ', ', $missing ) ) ) . '</p>';
@@ -234,11 +236,12 @@ class Resandpay_Admin_Events {
 			return $new;
 		}
 		foreach ( get_post_meta( $post_id ) as $key => $values ) {
-			if ( 0 === strpos( $key, '_rap_' ) || '_thumbnail_id' === $key ) {
+			if ( ( 0 === strpos( $key, '_rap_' ) && Resandpay_Codes::META !== $key ) || '_thumbnail_id' === $key ) {
 				update_post_meta( $new, $key, maybe_unserialize( $values[0] ) );
 			}
 		}
 		update_post_meta( $new, '_rap_cancelled', 0 );
+		Resandpay_Codes::assign( $new );
 		$terms = wp_get_object_terms( $post_id, Resandpay_Post_Types::CATEGORY, array( 'fields' => 'ids' ) );
 		if ( $terms && ! is_wp_error( $terms ) ) {
 			wp_set_object_terms( $new, $terms, Resandpay_Post_Types::CATEGORY );
@@ -340,6 +343,7 @@ class Resandpay_Admin_Events {
 		foreach ( $cols as $k => $v ) {
 			$new[ $k ] = $v;
 			if ( 'title' === $k ) {
+				$new['rap_code']     = __( 'Kód', 'reserveandpay' );
 				$new['rap_date']     = __( 'Termín', 'reserveandpay' );
 				$new['rap_location'] = __( 'Místo', 'reserveandpay' );
 				$new['rap_occ']      = __( 'Obsazeno', 'reserveandpay' );
@@ -356,6 +360,9 @@ class Resandpay_Admin_Events {
 			return;
 		}
 		switch ( $col ) {
+			case 'rap_code':
+				echo '<code>' . esc_html( $ev['code'] ?: '—' ) . '</code>';
+				break;
 			case 'rap_date':
 				$missing = self::missing( $ev );
 				if ( $missing ) {

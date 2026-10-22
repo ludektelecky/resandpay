@@ -143,7 +143,7 @@ class Resandpay_Reservations_Table extends WP_List_Table {
 		if ( ! $ev ) {
 			return '—';
 		}
-		return '<a href="' . esc_url( add_query_arg( 'event_id', $ev['id'], remove_query_arg( array( 'paged', 'rap_msg' ) ) ) ) . '">' . esc_html( $ev['title'] ) . '</a><br><small>' . esc_html( Resandpay_Events::format_date( $ev ) ) . '</small>';
+		return '<a href="' . esc_url( add_query_arg( 'event_id', $ev['id'], remove_query_arg( array( 'paged', 'rap_msg' ) ) ) ) . '">' . esc_html( $ev['title'] ) . '</a><br><small>' . esc_html( trim( $ev['code'] . ' · ' . Resandpay_Events::format_date( $ev ), ' ·' ) ) . '</small>';
 	}
 
 	protected function column_status( $item ) {

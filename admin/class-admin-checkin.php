@@ -132,7 +132,7 @@ class Resandpay_Admin_Checkin {
 			echo ' – ' . esc_html( Resandpay_Reservations::paid_method_labels()[ $r['paid_method'] ] ?? $r['paid_method'] );
 		}
 		echo '</p><dl>';
-		echo '<dt>' . esc_html__( 'Akce', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev ? $ev['title'] . ' – ' . Resandpay_Events::format_date( $ev ) : '—' ) . '</dd>';
+		echo '<dt>' . esc_html__( 'Akce', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev ? $ev['title'] . ' – ' . Resandpay_Events::format_date( $ev ) : '—' ) . ( $ev && $ev['code'] ? ' <code>' . esc_html( $ev['code'] ) . '</code>' : '' ) . '</dd>';
 		echo '<dt>' . esc_html__( 'Částka', 'reserveandpay' ) . '</dt><dd><strong>' . esc_html( Resandpay_Events::format_price( $r['amount'], $r['currency'] ) ) . '</strong></dd>';
 		echo '<dt>' . esc_html__( 'VS', 'reserveandpay' ) . '</dt><dd><code>' . esc_html( $r['vs'] ) . '</code></dd>';
 		echo '<dt>' . esc_html__( 'Zvolená platba', 'reserveandpay' ) . '</dt><dd>' . esc_html( Resandpay_Reservations::pay_choice_labels()[ $r['pay_choice'] ?? 'transfer' ] ?? '' ) . '</dd>';

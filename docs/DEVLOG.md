@@ -1,5 +1,15 @@
 # Vývojový deník ReserveAndPay
 
+## 0.3.4 (22. 10. 2026)
+
+- **Jednoznačné kódy**: akce `AK-RRRR-NNNN`, služba `SL-NNN`, termín služby `TE-RRRR-NNNN` (rok založení, řada akcí a termínů od 1 každý rok). Kód vznikne při prvním uložení (termíny v generátoru), je neměnný a nikdy se nepoužije znovu; přidělování pod zámkem
+- Duplikát akce dostane nový kód; po aktualizaci se kódy automaticky doplní existujícím akcím, službám a termínům (v pořadí založení)
+- Nastavení → Kódy akcí, služeb a termínů: předpony a počet číslic (platí pro nové kódy)
+- Administrace: sloupec Kód v seznamu akcí a služeb, vyhledání podle kódu (najde i termín), kód v editaci akce/služby, v seznamu a detailu rezervací, při odbavení a v CSV exportu; hledání rezervací podle kódu akce i služby (SL-… najde rezervace všech jejích termínů)
+- E-maily: nová proměnná `{event_code}`; shortcody přijímají i kód (`[reserveandpay_booking id="AK-2026-0012"]`, `[reserveandpay_slots service="SL-003"]`)
+- Na webu se kód zákaznicím nezobrazuje
+- Analytické zadání v2.2 (vydáno k pluginu 0.3.4); testy rozšířeny na 162 kontrol
+
 ## 0.3.3 (22. 10. 2026)
 
 - **Pravidla splatnosti** (Nastavení, přepsání u akce i služby): počet dní od rezervace (dosavadní chování, nejpozději začátek termínu), **vůči termínu** (−1 = den před, 0 = v den termínu, +1 = den po termínu, vždy do konce dne) nebo kombinace (dřívější z obou); termíny služby pravidlo převezmou ze služby

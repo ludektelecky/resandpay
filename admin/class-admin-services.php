@@ -17,6 +17,7 @@ class Resandpay_Admin_Services {
 		add_action( 'manage_' . Resandpay_Post_Types::SERVICE . '_posts_custom_column', array( __CLASS__, 'column' ), 10, 2 );
 		add_action( 'restrict_manage_posts', array( __CLASS__, 'type_filter' ) );
 		add_action( 'pre_get_posts', array( __CLASS__, 'type_filter_query' ) );
+		add_action( 'pre_get_posts', array( __CLASS__, 'search_by_code' ), 5 );
 	}
 
 	public static function menu() {
@@ -40,6 +41,7 @@ class Resandpay_Admin_Services {
 			)
 		);
 		?>
+		<p class="rap-code"><?php esc_html_e( 'Kód:', 'reserveandpay' ); ?> <?php echo $svc['code'] ? '<code>' . esc_html( $svc['code'] ) . '</code>' : esc_html__( 'přidělí se při uložení', 'reserveandpay' ); ?></p>
 		<p class="description"><?php esc_html_e( 'Popis služby výše se zobrazí u každého termínu na webu. Délka, pauza a počet míst jsou pevné – zákaznice je nevolí. Jejich změna platí pro nově vygenerované termíny.', 'reserveandpay' ); ?></p>
 		<table class="form-table">
 			<tr><th><label for="rap_duration"><?php esc_html_e( 'Délka termínu', 'reserveandpay' ); ?></label></th>
@@ -122,6 +124,9 @@ class Resandpay_Admin_Services {
 		update_post_meta( $post_id, '_rap_location', absint( $in['rap_location'] ?? 0 ) );
 		update_post_meta( $post_id, '_rap_due_days', '' === $due ? '' : max( 0, (int) $due ) );
 		update_post_meta( $post_id, '_rap_page', absint( $in['rap_page'] ?? 0 ) );
+		if ( ! in_array( get_post_status( $post_id ), array( 'auto-draft', 'trash', false ), true ) ) {
+			Resandpay_Codes::assign( $post_id );
+		}
 		$mode = (string) ( $in['rap_due_mode'] ?? '' );
 		update_post_meta( $post_id, '_rap_due_mode', in_array( $mode, Resandpay_Events::DUE_MODES, true ) ? $mode : '' );
 		$off = trim( (string) ( $in['rap_due_offset'] ?? '' ) );
@@ -133,6 +138,7 @@ class Resandpay_Admin_Services {
 	public static function columns( $cols ) {
 		$date = $cols['date'] ?? null;
 		unset( $cols['date'] );
+		$cols['rap_code']   = __( 'Kód', 'reserveandpay' );
 		$cols['rap_params'] = __( 'Délka · pauza · míst · cena', 'reserveandpay' );
 		$cols['rap_slots']  = __( 'Nadcházející termíny', 'reserveandpay' );
 		return $cols;
@@ -140,7 +146,9 @@ class Resandpay_Admin_Services {
 
 	public static function column( $col, $post_id ) {
 		$svc = Resandpay_Services::get( $post_id );
-		if ( 'rap_params' === $col ) {
+		if ( 'rap_code' === $col ) {
+			echo '<code>' . esc_html( $svc['code'] ?: '—' ) . '</code>';
+		} elseif ( 'rap_params' === $col ) {
 			echo esc_html( $svc['duration'] . ' min · ' . $svc['pause'] . ' min · ' . $svc['capacity'] . ' · ' . Resandpay_Events::format_price( $svc['price'], $svc['currency'] ) );
 		} elseif ( 'rap_slots' === $col ) {
 			$now   = new DateTimeImmutable( 'now', wp_timezone() );
@@ -213,6 +221,21 @@ class Resandpay_Admin_Services {
 			}
 		}
 		$q->set( 'meta_query', $mq );
+	}
+
+	/** Hledání podle kódu v seznamu akcí a služeb (AK-2026-0012, TE-…, SL-003). */
+	public static function search_by_code( $q ) {
+		if ( ! is_admin() || ! $q->is_main_query() || ! in_array( $q->get( 'post_type' ), array( Resandpay_Post_Types::EVENT, Resandpay_Post_Types::SERVICE ), true ) ) {
+			return;
+		}
+		$s = (string) $q->get( 's' );
+		if ( '' === $s || ! Resandpay_Codes::looks_like_code( $s ) ) {
+			return;
+		}
+		$id = Resandpay_Codes::find( $s );
+		$q->set( 's', '' );
+		$q->set( 'post__in', array( $id ?: -1 ) );
+		$_GET['rap_kind'] = 'all'; // Najít i termín, který je v seznamu jinak skrytý.
 	}
 
 	/** Výchozí hodnoty formuláře generátoru. */
