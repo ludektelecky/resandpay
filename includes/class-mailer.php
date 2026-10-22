@@ -219,6 +219,26 @@ class Resandpay_Mailer {
 			. '</table></td></tr></table></body></html>';
 	}
 
+	/** Odeslání hotového HTML e-mailu (upozornění pro správkyni). */
+	public static function send_raw( $to, $subject, $html, $text = '' ) {
+		$s       = Resandpay_Settings::all();
+		$headers = array( 'Content-Type: text/html; charset=UTF-8' );
+		if ( $s['mail_from_email'] && is_email( $s['mail_from_email'] ) ) {
+			$headers[] = sprintf( 'From: %s <%s>', wp_specialchars_decode( $s['mail_from_name'] ), $s['mail_from_email'] );
+		}
+		self::$sending    = true;
+		self::$parts      = array(
+			'text'   => $text,
+			'qr_png' => '',
+			'pdf'    => '',
+		);
+		self::$last_error = '';
+		$ok               = wp_mail( $to, $subject, $html, $headers );
+		self::$sending    = false;
+		self::$parts      = null;
+		return $ok;
+	}
+
 	public static function send_template( $to, $key, array $r ) {
 		$s       = Resandpay_Settings::all();
 		$parts   = self::build( $key, $r );

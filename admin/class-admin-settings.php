@@ -57,6 +57,22 @@ class Resandpay_Admin_Settings {
 				'terms_page'        => array( __( 'Stránka s obchodními a stornopodmínkami', 'reserveandpay' ), 'page' ),
 				'events_page'       => array( __( 'Stránka s přehledem akcí', 'reserveandpay' ), 'page', __( 'Stránka se shortcodem [reserveandpay_program]. Archiv /akce/ a kategorie se na ni přesměrují a detail akce na ni odkazuje.', 'reserveandpay' ) ),
 			),
+			__( 'Kontrola plateb', 'reserveandpay' ) => array(
+				'payment_mode'         => array( __( 'Režim kontroly plateb', 'reserveandpay' ), 'select', __( 'Automaticky = při volání CRONu, když uplynul interval. Ručně = jen tlačítkem v Rezervace → Platby.', 'reserveandpay' ), array( 'auto' => __( 'Automaticky v intervalu', 'reserveandpay' ), 'manual' => __( 'Jen ručně', 'reserveandpay' ) ) ),
+				'payment_interval'     => array( __( 'Interval kontroly', 'reserveandpay' ), 'select', __( 'Nejkratší reálný interval je dán krokem CRONu na hostingu (doporučeno */15).', 'reserveandpay' ), array( '15' => '15 min', '30' => '30 min', '60' => '60 min', '120' => '2 h', '240' => '4 h', '1440' => __( '1× denně', 'reserveandpay' ) ) ),
+				'imap_host'            => array( __( 'IMAP server', 'reserveandpay' ), $text, __( 'Active24/Websupport: imap.websupport.cz', 'reserveandpay' ) ),
+				'imap_port'            => array( __( 'Port', 'reserveandpay' ), 'number', __( '993 (SSL/TLS)', 'reserveandpay' ) ),
+				'imap_security'        => array( __( 'Šifrování', 'reserveandpay' ), 'select', '', array( 'ssl' => 'SSL/TLS', 'none' => __( 'bez šifrování (jen pro testy)', 'reserveandpay' ) ) ),
+				'imap_user'            => array( __( 'Uživatel (e-mailová adresa)', 'reserveandpay' ), $text, __( 'Např. bankovni.transakce@slehkouhlavou.cz', 'reserveandpay' ) ),
+				'imap_password'        => array( __( 'Heslo ke schránce', 'reserveandpay' ), 'password', __( 'Ukládá se šifrovaně a už se nezobrazí. Prázdné pole = ponechat uložené heslo. Alternativně konstanta RESANDPAY_IMAP_PASSWORD ve wp-config.php.', 'reserveandpay' ) ),
+				'imap_folder'          => array( __( 'Složka s avízy', 'reserveandpay' ), $text ),
+				'imap_folder_done'     => array( __( 'Složka pro zpracovaná avíza', 'reserveandpay' ), $text, __( 'Zpracovaná avíza se do ní přesunou (vytvoří se automaticky). Prázdné = nepřesouvat.', 'reserveandpay' ) ),
+				'bank_sender'          => array( __( 'Odesílatel avíz', 'reserveandpay' ), $text, __( 'Raiffeisenbank: info@rb.cz. Ostatní e-maily ve schránce se ignorují.', 'reserveandpay' ) ),
+				'bank_require_auth'    => array( __( 'Vyžadovat ověřenou pravost avíza', 'reserveandpay' ), 'checkbox', __( 'SPF, DKIM a DMARC banky. Avízo bez ověření se nespáruje automaticky, ale půjde k ruční kontrole. Doporučeno ponechat zapnuté.', 'reserveandpay' ) ),
+				'payment_batch'        => array( __( 'Max. avíz na jeden běh', 'reserveandpay' ), 'number' ),
+				'payment_alert_factor' => array( __( 'Upozornit při výpadku po (násobek intervalu)', 'reserveandpay' ), 'number', __( 'Výchozí 3 – při intervalu 60 min upozornění po 3 h bez úspěšné kontroly (na e-mail pro upozornění, nejvýš 1× denně).', 'reserveandpay' ) ),
+				'payment_log_days'     => array( __( 'Uchovávat log běhů (dní)', 'reserveandpay' ), 'number' ),
+			),
 			__( 'Kódy akcí, služeb a termínů', 'reserveandpay' ) => array(
 				'code_prefix_event'   => array( __( 'Předpona kódu akce', 'reserveandpay' ), $text, __( 'Např. AK → AK-2026-0012 (rok založení, řada od 1 každý rok).', 'reserveandpay' ) ),
 				'code_digits_event'   => array( __( 'Počet číslic – akce', 'reserveandpay' ), 'number' ),
@@ -110,6 +126,11 @@ class Resandpay_Admin_Settings {
 					case 'int':
 						$out[ $key ] = max( -365, min( 365, (int) $val ) );
 						break;
+					case 'password':
+						if ( '' !== (string) $val ) {
+							$out[ $key ] = Resandpay_Payments::encrypt( (string) $val );
+						}
+						break;
 					case 'select':
 						$out[ $key ] = isset( $def[3][ $val ] ) ? (string) $val : (string) array_key_first( $def[3] );
 						break;
@@ -130,6 +151,10 @@ class Resandpay_Admin_Settings {
 		$out['currency']  = strtoupper( substr( preg_replace( '/[^A-Za-z]/', '', $out['currency'] ), 0, 3 ) ) ?: 'CZK';
 		$out['vs_prefix'] = substr( preg_replace( '/\D/', '', $out['vs_prefix'] ), 0, 4 );
 		$out['iban']      = strtoupper( preg_replace( '/\s+/', '', $out['iban'] ) );
+		$out['imap_port']        = max( 1, min( 65535, (int) $out['imap_port'] ) ) ?: 993;
+		$out['payment_batch']    = max( 1, min( 500, (int) $out['payment_batch'] ) );
+		$out['payment_interval'] = max( 15, (int) $out['payment_interval'] );
+		$out['bank_sender']      = sanitize_email( $out['bank_sender'] ) ?: 'info@rb.cz';
 		foreach ( array( 'event' => 'AK', 'service' => 'SL', 'slot' => 'TE' ) as $k => $def ) {
 			$out[ 'code_prefix_' . $k ] = substr( strtoupper( preg_replace( '/[^A-Za-z]/', '', (string) $out[ 'code_prefix_' . $k ] ) ), 0, 6 ) ?: $def;
 			$out[ 'code_digits_' . $k ] = max( 2, min( 8, (int) $out[ 'code_digits_' . $k ] ) );
@@ -145,7 +170,7 @@ class Resandpay_Admin_Settings {
 		settings_fields( 'resandpay_settings_group' );
 		echo '<input type="hidden" name="' . esc_attr( Resandpay_Settings::OPTION ) . '[__form]" value="1">';
 		foreach ( self::fields() as $title => $section ) {
-			echo '<h2>' . esc_html( $title ) . '</h2>';
+			echo '<h2' . ( __( 'Kontrola plateb', 'reserveandpay' ) === $title ? ' id="rap-payments"' : '' ) . '>' . esc_html( $title ) . '</h2>';
 			if ( __( 'E-maily', 'reserveandpay' ) === $title ) {
 				echo '<p class="description">' . esc_html__( 'Proměnné:', 'reserveandpay' ) . ' <code>{name} {email} {phone} {note} {event} {date} {location} {amount} {vs} {proforma} {due_date} {account} {iban} {company} {free} {reason} {last_minute_note} {pay_choice} {event_code}</code></p>';
 			}
@@ -179,6 +204,13 @@ class Resandpay_Admin_Settings {
 							echo '<option value="' . esc_attr( $ok ) . '" ' . selected( (string) $val, (string) $ok, false ) . '>' . esc_html( $ol ) . '</option>';
 						}
 						echo '</select>';
+						break;
+					case 'password':
+						$saved = '' !== Resandpay_Payments::imap_password();
+						echo '<input type="password" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" value="" class="regular-text" autocomplete="new-password" placeholder="' . esc_attr( $saved ? __( '•••••• (uloženo)', 'reserveandpay' ) : '' ) . '">';
+						if ( defined( 'RESANDPAY_IMAP_PASSWORD' ) ) {
+							echo '<p class="description"><strong>' . esc_html__( 'Heslo je nastavené ve wp-config.php – má přednost.', 'reserveandpay' ) . '</strong></p>';
+						}
 						break;
 					case 'int':
 						echo '<input type="number" step="1" min="-365" max="365" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" value="' . esc_attr( $val ) . '" class="small-text">';

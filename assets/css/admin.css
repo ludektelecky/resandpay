@@ -62,3 +62,13 @@ td.rap-box .rap-payfields { max-width: 520px; }
 .rap-scan video { width: 100%; max-height: 60vh; background: #000; border-radius: 4px; display: block; }
 .rap-scan__msg { margin: 8px 0; font-weight: 600; }
 #rap-scan-btn { width: 100%; max-width: 480px; }
+/* Kontrola plateb */
+.rap-paystate { max-width: 900px; }
+.rap-paystate th { width: 220px; }
+.rap-paystate__actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.rap-inline-form { display: inline-block; margin: 0; }
+.rap-paylist td { vertical-align: top; }
+.rap-paylist tr.rap-pay--review td { background: #fcf9e8; }
+.rap-assign summary { cursor: pointer; color: #2271b1; margin-top: 4px; }
+.rap-assign form p { margin: 6px 0; }
+.rap-steps li { margin-bottom: 6px; }

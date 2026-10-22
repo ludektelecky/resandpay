@@ -1,5 +1,20 @@
 # Vývojový deník ReserveAndPay
 
+## 0.5.0 – Etapa E5 (22. 10. 2026)
+
+- **Kontrola plateb z avíz Raiffeisenbank** (Rezervace → Platby): čtení schránky přes IMAP, rozpoznání avíza „Pohyb na účtě“, ověření pravosti, párování podle VS a částky, rezervace → Zaplaceno + potvrzení zákaznici
+- Vlastní **IMAP klient** bez rozšíření php-imap (od PHP 8.4 není součástí PHP): SSL/TLS, BODY.PEEK (nic se neoznačí jako přečtené), přesun zpracovaných avíz do složky „Zpracováno“ (vytvoří se sama), jiné e-maily nechá být; otestováno proti serveru Dovecot
+- Vlastní **MIME parser** a **adaptér Raiffeisenbank** (datum a čas, na účet, částka, typ pohybu, protiúčet a plátce, VS/KS/SS, zpráva pro příjemce)
+- **Ověření pravosti**: From/Return-Path info@rb.cz, první Received-SPF = Pass z rb.cz, právě jedna hlavička X-Spamd-Result s DKIM a DMARC „allow“ pro rb.cz (vložená falešná hlavička → neověřeno)
+- K ruční kontrole: bez VS, neznámý VS, jiná částka/měna, zaplacená či zrušená rezervace, neověřená pravost, změněný formát avíza, možná duplicita; ignoruje se jen odchozí platba a platba na jiný účet; stejné avízo (Message-ID) se nikdy nezpracuje dvakrát
+- **Ruční přiřazení** podle VS (návrh rezervace podle VS ve zprávě pro příjemce; rozdíl částky jen s potvrzením) a **vyřešení bez přiřazení** s poznámkou; **zpracování avíza ze souboru .eml**
+- **CRON**: volání `https://web/?rap_cron=KLÍČ` (tajný klíč generuje plugin), doporučeno */15; plugin sám hlídá režim (automaticky / jen ručně) a interval (15 min – 1× denně, výchozí 60); při úspěchu bez výstupu, při chybě vypíše důvod. Každé volání zpracuje i splatnosti
+- Tlačítka „Zkontrolovat platby nyní“ a „Otestovat připojení ke schránce“ (nic nemění), log běhů (90 dní), stav posledního běhu a volání CRONu
+- **Upozornění** na e-mail pro upozornění: avíza k ruční kontrole po běhu; výpadek kontroly > 3× interval (nejvýš 1× denně); počet avíz k ruční kontrole v menu
+- Nastavení → Kontrola plateb (server imap.websupport.cz:993 SSL, uživatel, heslo šifrovaně AES-256-GCM nebo konstanta `RESANDPAY_IMAP_PASSWORD`, složky, odesílatel, ověření pravosti, dávka, upozornění, log)
+- Databáze verze 4 (tabulky avíz a běhů) – migrace proběhne automaticky
+- Analytické zadání v2.4 (vydáno k pluginu 0.5.0); testy rozšířeny na 238 kontrol
+
 ## 0.4.0 – Etapa E4 (22. 10. 2026)
 
 - **QR platba (SPD 1.0)**: ACC (IBAN), AM, CC, DT (splatnost), MSG (kód akce + jméno, jen ASCII, max. 60 znaků), RN (jméno příjemce, výchozí provozovatel), X-VS. Bez IBAN nebo u jiné měny než CZK se QR negeneruje. Obrázek PNG skládá plugin sám – hosting nepotřebuje GD ani Imagick
