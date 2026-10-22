@@ -146,6 +146,7 @@ class Resandpay_Reservations {
 				'newsletter'       => ! empty( $data['newsletter'] ) ? 1 : 0,
 				'user_id'          => (int) ( $data['user_id'] ?? get_current_user_id() ),
 				'source'           => 'admin' === $opts['source'] ? 'admin' : 'web',
+				'ip_hash'          => 'admin' === $opts['source'] ? '' : mb_substr( (string) ( $data['ip_hash'] ?? '' ), 0, 40 ),
 				'created_at'       => $now_local,
 				'updated_at'       => $now_local,
 			);
@@ -413,6 +414,8 @@ class Resandpay_Reservations {
 			}
 		}
 		$count += self::remind_before_due( $now_ts );
+		Resandpay_Antibot::prune();
+		Resandpay_Mailer::prune_log();
 		return $count;
 	}
 

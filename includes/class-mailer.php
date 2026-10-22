@@ -364,6 +364,7 @@ class Resandpay_Mailer {
 			'expired'       => __( 'Rezervace vypršela', 'reserveandpay' ),
 			'cancelled'     => __( 'Zrušení rezervace', 'reserveandpay' ),
 			'test'          => __( 'Zkušební e-mail', 'reserveandpay' ),
+			'security'      => __( 'Upozornění – zablokované rezervace', 'reserveandpay' ),
 		);
 	}
 

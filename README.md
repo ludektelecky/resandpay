@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.7.2** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 3.0** (22. 10. 2026, vydáno k pluginu 0.7.2) – viz `docs/`.
+> **Aktuální verze pluginu: 0.7.3** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 3.1** (22. 10. 2026, vydáno k pluginu 0.7.3) – viz `docs/`.
 
 ### Název a označení
 
@@ -53,6 +53,7 @@ Technické identifikátory se nemění (slug a textdomain `reserveandpay`, před
 - Transakční e-maily s upravitelnými texty
 
 ### Bezpečnost a provoz
+- Ochrana rezervačního formuláře proti robotům: skryté pole, minimální doba vyplnění, parametrizovatelné limity četnosti (IP adresa jen jako otisk, e-mail u akce), volitelně Cloudflare Turnstile – SWD kap. 9.1
 - **Testovací režim** – všechny e-maily se přesměrují na adresu správce, ostrá bankovní schránka se nikdy neupravuje
 - Úklidový nástroj pro smazání testovacích dat před spuštěním
 - Šifrované spojení se schránkou, spouštěcí skript CRONu chráněný tokenem / spouštěný přes PHP CLI

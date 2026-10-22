@@ -22,6 +22,7 @@ class Resandpay_Admin_Tools {
 		echo '<div class="wrap"><h1>' . esc_html__( 'Nástroje ReserveAndPay', 'reserveandpay' ) . '</h1>';
 		Resandpay_Admin::render_flash();
 		self::render_mail_section();
+		self::render_security_section();
 		echo '<h2>' . esc_html__( 'Texty e-mailů', 'reserveandpay' ) . '</h2>';
 		echo '<p>' . esc_html__( 'Obnoví výchozí texty všech e-mailů (předměty i obsah). Platební údaje, QR kód a odkaz na platební pokyn se v e-mailech zobrazují automaticky pod textem.', 'reserveandpay' ) . '</p>';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="resandpay_reset_templates">';
@@ -41,6 +42,39 @@ class Resandpay_Admin_Tools {
 		echo '<p><label>' . esc_html__( 'Pro potvrzení napište SMAZAT:', 'reserveandpay' ) . ' <input type="text" name="confirm" autocomplete="off"></label></p>';
 		submit_button( __( 'Smazat testovací rezervace', 'reserveandpay' ), 'delete' );
 		echo '</form></div>';
+	}
+
+	/** Ochrana formuláře: aktivní vrstvy a počty zablokovaných pokusů. */
+	private static function render_security_section() {
+		$s  = Resandpay_Settings::all();
+		$st = get_option( Resandpay_Antibot::STATS, array() );
+		echo '<h2 id="rap-security">' . esc_html__( 'Ochrana formuláře proti robotům', 'reserveandpay' ) . '</h2><ul class="ul-disc">';
+		echo '<li>' . esc_html__( 'Skryté pole (honeypot): zapnuto', 'reserveandpay' ) . '</li>';
+		/* translators: %d: sekundy */
+		echo '<li>' . esc_html( (int) $s['antibot_min_seconds'] > 0 ? sprintf( __( 'Minimální doba vyplnění: %d s', 'reserveandpay' ), (int) $s['antibot_min_seconds'] ) : __( 'Minimální doba vyplnění: vypnuto', 'reserveandpay' ) ) . '</li>';
+		$lim = function ( $n ) {
+			return (int) $n > 0 ? (string) (int) $n : __( 'bez limitu', 'reserveandpay' );
+		};
+		/* translators: 1: počet, 2: minuty, 3: počet za den */
+		echo '<li>' . esc_html( sprintf( __( 'Z jedné IP adresy: %1$s za %2$d min, %3$s za 24 h', 'reserveandpay' ), $lim( $s['rate_ip_max_window'] ), (int) $s['rate_ip_window_minutes'], $lim( $s['rate_ip_max_day'] ) ) ) . '</li>';
+		/* translators: %s: počet */
+		echo '<li>' . esc_html( sprintf( __( 'Jeden e-mail u jedné akce: %s aktivních rezervací', 'reserveandpay' ), $lim( $s['rate_email_max_event'] ) ) ) . '</li>';
+		echo '<li>' . esc_html( Resandpay_Antibot::turnstile_on() ? __( 'Cloudflare Turnstile: zapnuto', 'reserveandpay' ) : __( 'Cloudflare Turnstile: vypnuto', 'reserveandpay' ) ) . '</li></ul>';
+		echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=reserveandpay-settings' ) ) . '">' . esc_html__( 'Upravit v Nastavení → Ochrana formuláře proti robotům', 'reserveandpay' ) . '</a></p>';
+		$labels = Resandpay_Antibot::code_labels();
+		$any    = array_filter( array_intersect_key( $st, $labels ) );
+		if ( ! $any ) {
+			echo '<p>' . esc_html__( 'Zatím nebyl zablokován žádný pokus o rezervaci.', 'reserveandpay' ) . '</p>';
+			return;
+		}
+		echo '<table class="widefat striped" style="max-width:640px"><thead><tr><th>' . esc_html__( 'Důvod zablokování', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Počet', 'reserveandpay' ) . '</th></tr></thead><tbody>';
+		foreach ( $labels as $k => $l ) {
+			if ( ! empty( $st[ $k ] ) ) {
+				echo '<tr><td>' . esc_html( $l ) . '</td><td>' . (int) $st[ $k ] . '</td></tr>';
+			}
+		}
+		/* translators: 1: čas, 2: důvod */
+		echo '</tbody></table><p class="description">' . esc_html( sprintf( __( 'Poslední zablokovaný pokus: %1$s (%2$s).', 'reserveandpay' ), wp_date( 'j. n. Y H:i', Resandpay_Events::ts( $st['last'] ?? '' ) ), $labels[ $st['last_code'] ?? '' ] ?? '' ) ) . '</p>';
 	}
 
 	/** Diagnostika e-mailů: zkušební odeslání, kontrola domény odesílatele, seznam odeslaných e-mailů. */

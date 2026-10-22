@@ -3,7 +3,7 @@
  * Plugin Name:       ReserveAndPay
  * Plugin URI:        https://github.com/ludektelecky/resandpay
  * Description:       Rezervace akcí a termínů s platbou převodem (QR) a kontrolou plateb z bankovních avíz.
- * Version:           0.7.2
+ * Version:           0.7.3
  * Requires at least: 6.4
  * Requires PHP:      8.0
  * Author:            INSYSTEMS
@@ -14,8 +14,8 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'RESANDPAY_VERSION', '0.7.2' );
-define( 'RESANDPAY_DB_VERSION', '6' );
+define( 'RESANDPAY_VERSION', '0.7.3' );
+define( 'RESANDPAY_DB_VERSION', '7' );
 define( 'RESANDPAY_FILE', __FILE__ );
 define( 'RESANDPAY_DIR', plugin_dir_path( __FILE__ ) );
 define( 'RESANDPAY_URL', plugin_dir_url( __FILE__ ) );
@@ -35,6 +35,7 @@ require_once RESANDPAY_DIR . 'includes/banks/class-bank-rb.php';
 require_once RESANDPAY_DIR . 'includes/class-imap.php';
 require_once RESANDPAY_DIR . 'includes/class-payments.php';
 require_once RESANDPAY_DIR . 'includes/class-mailer.php';
+require_once RESANDPAY_DIR . 'includes/class-antibot.php';
 require_once RESANDPAY_DIR . 'public/class-views.php';
 require_once RESANDPAY_DIR . 'public/class-frontend.php';
 
@@ -63,6 +64,7 @@ function resandpay_init() {
 	Resandpay_Install::maybe_upgrade();
 	Resandpay_Post_Types::init();
 	Resandpay_Mailer::init();
+	Resandpay_Antibot::init();
 	Resandpay_Frontend::init();
 	Resandpay_Codes::init();
 	Resandpay_PDF::init();

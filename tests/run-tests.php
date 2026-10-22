@@ -1029,6 +1029,73 @@ rap_t( false !== strpos( $tp, 'Odeslané e-maily' ) && false !== strpos( $tp, 'R
 rap_t( false !== strpos( $dp2, 'Odeslané e-maily' ) && false !== strpos( $dp2, 'Platba přijata' ) && false !== strpos( $dp2, '✗' ), 'detail rezervace: odeslané e-maily vč. chyby' );
 Resandpay_Settings::update( array( 'test_mode' => 1 ) );
 
+echo "== 0.7.3: ochrana formuláře proti robotům\n";
+global $wpdb;
+delete_option( Resandpay_Antibot::STATS );
+delete_transient( 'resandpay_antibot_notified' );
+Resandpay_Settings::update( array( 'antibot_min_seconds' => 3, 'rate_ip_window_minutes' => 10, 'rate_ip_max_window' => 3, 'rate_ip_max_day' => 10, 'rate_email_max_event' => 3, 'rate_notify' => 1, 'admin_email' => 'spravce@example.com', 'turnstile_enabled' => 0 ) );
+$ab   = rap_event( 'Ochrana', $now + 45 * $day, $now + 45 * $day + 3600, 30 );
+$ok_p = array( 'rap_ts' => Resandpay_Antibot::sign_time( $now - 20 ) );
+$h1   = Resandpay_Antibot::ip_hash( '203.0.113.7' );
+rap_t( 40 === strlen( $h1 ) && $h1 === Resandpay_Antibot::ip_hash( '203.0.113.7' ) && $h1 !== Resandpay_Antibot::ip_hash( '203.0.113.8' ) && false === strpos( $h1, '203' ), 'IP adresa jen jako nevratný otisk' );
+rap_t( true === Resandpay_Antibot::check( $ok_p, $ab, 'clovek@example.com', array( 'now' => $now, 'ip_hash' => $h1 ) ), 'běžné vyplnění projde' );
+rap_t( 'antibot_honeypot' === Resandpay_Antibot::check( $ok_p + array( 'rap_website' => 'http://spam' ), $ab, 'a@example.com', array( 'now' => $now, 'ip_hash' => $h1 ) )->get_error_code(), 'vyplněné skryté pole → zablokováno' );
+rap_t( 'antibot_too_fast' === Resandpay_Antibot::check( array( 'rap_ts' => Resandpay_Antibot::sign_time( $now - 1 ) ), $ab, 'a@example.com', array( 'now' => $now, 'ip_hash' => $h1 ) )->get_error_code(), 'odeslání do 3 s → zablokováno' );
+rap_t( 'antibot_too_fast' === Resandpay_Antibot::check( array( 'rap_ts' => ( $now - 60 ) . '.0123456789abcdef0123' ), $ab, 'a@example.com', array( 'now' => $now, 'ip_hash' => $h1 ) )->get_error_code() && 'antibot_too_fast' === Resandpay_Antibot::check( array(), $ab, 'a@example.com', array( 'now' => $now, 'ip_hash' => $h1 ) )->get_error_code(), 'podvržený nebo chybějící čas → zablokováno' );
+Resandpay_Settings::update( array( 'antibot_min_seconds' => 0 ) );
+rap_t( true === Resandpay_Antibot::check( array(), $ab, 'a@example.com', array( 'now' => $now, 'ip_hash' => $h1 ) ), 'minimální doba 0 = nekontroluje se' );
+Resandpay_Settings::update( array( 'antibot_min_seconds' => 3 ) );
+$form = Resandpay_Frontend::render_booking( $ab );
+rap_t( false !== strpos( $form, 'name="rap_ts"' ) && false !== strpos( $form, 'name="rap_website"' ) && false === strpos( $form, 'cf-turnstile' ), 'formulář: skryté pole a podepsaný čas, Turnstile vypnutý' );
+for ( $i = 0; $i < 3; $i++ ) {
+	Resandpay_Reservations::create( $ab, array_merge( rap_person( 150 + $i ), array( 'ip_hash' => $h1 ) ), array( 'notify' => false ) );
+}
+$GLOBALS['rap_mails'] = array();
+$rb = Resandpay_Antibot::check( $ok_p, $ab, 'dalsi@example.com', array( 'now' => time(), 'ip_hash' => $h1 ) );
+rap_t( is_wp_error( $rb ) && 'antibot_rate_ip' === $rb->get_error_code() && false !== strpos( $rb->get_error_message(), 'později' ), '4. rezervace z jedné IP za 10 min → zablokováno se zdvořilou hláškou' );
+rap_t( 1 === count( array_filter( $GLOBALS['rap_mails'], fn( $m ) => false !== strpos( $m['subject'], 'zablokované rezervace' ) ) ), 'správce dostane upozornění' );
+$GLOBALS['rap_mails'] = array();
+Resandpay_Antibot::check( $ok_p, $ab, 'dalsi@example.com', array( 'now' => time(), 'ip_hash' => $h1 ) );
+rap_t( ! $GLOBALS['rap_mails'], 'další upozornění nejdříve za hodinu' );
+rap_t( true === Resandpay_Antibot::check( $ok_p, $ab, 'dalsi@example.com', array( 'now' => time() + 11 * MINUTE_IN_SECONDS, 'ip_hash' => $h1 ) ), 'po uplynutí okna (10 min) opět povoleno' );
+Resandpay_Settings::update( array( 'rate_ip_max_window' => 0, 'rate_ip_max_day' => 3 ) );
+rap_t( 'antibot_rate_ip_day' === Resandpay_Antibot::check( $ok_p, $ab, 'dalsi@example.com', array( 'now' => time() + HOUR_IN_SECONDS, 'ip_hash' => $h1 ) )->get_error_code(), 'denní limit z jedné IP (parametr)' );
+Resandpay_Settings::update( array( 'rate_ip_max_day' => 0 ) );
+rap_t( true === Resandpay_Antibot::check( $ok_p, $ab, 'dalsi@example.com', array( 'now' => time(), 'ip_hash' => $h1 ) ), 'limity 0 = bez limitu' );
+$h2 = Resandpay_Antibot::ip_hash( '198.51.100.1' );
+for ( $i = 0; $i < 3; $i++ ) {
+	Resandpay_Reservations::create( $ab, array_merge( rap_person( 160 ), array( 'ip_hash' => Resandpay_Antibot::ip_hash( '198.51.100.' . ( 10 + $i ) ) ) ), array( 'notify' => false ) );
+}
+$re = Resandpay_Antibot::check( $ok_p, $ab, 'osoba160@example.com', array( 'now' => time(), 'ip_hash' => $h2 ) );
+rap_t( is_wp_error( $re ) && 'antibot_rate_email' === $re->get_error_code() && false !== strpos( $re->get_error_message(), '3 rezervace' ), 'limit aktivních rezervací jednoho e-mailu u akce (3)' );
+Resandpay_Settings::update( array( 'rate_email_max_event' => 5 ) );
+rap_t( true === Resandpay_Antibot::check( $ok_p, $ab, 'osoba160@example.com', array( 'now' => time(), 'ip_hash' => $h2 ) ), 'limit e-mailu je parametr (5)' );
+$adm = Resandpay_Reservations::create( $ab, array_merge( rap_person( 161 ), array( 'ip_hash' => $h1 ) ), array( 'notify' => false, 'source' => 'admin' ) );
+rap_t( '' === $adm['ip_hash'], 'ruční rezervace v administraci se neomezuje a neukládá otisk' );
+$wpdb->update( Resandpay_Reservations::table(), array( 'created_at' => wp_date( 'Y-m-d H:i:s', time() - 40 * DAY_IN_SECONDS ) ), array( 'customer_name' => 'Test Osoba 150', 'event_id' => $ab ) );
+Resandpay_Antibot::prune();
+rap_t( '' === (string) $wpdb->get_var( $wpdb->prepare( 'SELECT ip_hash FROM ' . Resandpay_Reservations::table() . ' WHERE event_id = %d AND customer_name = %s', $ab, 'Test Osoba 150' ) ), 'otisky IP starší než 30 dní se mažou' );
+Resandpay_Settings::update( array( 'turnstile_enabled' => 1, 'turnstile_site_key' => '1x00000000000000000000AA', 'turnstile_secret' => 'tajne' ) );
+$tsr = null;
+$tsf = function ( $pre, $args, $url ) use ( &$tsr ) {
+	if ( false === strpos( $url, 'challenges.cloudflare.com' ) ) {
+		return $pre;
+	}
+	return array( 'body' => wp_json_encode( array( 'success' => 'ok-token' === ( $args['body']['response'] ?? '' ) ) ), 'response' => array( 'code' => 200 ), 'headers' => array(), 'cookies' => array() );
+};
+add_filter( 'pre_http_request', $tsf, 10, 3 );
+rap_t( false !== strpos( Resandpay_Frontend::render_booking( $ab ), 'cf-turnstile' ), 'Turnstile zapnutý: widget ve formuláři' );
+rap_t( 'antibot_turnstile' === Resandpay_Antibot::check( $ok_p, $ab, 'x@example.com', array( 'now' => time(), 'ip_hash' => $h2 ) )->get_error_code(), 'Turnstile: bez ověření → zablokováno' );
+rap_t( true === Resandpay_Antibot::check( $ok_p + array( 'cf-turnstile-response' => 'ok-token' ), $ab, 'x@example.com', array( 'now' => time(), 'ip_hash' => $h2 ) ), 'Turnstile: ověřeno → projde' );
+remove_filter( 'pre_http_request', $tsf, 10 );
+Resandpay_Settings::update( array( 'turnstile_enabled' => 0, 'rate_ip_max_window' => 3, 'rate_ip_max_day' => 10, 'rate_email_max_event' => 3 ) );
+wp_set_current_user( 1 );
+ob_start();
+Resandpay_Admin_Tools::page();
+$tp3 = ob_get_clean();
+wp_set_current_user( 0 );
+rap_t( false !== strpos( $tp3, 'Ochrana formuláře proti robotům' ) && false !== strpos( $tp3, 'limit rezervací z jedné IP adresy za okno' ), 'Nástroje: přehled ochrany a zablokovaných pokusů' );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );

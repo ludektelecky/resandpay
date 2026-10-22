@@ -74,6 +74,17 @@ class Resandpay_Settings {
 			'mail_from_name'      => get_option( 'blogname' ),
 			'mail_from_email'     => get_option( 'admin_email' ),
 			'mail_log_days'       => 365,
+			// Ochrana formuláře proti robotům.
+			'antibot_min_seconds'    => 3,
+			'rate_ip_window_minutes' => 10,
+			'rate_ip_max_window'     => 3,
+			'rate_ip_max_day'        => 10,
+			'rate_email_max_event'   => 3,
+			'rate_notify'            => 1,
+			'ip_hash_days'           => 30,
+			'turnstile_enabled'      => 0,
+			'turnstile_site_key'     => '',
+			'turnstile_secret'       => '',
 			// Testovací režim.
 			'test_mode'           => 1,
 			'test_email'          => get_option( 'admin_email' ),

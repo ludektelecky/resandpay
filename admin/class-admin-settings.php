@@ -86,6 +86,18 @@ class Resandpay_Admin_Settings {
 				'code_prefix_slot'    => array( __( 'Předpona kódu termínu služby', 'reserveandpay' ), $text, __( 'Např. TE → TE-2026-0145. Změna předpon a číslic platí jen pro nově přidělované kódy; přidělený kód se nikdy nemění.', 'reserveandpay' ) ),
 				'code_digits_slot'    => array( __( 'Počet číslic – termín', 'reserveandpay' ), 'number' ),
 			),
+			__( 'Ochrana formuláře proti robotům', 'reserveandpay' ) => array(
+				'antibot_min_seconds'    => array( __( 'Minimální doba vyplnění formuláře (s)', 'reserveandpay' ), 'number', __( 'Robot formulář odešle okamžitě. Výchozí 3 s, 0 = nekontrolovat.', 'reserveandpay' ) ),
+				'rate_ip_window_minutes' => array( __( 'Limit z jedné IP adresy – okno (minut)', 'reserveandpay' ), 'number', __( 'Délka okna pro následující limit. Výchozí 10 min.', 'reserveandpay' ) ),
+				'rate_ip_max_window'     => array( __( 'Limit z jedné IP adresy – rezervací za okno', 'reserveandpay' ), 'number', __( 'Výchozí 3. 0 = bez limitu. Pozor: firma nebo domácnost může sdílet jednu IP adresu.', 'reserveandpay' ) ),
+				'rate_ip_max_day'        => array( __( 'Limit z jedné IP adresy – rezervací za 24 h', 'reserveandpay' ), 'number', __( 'Výchozí 10. 0 = bez limitu.', 'reserveandpay' ) ),
+				'rate_email_max_event'   => array( __( 'Limit aktivních rezervací jednoho e-mailu u jedné akce', 'reserveandpay' ), 'number', __( 'Výchozí 3 (každé místo = jedna rezervace). 0 = bez limitu. Další místa lze přidat ručně v administraci.', 'reserveandpay' ) ),
+				'rate_notify'            => array( __( 'Upozornit správce na zablokované rezervace', 'reserveandpay' ), 'checkbox', __( 'Při překročení limitu četnosti přijde e-mail na adresu pro upozornění, nejvýš 1× za hodinu.', 'reserveandpay' ) ),
+				'ip_hash_days'           => array( __( 'Uchovávat otisk IP adresy (dní)', 'reserveandpay' ), 'number', __( 'IP adresa se neukládá, jen její nevratný otisk pro limity; po této době se smaže. Výchozí 30 dní.', 'reserveandpay' ) ),
+				'turnstile_enabled'      => array( __( 'Ověření „nejsem robot“ (Cloudflare Turnstile)', 'reserveandpay' ), 'checkbox', __( 'Volitelné, ve výchozím stavu vypnuto. Zapnout jen při problému s roboty – jde o službu třetí strany (Cloudflare), kterou je nutné uvést v zásadách zpracování osobních údajů. Klíče: dash.cloudflare.com → Turnstile.', 'reserveandpay' ) ),
+				'turnstile_site_key'     => array( __( 'Turnstile – Site Key', 'reserveandpay' ), $text ),
+				'turnstile_secret'       => array( __( 'Turnstile – Secret Key', 'reserveandpay' ), $text ),
+			),
 			__( 'E-maily', 'reserveandpay' )           => array(
 				'mail_from_name'        => array( __( 'Jméno odesílatele', 'reserveandpay' ), $text ),
 				'mail_from_email'       => array( __( 'E-mail odesílatele', 'reserveandpay' ), 'email' ),

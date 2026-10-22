@@ -84,9 +84,6 @@ class Resandpay_Frontend {
 		if ( ! isset( $_POST['_rapnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_rapnonce'] ) ), 'resandpay_book_' . $event_id ) ) {
 			$errors[] = __( 'Platnost formuláře vypršela. Načtěte prosím stránku znovu a odešlete formulář ještě jednou.', 'reserveandpay' );
 		}
-		if ( ! empty( $_POST['rap_website'] ) ) { // Honeypot proti robotům.
-			$errors[] = __( 'Formulář se nepodařilo odeslat.', 'reserveandpay' );
-		}
 		$ev = Resandpay_Events::get( $event_id );
 		if ( $ev && $ev['members_only'] && ! is_user_logged_in() ) {
 			$errors[] = __( 'Tato akce je jen pro přihlášené uživatele.', 'reserveandpay' );
@@ -113,7 +110,15 @@ class Resandpay_Frontend {
 			$values['company'] = $values['company_ic'] = $values['company_dic'] = '';
 		}
 
+		if ( ! $errors && ! current_user_can( resandpay_cap_reservations() ) ) {
+			// Ochrana proti robotům (skryté pole, doba vyplnění, Turnstile, limity četnosti) – SWD kap. 9.1.
+			$guard = Resandpay_Antibot::check( wp_unslash( $_POST ), $event_id, $values['email'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+			if ( is_wp_error( $guard ) ) {
+				$errors[] = $guard->get_error_message();
+			}
+		}
 		if ( ! $errors ) {
+			$values['ip_hash'] = Resandpay_Antibot::ip_hash();
 			$res = Resandpay_Reservations::create( $event_id, $values, array( 'source' => 'web' ) );
 			if ( is_wp_error( $res ) ) {
 				$errors[] = $res->get_error_message();
@@ -543,6 +548,7 @@ class Resandpay_Frontend {
 			<input type="hidden" name="rap_event_id" value="<?php echo (int) $event_id; ?>">
 			<?php wp_nonce_field( 'resandpay_book_' . $event_id, '_rapnonce' ); ?>
 			<p class="rap-hp" aria-hidden="true"><label>Web <input type="text" name="rap_website" tabindex="-1" autocomplete="off"></label></p>
+			<?php echo Resandpay_Antibot::form_fields(); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř. ?>
 			<p class="rap-field"><label for="rap_name"><?php esc_html_e( 'Jméno a příjmení', 'reserveandpay' ); ?> *</label>
 				<input id="rap_name" type="text" name="rap_name" value="<?php echo $v( 'customer_name' ); ?>" required autocomplete="name"></p>
 			<p class="rap-field"><label for="rap_email"><?php esc_html_e( 'E-mail', 'reserveandpay' ); ?> *</label>

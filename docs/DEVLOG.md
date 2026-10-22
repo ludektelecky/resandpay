@@ -1,5 +1,17 @@
 # Vývojový deník ReserveAndPay
 
+## 0.7.3 (22. 10. 2026)
+
+- **Ochrana rezervačního formuláře proti robotům** (SWD kap. 9.1), jen pro rezervace z webu:
+  - **vrstva 1 (neviditelná)**: skryté pole + minimální doba vyplnění ověřená podepsaným časem (výchozí 3 s)
+  - **vrstva 2 – limity četnosti, vše v Nastavení → Ochrana formuláře proti robotům** (0 = bez limitu): z jedné IP adresy 3 rezervace / 10 min a 10 / 24 h, jeden e-mail 3 aktivní rezervace u akce; zákazník dostane zdvořilou hlášku s kontaktem, správce upozornění (nejvýš 1× za hodinu)
+  - **vrstva 3 – volitelně Cloudflare Turnstile** (výchozí vypnuto; Site Key + Secret Key); při nedostupnosti Cloudflare se rezervace neblokují
+  - IP adresa se neukládá – jen nevratný otisk (HMAC) u rezervace, mazaný po 30 dnech (nastavitelné)
+  - ruční rezervace v administraci a přihlášená správkyně se neomezují
+  - **Nástroje → Ochrana formuláře proti robotům**: aktivní vrstvy a počty zablokovaných pokusů podle důvodu
+- Databáze verze 7 (otisk IP u rezervace)
+- Testy: 355 kontrol + souběh + test v prohlížeči (příliš rychlé odeslání, 4. rezervace z jedné IP); analytické zadání v3.1 (nová kap. 9.1, kap. 13)
+
 ## 0.7.2 (22. 10. 2026)
 
 - **Seznam odeslaných e-mailů**: každý e-mail pluginu se zapíše – čas, typ (Rezervace přijata, 1. část platby přijata, Připomínka…), příjemce (v testovacím režimu i skutečná testovací adresa), předmět a výsledek (✓ odesláno / ✗ chyba s popisem)
