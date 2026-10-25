@@ -287,14 +287,23 @@ class Resandpay_PDF {
 	}
 
 	/**
-	 * PDF poukaz se slevovým kupónem (A5 na šířku) v grafice webu – SWD kap. 3.10.
-	 * QR kód kupónu je ve zlaté barvě, aby se nepletl s platebním QR kódem.
+	 * PDF poukaz se slevovým kupónem (A5 na šířku) dle grafického manuálu v1:
+	 * krémový podklad, tenké linky, motiv soustředných kružnic, decentní řádkové logo
+	 * (lotos z vlny), dechová linka s mottem a zřetelná adresa webu. QR kód kupónu je
+	 * ve zlatohnědé, aby se nepletl s platebním QR kódem. Logo, motto a web jsou v nastavení.
 	 *
 	 * @param array $coupons Jeden nebo více kupónů (každý na vlastní stránce).
 	 */
 	public static function voucher( array $coupons ) {
 		self::load();
-		$s = Resandpay_Settings::all();
+		$s       = Resandpay_Settings::all();
+		$cream   = array( 250, 246, 239 );
+		$bg_alt  = array( 240, 232, 218 );
+		$gold    = array( 184, 134, 46 );
+		$web     = preg_replace( '#^(https?://)?(www\.)?#i', '', rtrim( (string) ( $s['contact_web'] ?: wp_parse_url( home_url(), PHP_URL_HOST ) ), '/' ) );
+		// TCPDF nedědí fill="none" z kořene SVG – tahové motivy doplnit explicitně (manuál: žádná výplň).
+		$symbol  = preg_replace( '/<(path|g|circle|ellipse|polyline|line)(?![^>]*\bfill=)/i', '<$1 fill="none"', (string) $s['brand_symbol_svg'] );
+		$motto   = trim( (string) $s['brand_motto'] );
 		try {
 			$pdf = new TCPDF( 'L', 'mm', 'A5', true, 'UTF-8', false );
 			$pdf->SetCreator( 'ReserveAndPay' );
@@ -302,40 +311,58 @@ class Resandpay_PDF {
 			$pdf->SetTitle( __( 'Slevový kupón', 'reserveandpay' ) );
 			$pdf->setPrintHeader( false );
 			$pdf->setPrintFooter( false );
-			$pdf->SetMargins( 14, 12, 14 );
+			$pdf->SetMargins( 0, 0, 0 );
 			$pdf->SetAutoPageBreak( false );
 			$pdf->setCellPaddings( 0, 0, 0, 0 );
-			$gold = array( 184, 134, 46 );
-			$logo = self::logo_path();
 			foreach ( $coupons as $c ) {
 				$pdf->AddPage();
-				$pdf->SetFillColor( 251, 247, 239 );
+				// Podklad.
+				$pdf->SetFillColor( ...$cream );
 				$pdf->Rect( 0, 0, 210, 148, 'F' );
+				// Motiv: soustředné kružnice (jako podklad webu) – jeden motiv, přetéká přes okraj, tlumeně.
+				$pdf->StartTransform();
+				$pdf->Rect( 7, 7, 196, 134, 'CNZ' );
+				$pdf->SetAlpha( 0.28 );
 				$pdf->SetDrawColor( ...$gold );
-				$pdf->SetLineWidth( 1.2 );
-				$pdf->Rect( 7, 7, 196, 134, 'D' );
 				$pdf->SetLineWidth( 0.3 );
-				$pdf->Rect( 9.5, 9.5, 191, 129, 'D' );
-				if ( $logo ) {
+				foreach ( array( 16, 32, 48, 64, 80, 96 ) as $rad ) {
+					$pdf->Circle( 167, 64, $rad, 0, 360, 'D' );
+				}
+				$pdf->SetAlpha( 1 );
+				$pdf->StopTransform();
+				// Tenký rámeček.
+				$pdf->SetDrawColor( 214, 195, 160 );
+				$pdf->SetLineWidth( 0.35 );
+				$pdf->Rect( 7, 7, 196, 134, 'D' );
+				// Logo – řádková sestava, decentně (symbol 1,5× výšky písma, mezera 0,4×).
+				$x = 17;
+				if ( $symbol ) {
 					try {
-						$pdf->Image( $logo, 16, 15, 0, 13, '', '', '', true, 300, '', false, false, 0, 'LT' );
+						$pdf->ImageSVG( '@' . $symbol, $x, 14.2, 9.5, 7.6, '', '', '', 0, false );
+						$x += 9.5 + 1.6;
 					} catch ( Exception $e ) {
-						$logo = '';
+						$x = 17;
 					}
 				}
-				if ( ! $logo ) {
-					self::font( $pdf, 'fraunces_sb', 13, self::C_ACCENT );
-					$pdf->SetXY( 16, 16 );
-					$pdf->Cell( 110, 6, $s['brand_name'] ?: $s['company_name'], 0, 0, 'L' );
-				}
-				self::font( $pdf, 'worksansb', 8.5, self::C_PLUM );
-				$pdf->SetXY( 16, 34 );
-				$pdf->Cell( 110, 5, self::upper( __( 'Slevový kupón', 'reserveandpay' ) ), 0, 2, 'L' );
-				self::font( $pdf, 'fraunces_sb', 40, self::C_ACCENT );
-				$pdf->Cell( 110, 18, '−' . Resandpay_Discounts::value_label( $c['mode'], $c['value'] ), 0, 2, 'L' );
-				self::font( $pdf, 'worksans', 10, self::C_INK );
+				self::font( $pdf, 'fraunces_md', 11, self::C_INK );
+				$pdf->SetXY( $x, 16 );
+				$l1 = trim( (string) $s['logo_line1'] );
+				$pdf->Cell( $pdf->GetStringWidth( $l1 . ' ' ), 5, $l1 . ' ', 0, 0, 'L' );
+				self::font( $pdf, 'fraunces_i', 12, self::C_ACCENT );
+				$pdf->Cell( 60, 5, trim( (string) $s['logo_line2'] ), 0, 0, 'L' );
+				// Eyebrow a výše slevy.
+				self::font( $pdf, 'worksansb', 8, self::C_PLUM );
+				$pdf->setFontSpacing( 0.32 );
+				$pdf->SetXY( 17, 37 );
+				$pdf->Cell( 110, 5, self::upper( __( 'Slevový kupón', 'reserveandpay' ) ), 0, 0, 'L' );
+				$pdf->setFontSpacing( 0 );
+				self::font( $pdf, 'fraunces_md', 42, self::C_ACCENT );
+				$pdf->SetXY( 16, 43 );
+				$pdf->Cell( 112, 18, '−' . Resandpay_Discounts::value_label( $c['mode'], $c['value'] ), 0, 0, 'L' );
+				self::font( $pdf, 'fraunces_i', 13, self::C_INK );
 				/* translators: %s: rozsah */
-				$pdf->MultiCell( 112, 5, sprintf( __( 'Sleva na: %s', 'reserveandpay' ), Resandpay_Discounts::scope_label( $c ) ), 0, 'L', false, 1, 16 );
+				$pdf->SetXY( 17, 63 );
+				$pdf->MultiCell( 108, 5.6, sprintf( __( 'platí pro: %s', 'reserveandpay' ), Resandpay_Discounts::scope_label( $c ) ), 0, 'L', false, 1, 17 );
 				$valid = array();
 				if ( $c['valid_from'] ) {
 					/* translators: %s: datum */
@@ -346,52 +373,69 @@ class Resandpay_PDF {
 					$valid[] = sprintf( __( 'do %s', 'reserveandpay' ), wp_date( 'j. n. Y', strtotime( $c['valid_to'] . ' 12:00' ) ) );
 				}
 				if ( $valid ) {
-					self::font( $pdf, 'worksans', 9.5, self::C_SOFT );
+					self::font( $pdf, 'worksans', 9, self::C_SOFT );
 					/* translators: %s: platnost */
-					$pdf->MultiCell( 112, 5, sprintf( __( 'Platnost %s', 'reserveandpay' ), implode( ' ', $valid ) ), 0, 'L', false, 1, 16 );
+					$pdf->MultiCell( 108, 5, sprintf( __( 'Platnost %s', 'reserveandpay' ), implode( ' ', $valid ) ), 0, 'L', false, 1, 17 );
 				}
-				// Kód.
-				$pdf->SetFillColor( 255, 255, 255 );
-				$pdf->SetDrawColor( ...self::C_LINE );
-				$pdf->Rect( 16, 92, 104, 17, 'DF' );
-				self::font( $pdf, 'worksansb', 7, self::C_PLUM );
-				$pdf->SetXY( 20, 94.5 );
-				$pdf->Cell( 96, 3.5, self::upper( __( 'Kód kupónu', 'reserveandpay' ) ), 0, 2, 'L' );
-				self::font( $pdf, 'fraunces_sb', 17, self::C_INK );
-				$pdf->Cell( 96, 8, $c['code'], 0, 0, 'L' );
-				self::font( $pdf, 'worksans', 8.5, self::C_SOFT );
-				$pdf->SetXY( 16, 113 );
-				$pdf->MultiCell( 112, 4.4, __( 'Naskenujte QR kód – kupón se v rezervaci vyplní sám. Nebo zadejte kód do pole „Slevový kupón“ při rezervaci na webu. Kupón nelze kombinovat s jinou slevou.', 'reserveandpay' ), 0, 'L', false, 1 );
-				// Zlatý QR kód s rámečkem a popiskem.
+				// Kód kupónu.
+				$pdf->SetFillColor( ...$bg_alt );
+				$pdf->SetDrawColor( 214, 195, 160 );
+				$pdf->SetLineWidth( 0.3 );
+				$pdf->Rect( 17, 84, 100, 18, 'DF' );
+				self::font( $pdf, 'worksansb', 6.8, self::C_PLUM );
+				$pdf->setFontSpacing( 0.25 );
+				$pdf->SetXY( 21, 86.6 );
+				$pdf->Cell( 92, 3.5, self::upper( __( 'Kód kupónu', 'reserveandpay' ) ), 0, 0, 'L' );
+				$pdf->setFontSpacing( 0.4 );
+				self::font( $pdf, 'fraunces_md', 16, self::C_INK );
+				$pdf->SetXY( 21, 91 );
+				$pdf->Cell( 92, 8, $c['code'], 0, 0, 'L' );
+				$pdf->setFontSpacing( 0 );
+				self::font( $pdf, 'worksans', 8.3, self::C_SOFT );
+				$pdf->SetXY( 17, 105 );
+				/* translators: %s: web */
+				$pdf->MultiCell( 104, 4.3, sprintf( __( 'Naskenujte QR kód, nebo zadejte kód při rezervaci na %s v poli „Slevový kupón“. Kupón nelze kombinovat s jinou slevou.', 'reserveandpay' ), $web ), 0, 'L', false, 1, 17 );
+				// Zlatohnědý QR kód (moduly gold-deep na krémové) s popiskem – odlišený od platebních QR.
+				$pdf->SetFillColor( ...$cream );
+				$pdf->Rect( 140, 37, 54, 54, 'F' );
 				$pdf->SetDrawColor( ...$gold );
-				$pdf->SetLineWidth( 0.8 );
-				$pdf->SetFillColor( 251, 247, 239 );
-				$pdf->Rect( 136, 34, 58, 70, 'DF' );
+				$pdf->SetLineWidth( 0.5 );
+				$pdf->Rect( 140, 37, 54, 54, 'D' );
 				$pdf->write2DBarcode(
 					Resandpay_Discounts::coupon_url( $c ),
 					'QRCODE,Q',
-					141,
-					39,
-					48,
-					48,
+					144,
+					41,
+					46,
+					46,
 					array(
 						'border'  => false,
 						'padding' => 0,
 						'fgcolor' => self::C_ACCENT,
-						'bgcolor' => array( 251, 247, 239 ),
+						'bgcolor' => $cream,
 					),
 					'N'
 				);
-				self::font( $pdf, 'worksansb', 8, $gold );
-				$pdf->SetXY( 136, 92 );
-				$pdf->Cell( 58, 5, self::upper( __( 'Slevový kupón', 'reserveandpay' ) ), 0, 2, 'C' );
-				self::font( $pdf, 'worksans', 7, self::C_SOFT );
-				$pdf->Cell( 58, 4, __( 'není platební QR kód', 'reserveandpay' ), 0, 0, 'C' );
-				// Patička.
-				$contact = array_filter( array( $s['contact_web'], $s['contact_email'] ) );
-				self::font( $pdf, 'worksans', 8, self::C_SOFT );
-				$pdf->SetXY( 16, 129 );
-				$pdf->Cell( 178, 4, trim( ( $s['brand_name'] ?: $s['company_name'] ) . ( $contact ? ' · ' . implode( ' · ', $contact ) : '' ), ' ·' ), 0, 0, 'L' );
+				self::font( $pdf, 'worksansb', 7, self::C_ACCENT );
+				$pdf->setFontSpacing( 0.25 );
+				$pdf->SetXY( 140, 93 );
+				$pdf->Cell( 54, 4, self::upper( __( 'Slevový kupón', 'reserveandpay' ) ), 0, 2, 'C' );
+				$pdf->setFontSpacing( 0 );
+				self::font( $pdf, 'worksans', 6.8, self::C_SOFT );
+				$pdf->Cell( 54, 3.6, __( 'není platební QR kód', 'reserveandpay' ), 0, 0, 'C' );
+				// Adresa webu – zřetelně.
+				self::font( $pdf, 'fraunces_md', 15, self::C_ACCENT );
+				$pdf->SetXY( 140, 104 );
+				$pdf->Cell( 54, 7, $web, 0, 0, 'C' );
+				// Dechová linka a motto (podpis značky).
+				$pdf->ImageSVG( '@<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 28" fill="none"><path fill="none" d="M2 14 C30 2 50 26 80 14 S130 2 160 14 S200 26 218 14" stroke="#8C6423" stroke-width="2" stroke-linecap="round"/></svg>', 83, 119, 44, 5.6, '', '', '', 0, false );
+				if ( $motto ) {
+					self::font( $pdf, 'worksansb', 7, self::C_SOFT );
+					$pdf->setFontSpacing( 0.42 );
+					$pdf->SetXY( 7, 127.5 );
+					$pdf->Cell( 196, 4, self::upper( $motto ), 0, 0, 'C' );
+					$pdf->setFontSpacing( 0 );
+				}
 			}
 			return $pdf->Output( '', 'S' );
 		} catch ( Exception $e ) {

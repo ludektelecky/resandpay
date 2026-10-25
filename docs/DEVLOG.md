@@ -1,5 +1,17 @@
 # Vývojový deník ReserveAndPay
 
+## 0.8.1 (25. 10. 2026)
+
+- **Nový vzhled slevového poukazu (PDF)** dle grafického manuálu v1:
+  - motiv **soustředných kružnic** (jako podklad webu) – tlumeně ve zlaté, přetéká přes okraj, jediný motiv na ploše
+  - **decentní logo** – řádková sestava „lotos z vlny“ (lístky zlatohnědé, vlna švestková) + „s lehkou“ Fraunces Medium a „hlavou“ Fraunces Italic
+  - **zřetelná adresa webu** slehkouhlavou.cz pod QR kódem a v návodu
+  - dole **dechová linka** a motto **NÁDECH — VÝDECH — PROSTOR**
+  - krémový podklad, tenké linky, kód na druhém podkladu (žádná čistá bílá), QR kód zlatohnědý s popiskem „není platební QR kód“
+- Nastavení → Identifikace: texty loga, symbol loga (SVG, bezpečně filtrovaný) a motto – nic natvrdo
+- Do PDF přibyla písma Fraunces Medium a Fraunces Italic
+- Testy: 449 kontrol + souběh, QR kód z poukazu ověřen čtečkou; analytické zadání v3.7 (kap. 3.10)
+
 ## 0.8.0 – Slevy (25. 10. 2026)
 
 - **Slevové kupóny** – nová stránka **ResAndPay → Slevové kupóny**:

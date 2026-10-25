@@ -1362,6 +1362,15 @@ Resandpay_Install::maybe_upgrade();
 rap_t( 4900.0 === (float) Resandpay_Reservations::get( $dc['id'] )['price_full'], 'upgrade DB 8 → 9: plná cena doplněna' );
 Resandpay_Settings::update( array( 'bank_account' => '123456789/2700', 'cash_enabled' => 0, 'reminder_days' => 1 ) );
 
+echo "== 0.8.1: vzhled poukazu\n";
+require_once RESANDPAY_DIR . 'admin/class-admin-settings.php';
+$sv = Resandpay_Admin_Settings::sanitize_svg( '<svg viewBox="0 0 10 10" onload="x()"><script>a</script><path d="M0 0 L5 5" stroke="#8C6423" onclick="y"/><image href="x"/></svg>' );
+rap_t( false !== strpos( $sv, 'viewBox="0 0 10 10"' ) && false === strpos( $sv, 'onload' ) && false === strpos( $sv, '<script' ) && false === strpos( $sv, '<image' ) && false !== strpos( $sv, '<path' ), 'symbol loga: jen bezpečné SVG prvky, viewBox zachován' );
+$dflt = Resandpay_Settings::defaults();
+rap_t( 'nádech — výdech — prostor' === $dflt['brand_motto'] && 's lehkou' === $dflt['logo_line1'] && 'hlavou' === $dflt['logo_line2'] && false !== strpos( $dflt['brand_symbol_svg'], '#8C6423' ), 'výchozí logo (lotos z vlny) a motto dle grafického manuálu' );
+$vp1 = Resandpay_PDF::voucher( array( Resandpay_Discounts::all()[0] ) );
+rap_t( 0 === strpos( $vp1, '%PDF' ) && strlen( $vp1 ) > 8000, 'poukaz s logem, kružnicemi, dechovou linkou, mottem a webem' );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );

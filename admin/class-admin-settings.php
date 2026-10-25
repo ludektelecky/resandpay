@@ -44,6 +44,10 @@ class Resandpay_Admin_Settings {
 				'contact_email'     => array( __( 'E-mail v kontaktech', 'reserveandpay' ), 'email' ),
 				'qr_recipient_name' => array( __( 'Jméno příjemce v QR platbě', 'reserveandpay' ), $text, __( 'Pole RN (max. 35 znaků, bez diakritiky). Prázdné = jméno provozovatele.', 'reserveandpay' ) ),
 				'pdf_footer'        => array( __( 'Patička platebního pokynu', 'reserveandpay' ), $text ),
+				'logo_line1'        => array( __( 'Logo – první část názvu', 'reserveandpay' ), $text, __( 'Pro slevový poukaz (řádková sestava loga dle grafického manuálu): první část písmem Fraunces, druhá kurzívou ve zlatohnědé.', 'reserveandpay' ) ),
+				'logo_line2'        => array( __( 'Logo – druhá část názvu (kurzívou)', 'reserveandpay' ), $text ),
+				'brand_symbol_svg'  => array( __( 'Symbol loga (SVG)', 'reserveandpay' ), 'svg', __( 'Vektorový symbol značky (výchozí: lotos z vlny dle grafického manuálu). Povolené prvky svg, g, path, circle, line, polyline, ellipse.', 'reserveandpay' ) ),
+				'brand_motto'       => array( __( 'Motto', 'reserveandpay' ), $text, __( 'Na slevovém poukazu pod dechovou linkou, verzálkami.', 'reserveandpay' ) ),
 			),
 			__( 'Rezervace a platby', 'reserveandpay' ) => array(
 				'currency'          => array( __( 'Výchozí měna', 'reserveandpay' ), $text, __( 'Třípísmenný kód, např. CZK.', 'reserveandpay' ) ),
@@ -137,6 +141,13 @@ class Resandpay_Admin_Settings {
 		);
 	}
 
+	/** SVG symbolu loga – jen bezpečné vektorové prvky (žádné skripty, odkazy ani obrázky). */
+	public static function sanitize_svg( $svg ) {
+		$attrs = array_fill_keys( array( 'xmlns', 'viewbox', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'd', 'cx', 'cy', 'r', 'rx', 'ry', 'x1', 'y1', 'x2', 'y2', 'points', 'transform', 'opacity' ), true );
+		$out = trim( wp_kses( $svg, array_fill_keys( array( 'svg', 'g', 'path', 'circle', 'line', 'polyline', 'ellipse' ), $attrs ) ) );
+		return str_replace( ' viewbox=', ' viewBox=', $out );
+	}
+
 	public static function sanitize( $in ) {
 		if ( Resandpay_Settings::$internal ) {
 			return $in; // Interní zápis pluginu (Resandpay_Settings::update) – hodnoty jsou už připravené.
@@ -179,6 +190,9 @@ class Resandpay_Admin_Settings {
 						break;
 					case 'textarea':
 						$out[ $key ] = sanitize_textarea_field( (string) $val );
+						break;
+					case 'svg':
+						$out[ $key ] = self::sanitize_svg( (string) $val );
 						break;
 					default:
 						$out[ $key ] = sanitize_text_field( (string) $val );
@@ -230,6 +244,10 @@ class Resandpay_Admin_Settings {
 						break;
 					case 'textarea':
 						echo '<textarea id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" rows="8" class="large-text code">' . esc_textarea( $val ) . '</textarea>';
+						break;
+					case 'svg':
+						echo '<div class="rap-svg-preview" style="width:60px;height:48px">' . self::sanitize_svg( (string) $val ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput -- prošlo wp_kses.
+						echo '<textarea id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" rows="4" class="large-text code">' . esc_textarea( $val ) . '</textarea>';
 						break;
 					case 'page':
 						wp_dropdown_pages(

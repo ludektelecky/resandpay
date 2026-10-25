@@ -25,6 +25,11 @@ class Resandpay_Settings {
 			'contact_email'       => get_option( 'admin_email' ),
 			'qr_recipient_name'   => '',
 			'pdf_footer'          => 'Nejedná se o daňový doklad',
+			// Logo a motto pro tiskoviny pluginu (poukaz) – grafický manuál v1, kap. 01–02.
+			'logo_line1'          => 's lehkou',
+			'logo_line2'          => 'hlavou',
+			'brand_motto'         => 'nádech — výdech — prostor',
+			'brand_symbol_svg'    => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 80" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="4.2"><g stroke="#8C6423"><path d="M50 62 C40 46 42 26 50 10 C58 26 60 46 50 62 Z"/><path d="M50 62 C36 56 28 42 30 24 C42 32 48 46 50 62 Z"/><path d="M50 62 C64 56 72 42 70 24 C58 32 52 46 50 62 Z"/></g><path stroke="#6B3F4B" d="M8 64 C20 56 34 56 50 64 C66 56 80 56 92 64"/></svg>',
 			// Rezervace.
 			'currency'            => 'CZK',
 			// Splatnost: booking = N dní od rezervace (nejpozději začátek termínu),
