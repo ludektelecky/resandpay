@@ -120,6 +120,9 @@ class Resandpay_Mailer {
 			$ph['{amount}']    = Resandpay_Events::format_price( Resandpay_Reservations::amount_now( $r ), $r['currency'] );
 			$ph['{due_date}']  = $dn ? wp_date( 'j. n. Y G:i', Resandpay_Events::ts( $dn ) ) : '';
 		}
+		if ( 'admin' === $key && ( $ev_full = Resandpay_Events::get( $r['event_id'] ?? 0 ) ) ) {
+			$ph['{date}'] = Resandpay_Events::format_date_full( $ev_full ); // Správce vidí čas vždy.
+		}
 		$ph = apply_filters( 'resandpay_mail_placeholders', $ph, $r );
 		return strtr( (string) $template, $ph );
 	}

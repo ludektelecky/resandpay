@@ -74,6 +74,7 @@ class Resandpay_Settings {
 			'mail_from_name'      => get_option( 'blogname' ),
 			'mail_from_email'     => get_option( 'admin_email' ),
 			'mail_log_days'       => 365,
+			'time_display_default'   => 'show',
 			// Ochrana formuláře proti robotům.
 			'antibot_min_seconds'    => 3,
 			'rate_ip_window_minutes' => 10,

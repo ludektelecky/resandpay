@@ -1,5 +1,13 @@
 # Vývojový deník ReserveAndPay
 
+## 0.7.6 (25. 10. 2026)
+
+- **Zobrazení času akcí a termínů** – nová volba **„Zobrazení času“**: u akce v „Další nastavení“, u služby v řádku „Zobrazení“ (platí pro všechny termíny služby, i již vypsané); hodnoty Výchozí z nastavení / Zobrazovat čas / **Jen datum**
+  - výchozí hodnota v Nastavení → Detail akce → „Zobrazení času akcí a termínů“ (výchozí Zobrazovat čas – beze změny chování)
+  - „Jen datum“: web (výpis, kalendář, detail akce, přehled na úvodní stránce, potvrzení), e-maily zákazníkovi a platební pokyn PDF bez času – např. „12.–14. 3. 2027“, „pá 12. – ne 14. 3. 2027“; ve výběru volných termínů služby tlačítko „Rezervovat“ místo času
+  - administrace a e-mail správci čas zobrazují vždy; čas se dál používá pro splatnost, uzávěrku, poslední chvíli, řazení a překryvy
+- Testy: 399 kontrol + souběh; analytické zadání v3.4 (kap. 4.3)
+
 ## 0.7.5 (22. 10. 2026)
 
 - **Dynamický prefix variabilního symbolu** (Nastavení → Rezervace a platby → Prefix variabilního symbolu): kromě číslic proměnné **%YYYY%** (2026), **%YY%** (26) a **%MM%** (01–12), vyhodnocené k okamžiku rezervace – s novým rokem se prefix změní sám

@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.7.5** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 3.3** (22. 10. 2026, vydáno k pluginu 0.7.5) – viz `docs/`.
+> **Aktuální verze pluginu: 0.7.6** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 3.4** (25. 10. 2026, vydáno k pluginu 0.7.6) – viz `docs/`.
 
 ### Název a označení
 
@@ -32,6 +32,7 @@ Technické identifikátory se nemění (slug a textdomain `reserveandpay`, před
 ### Rezervace
 - Rezervační formulář v detailu akce / po výběru volného termínu
 - Kalendář a výpis akcí na webu, pohled „Volné termíny“ u služeb
+- Zobrazení času u akce i služby: zobrazovat čas, nebo jen datum (výchozí v nastavení)
 - Stavy: Čeká na platbu · Částečně zaplaceno · Zaplaceno · Platba na místě · Po splatnosti · Expirováno · Zrušeno
 - Rezervace kdykoli až do začátku; při rezervaci na poslední chvíli lze platit na místě
 - Pozdní rezervace (až po splatnosti podle pravidla, např. −30 dní): celá částka do 7 dní, nejpozději den před akcí

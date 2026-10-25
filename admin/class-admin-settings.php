@@ -60,6 +60,7 @@ class Resandpay_Admin_Settings {
 			),
 			__( 'Detail akce', 'reserveandpay' )       => array(
 				'detail_layout'    => array( __( 'Vzhled stránky akce', 'reserveandpay' ), 'select', __( 'S galerií: nahoře název, termín, cena a fotky, pod nimi popis akce a vedle něj rezervační formulář. Jednoduchý: údaje, text a formulář pod sebou (vzhled do verze 0.6).', 'reserveandpay' ), array( 'full' => __( 'S galerií a rezervační kartou', 'reserveandpay' ), 'basic' => __( 'Jednoduchý', 'reserveandpay' ) ) ),
+				'time_display_default' => array( __( 'Zobrazení času akcí a termínů', 'reserveandpay' ), 'select', __( 'Výchozí volba; u každé akce a služby ji lze změnit v „Další nastavení“. Jen datum: na webu, v e-mailech a na platebním pokynu bez času. Administrace čas zobrazuje vždy.', 'reserveandpay' ), array( 'show' => __( 'Zobrazovat čas', 'reserveandpay' ), 'date' => __( 'Jen datum (bez času)', 'reserveandpay' ) ) ),
 				'detail_own_title' => array( __( 'Nadpis akce v záhlaví pluginu', 'reserveandpay' ), 'checkbox', __( 'Platí pro vzhled s galerií. Nadpis se zobrazí v záhlaví vedle fotek a titulek šablony GeneratePress se skryje. U jiné šablony vypněte, pokud se nadpis zobrazí dvakrát.', 'reserveandpay' ) ),
 			),
 			__( 'Kontrola plateb', 'reserveandpay' ) => array(

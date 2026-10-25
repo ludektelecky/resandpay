@@ -65,6 +65,8 @@ class Resandpay_Admin_Services {
 			<tr><th><?php esc_html_e( 'Splatnost a platba', 'reserveandpay' ); ?></th>
 				<td class="rap-box"><?php Resandpay_Admin_Events::payment_fields( $svc ); ?>
 					<p class="description"><?php esc_html_e( 'Platí pro nově generované termíny. Termín lze rezervovat až do začátku; nestihne-li platba dorazit, platí se na místě.', 'reserveandpay' ); ?></p></td></tr>
+			<tr><th><?php esc_html_e( 'Zobrazení', 'reserveandpay' ); ?></th>
+				<td><?php Resandpay_Events::time_display_field( get_post_meta( $post->ID, '_rap_time_display', true ), __( 'Platí pro všechny termíny služby (i již vypsané), pokud termín nemá vlastní volbu. Jen datum: na webu, v e-mailech a na platebním pokynu bez času; ve výběru volných termínů se pak u tlačítek místo času ukáže „Rezervovat“ – hodí se jen pro jeden termín denně.', 'reserveandpay' ) ); ?></td></tr>
 			<tr><th><label for="rap_page"><?php esc_html_e( 'Stránka s volnými termíny', 'reserveandpay' ); ?></label></th>
 				<td><?php wp_dropdown_pages( array( 'name' => 'rap_page', 'id' => 'rap_page', 'selected' => $svc['page_id'], 'show_option_none' => '— ' . __( 'nevybráno', 'reserveandpay' ) . ' —', 'option_none_value' => 0 ) ); ?>
 					<p class="description"><?php echo esc_html( sprintf( /* translators: %s: shortcode */ __( 'Na stránku vložte shortcode %s. Detail termínu na ni odkazuje.', 'reserveandpay' ), '[reserveandpay_slots service="' . ( $post->post_name ?: $post->ID ) . '"]' ) ); ?></p></td></tr>
@@ -105,7 +107,7 @@ class Resandpay_Admin_Services {
 			$msg = sprintf( __( 'Počet míst upraven u nadcházejících termínů: %d.', 'reserveandpay' ), $res['updated'] );
 			if ( $res['skipped'] ) {
 				/* translators: %s: seznam termínů */
-				$msg .= ' ' . sprintf( __( 'Beze změny (víc rezervací než nová kapacita): %s.', 'reserveandpay' ), implode( ', ', array_map( array( 'Resandpay_Events', 'format_date' ), $res['skipped'] ) ) );
+				$msg .= ' ' . sprintf( __( 'Beze změny (víc rezervací než nová kapacita): %s.', 'reserveandpay' ), implode( ', ', array_map( array( 'Resandpay_Events', 'format_date_full' ), $res['skipped'] ) ) );
 			}
 			Resandpay_Admin::flash( $msg, $res['skipped'] ? 'warning' : 'success' );
 		} elseif ( $old && $old !== $cap ) {
@@ -134,6 +136,7 @@ class Resandpay_Admin_Services {
 		$cash = (string) ( $in['rap_cash'] ?? '' );
 		update_post_meta( $post_id, '_rap_cash', in_array( $cash, array( '0', '1' ), true ) ? $cash : '' );
 		Resandpay_Events::save_part1_meta( $post_id, $in );
+		Resandpay_Events::save_time_display_meta( $post_id, $in );
 	}
 
 	public static function columns( $cols ) {
@@ -380,7 +383,7 @@ class Resandpay_Admin_Services {
 					),
 					'customer_name'
 				);
-				echo '<li>' . esc_html( Resandpay_Events::format_date( $ev ) . ' – ' . implode( ', ', $names ) ) . '</li>';
+				echo '<li>' . esc_html( Resandpay_Events::format_date_full( $ev ) . ' – ' . implode( ', ', $names ) ) . '</li>';
 			}
 			echo '</ul></div>';
 		}

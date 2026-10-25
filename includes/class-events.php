@@ -160,6 +160,8 @@ class Resandpay_Events {
 			'part1_value'   => (float) $m( 'part1_value', 0 ),
 			'part1_days'    => (int) $m( 'part1_days', 7 ),
 			'close_hours'   => (float) $m( 'close_hours', 0 ),
+			'time_display'  => $m( 'time_display', '' ),
+			'show_time'     => self::resolve_show_time( $m( 'time_display', '' ), (int) $m( 'service', 0 ) ),
 			'cancelled'     => (bool) $m( 'cancelled', 0 ),
 			'members_only'  => (bool) $m( 'members_only', 0 ),
 			'program'       => $m( 'program' ),
@@ -210,11 +212,74 @@ class Resandpay_Events {
 	}
 
 	/** Lidsky čitelný termín akce. */
-	public static function format_date( array $event ) {
+	/**
+	 * Zobrazovat u akce / termínu čas? Volba u akce (u termínu služby, není-li u termínu, ze služby),
+	 * jinak výchozí z nastavení. show = zobrazovat, date = jen datum.
+	 */
+	public static function resolve_show_time( $own, $service_id = 0 ) {
+		$v = (string) $own;
+		if ( '' === $v && $service_id ) {
+			$v = (string) get_post_meta( $service_id, '_rap_time_display', true );
+		}
+		if ( '' === $v ) {
+			$v = (string) Resandpay_Settings::get( 'time_display_default' );
+		}
+		return 'date' !== $v;
+	}
+
+	/** Uloží volbu zobrazení času (jen když ji formulář posílá). */
+	public static function save_time_display_meta( $post_id, array $in ) {
+		if ( ! array_key_exists( 'rap_time_display', $in ) ) {
+			return;
+		}
+		$v = (string) $in['rap_time_display'];
+		update_post_meta( $post_id, '_rap_time_display', in_array( $v, array( 'show', 'date' ), true ) ? $v : '' );
+	}
+
+	public static function time_display_labels( $default_label = '' ) {
+		return array(
+			''     => $default_label ?: sprintf( /* translators: %s: výchozí volba */ __( 'Výchozí z nastavení (%s)', 'reserveandpay' ), 'date' === Resandpay_Settings::get( 'time_display_default' ) ? __( 'jen datum', 'reserveandpay' ) : __( 'zobrazovat čas', 'reserveandpay' ) ),
+			'show' => __( 'Zobrazovat čas', 'reserveandpay' ),
+			'date' => __( 'Jen datum (bez času)', 'reserveandpay' ),
+		);
+	}
+
+	/** Výběr „Zobrazení času“ pro editaci akce a služby. */
+	public static function time_display_field( $value, $hint = '' ) {
+		echo '<p><label for="rap_time_display">' . esc_html__( 'Zobrazení času', 'reserveandpay' ) . '</label> <select id="rap_time_display" name="rap_time_display">';
+		foreach ( self::time_display_labels() as $k => $l ) {
+			echo '<option value="' . esc_attr( $k ) . '" ' . selected( (string) $value, $k, false ) . '>' . esc_html( $l ) . '</option>';
+		}
+		echo '</select> <span class="rap-hint">' . esc_html( $hint ?: __( 'Jen datum: na webu, v e-mailech a na platebním pokynu se čas nezobrazí (např. „12.–14. 3. 2027“). V administraci a pro výpočty (splatnost, uzávěrka, řazení) se čas používá dál – zadávejte skutečný začátek.', 'reserveandpay' ) ) . '</span></p>';
+	}
+
+	/** Datum (i s časem) pro administraci – čas vždy. */
+	public static function format_date_full( array $event ) {
+		return self::format_date( $event, true );
+	}
+
+	/** Jen datum: „12. 3. 2027“, „12.–14. 3. 2027“, „28. 2. – 2. 3. 2027“, „30. 12. 2026 – 2. 1. 2027“. */
+	public static function format_date_only( $s, $e ) {
+		if ( ! $e || wp_date( 'Y-m-d', $s ) === wp_date( 'Y-m-d', $e ) ) {
+			return wp_date( 'j. n. Y', $s );
+		}
+		if ( wp_date( 'Y-m', $s ) === wp_date( 'Y-m', $e ) ) {
+			return wp_date( 'j.', $s ) . '–' . wp_date( 'j. n. Y', $e );
+		}
+		if ( wp_date( 'Y', $s ) === wp_date( 'Y', $e ) ) {
+			return wp_date( 'j. n.', $s ) . ' – ' . wp_date( 'j. n. Y', $e );
+		}
+		return wp_date( 'j. n. Y', $s ) . ' – ' . wp_date( 'j. n. Y', $e );
+	}
+
+	public static function format_date( array $event, $with_time = null ) {
 		$s = self::ts( $event['start'] );
 		$e = self::ts( $event['end'] );
 		if ( ! $s ) {
 			return '';
+		}
+		if ( ! ( $with_time ?? ( $event['show_time'] ?? true ) ) ) {
+			return self::format_date_only( $s, $e );
 		}
 		$df = 'j. n. Y';
 		$tf = 'G:i';
@@ -394,6 +459,7 @@ class Resandpay_Events {
 		$cash = (string) ( $in['rap_cash'] ?? '' );
 		update_post_meta( $post_id, '_rap_cash', in_array( $cash, array( '0', '1' ), true ) ? $cash : '' );
 		self::save_part1_meta( $post_id, $in );
+		self::save_time_display_meta( $post_id, $in );
 		update_post_meta( $post_id, '_rap_close_hours', max( 0, (float) str_replace( ',', '.', (string) ( $in['rap_close_hours'] ?? 0 ) ) ) );
 		update_post_meta( $post_id, '_rap_members_only', empty( $in['rap_members_only'] ) ? 0 : 1 );
 		update_post_meta( $post_id, '_rap_cancelled', empty( $in['rap_cancelled'] ) ? 0 : 1 );

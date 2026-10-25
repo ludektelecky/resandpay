@@ -156,7 +156,7 @@ class Resandpay_Admin_Checkin {
 			echo ' – ' . esc_html( Resandpay_Reservations::paid_method_labels()[ $r['paid_method'] ] ?? $r['paid_method'] );
 		}
 		echo '</p><dl>';
-		echo '<dt>' . esc_html__( 'Akce', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev ? $ev['title'] . ' – ' . Resandpay_Events::format_date( $ev ) : '—' ) . ( $ev && $ev['code'] ? ' <code>' . esc_html( $ev['code'] ) . '</code>' : '' ) . '</dd>';
+		echo '<dt>' . esc_html__( 'Akce', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev ? $ev['title'] . ' – ' . Resandpay_Events::format_date_full( $ev ) : '—' ) . ( $ev && $ev['code'] ? ' <code>' . esc_html( $ev['code'] ) . '</code>' : '' ) . '</dd>';
 		if ( ! $paid && (float) $r['amount_paid'] > 0 ) {
 			/* translators: 1: zaplaceno, 2: celkem */
 			echo '<dt>' . esc_html__( 'Zbývá vybrat', 'reserveandpay' ) . '</dt><dd><strong>' . esc_html( Resandpay_Events::format_price( Resandpay_Reservations::remaining( $r ), $r['currency'] ) ) . '</strong> <span class="description">(' . esc_html( sprintf( __( 'zaplaceno %1$s z %2$s', 'reserveandpay' ), Resandpay_Events::format_price( $r['amount_paid'], $r['currency'] ), Resandpay_Events::format_price( $r['amount'], $r['currency'] ) ) ) . ')</span></dd>';
@@ -203,7 +203,7 @@ class Resandpay_Admin_Checkin {
 			$unpaid  = array_filter( $rows, fn( $r ) => Resandpay_Reservations::PAID !== $r['status'] );
 			$sum     = array_sum( array_map( fn( $r ) => Resandpay_Reservations::CANCELLED === $r['status'] ? 0 : Resandpay_Reservations::remaining( $r ), $unpaid ) );
 			$cur     = $rows[0]['currency'];
-			echo '<h3>' . esc_html( $ev['title'] . ' – ' . Resandpay_Events::format_date( $ev ) ) . '</h3>';
+			echo '<h3>' . esc_html( $ev['title'] . ' – ' . Resandpay_Events::format_date_full( $ev ) ) . '</h3>';
 			/* translators: 1: počet nezaplacených, 2: částka */
 			echo '<p>' . esc_html( sprintf( __( 'Nezaplaceno: %1$d · k vybrání na místě: %2$s', 'reserveandpay' ), count( $unpaid ), Resandpay_Events::format_price( $sum, $cur ) ) ) . '</p>';
 			echo '<table class="widefat striped rap-checkin__day"><thead><tr><th>' . esc_html__( 'Jméno', 'reserveandpay' ) . '</th><th>VS</th><th>' . esc_html__( 'Stav', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Odbavit', 'reserveandpay' ) . '</th></tr></thead><tbody>';

@@ -1198,6 +1198,42 @@ $san = Resandpay_Admin_Settings::sanitize( array_merge( Resandpay_Settings::all(
 rap_t( '%YYYY%' === $san['vs_prefix'], 'nastavení: neznámá proměnná nebo písmena → ponechán původní prefix' );
 Resandpay_Settings::update( array( 'vs_prefix' => '26' ) );
 
+echo "== 0.7.6: zobrazení času akcí a termínů\n";
+Resandpay_Settings::update( array( 'time_display_default' => 'show' ) );
+$tdE = rap_event( 'Jóga víkend bez času', Resandpay_Events::ts( '2027-03-12 14:00:00' ), Resandpay_Events::ts( '2027-03-14 14:00:00' ), 10 );
+rap_t( Resandpay_Events::get( $tdE )['show_time'] && '12. 3. 2027 14:00 – 14. 3. 2027 14:00' === Resandpay_Events::format_date( Resandpay_Events::get( $tdE ) ), 'výchozí: čas se zobrazuje' );
+Resandpay_Events::save_time_display_meta( $tdE, array( 'rap_time_display' => 'date' ) );
+$tde = Resandpay_Events::get( $tdE );
+rap_t( ! $tde['show_time'] && '12.–14. 3. 2027' === Resandpay_Events::format_date( $tde ), 'akce „jen datum“: 12.–14. 3. 2027' );
+rap_t( '12. 3. 2027 14:00 – 14. 3. 2027 14:00' === Resandpay_Events::format_date_full( $tde ), 'administrace: čas vždy' );
+rap_t( 'pá 12. – ne 14. 3. 2027' === Resandpay_Views::when_line( $tde ), 'web: řádek Kdy bez času' );
+rap_t( '28. 2. – 2. 3. 2027' === Resandpay_Events::format_date_only( Resandpay_Events::ts( '2027-02-28 10:00:00' ), Resandpay_Events::ts( '2027-03-02 12:00:00' ) ) && '30. 12. 2026 – 2. 1. 2027' === Resandpay_Events::format_date_only( Resandpay_Events::ts( '2026-12-30 10:00:00' ), Resandpay_Events::ts( '2027-01-02 12:00:00' ) ) && '5. 6. 2027' === Resandpay_Events::format_date_only( Resandpay_Events::ts( '2027-06-05 10:00:00' ), Resandpay_Events::ts( '2027-06-05 12:00:00' ) ), 'formáty jen data (přes měsíc, přes rok, jeden den)' );
+$tdr = Resandpay_Reservations::create( $tdE, rap_person( 190 ), array( 'notify' => false, 'now' => Resandpay_Events::ts( '2026-12-01 10:00:00' ) ) );
+$tdb = Resandpay_Mailer::build( 'received', $tdr );
+rap_t( false !== strpos( $tdb['html'], '12.–14. 3. 2027' ) && false === strpos( $tdb['html'], '14:00' ), 'e-mail zákazníkovi bez času' );
+rap_t( false !== strpos( Resandpay_Mailer::render( '{date}', $tdr, 'admin' ), '14:00' ), 'e-mail správci s časem' );
+Resandpay_Events::save_time_display_meta( $tdE, array( 'rap_time_display' => 'show' ) );
+Resandpay_Settings::update( array( 'time_display_default' => 'date' ) );
+rap_t( Resandpay_Events::get( $tdE )['show_time'], 'volba u akce má přednost před výchozí' );
+Resandpay_Events::save_time_display_meta( $tdE, array() );
+rap_t( Resandpay_Events::get( $tdE )['show_time'], 'bez pole ve formuláři se volba nemění' );
+Resandpay_Events::save_time_display_meta( $tdE, array( 'rap_time_display' => '' ) );
+rap_t( ! Resandpay_Events::get( $tdE )['show_time'], 'prázdná volba = výchozí z nastavení (jen datum)' );
+Resandpay_Settings::update( array( 'time_display_default' => 'show' ) );
+$tdS = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::SERVICE, 'post_status' => 'publish', 'post_title' => 'Celodenní kurz' ) );
+Resandpay_Admin_Services::save_service_meta( $tdS, array( 'rap_duration' => 480, 'rap_pause' => 0, 'rap_capacity' => 8, 'rap_price' => 2500, 'rap_time_display' => 'date' ) );
+$pvT = Resandpay_Services::preview( $tdS, array( 'weekdays' => array( 6 ), 'time_from' => '09:00', 'time_to' => '17:00', 'date_from' => '2027-08-07', 'date_to' => '2027-08-07' ) );
+Resandpay_Services::create_slots( $tdS, wp_list_pluck( $pvT, 'start' ) );
+$slT = array_values( Resandpay_Services::slots( $tdS, date_create_immutable( '2027-08-07 00:00:00', $tzz ), date_create_immutable( '2027-08-08 00:00:00', $tzz ) ) );
+rap_t( $slT && ! $slT[0]['show_time'] && '7. 8. 2027' === Resandpay_Events::format_date( $slT[0] ), 'termín služby přebírá „jen datum“ ze služby' );
+Resandpay_Admin_Services::save_service_meta( $tdS, array( 'rap_duration' => 480, 'rap_pause' => 0, 'rap_capacity' => 8, 'rap_price' => 2500, 'rap_time_display' => 'show' ) );
+rap_t( Resandpay_Events::get( $slT[0]['id'] )['show_time'], 'změna u služby platí i pro již vypsané termíny' );
+Resandpay_Admin_Services::save_service_meta( $tdS, array( 'rap_duration' => 480, 'rap_pause' => 0, 'rap_capacity' => 8, 'rap_price' => 2500, 'rap_time_display' => 'date' ) );
+$_GET = array( 'rap_from' => '2027-08-07' );
+$slh = Resandpay_Views::render_slots( array( 'service' => $tdS, 'days' => 7 ) );
+$_GET = array();
+rap_t( is_string( $slh ) && false !== strpos( $slh, '>Rezervovat<' ) && false === strpos( $slh, '>9:00<' ), 'výběr volných termínů: tlačítko „Rezervovat“ místo času' );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );

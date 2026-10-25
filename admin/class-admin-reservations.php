@@ -187,7 +187,7 @@ class Resandpay_Admin_Reservations {
 		if ( $event ) {
 			$ev = Resandpay_Events::get( $event );
 			if ( $ev ) {
-				echo '<p class="rap-event-head"><strong>' . esc_html( $ev['title'] ) . '</strong> – ' . esc_html( Resandpay_Events::format_date( $ev ) ) . ' · ';
+				echo '<p class="rap-event-head"><strong>' . esc_html( $ev['title'] ) . '</strong> – ' . esc_html( Resandpay_Events::format_date_full( $ev ) ) . ' · ';
 				/* translators: 1: obsazeno, 2: kapacita */
 				echo esc_html( sprintf( __( 'obsazeno %1$d / %2$d', 'reserveandpay' ), Resandpay_Reservations::count_active( $event ), $ev['capacity'] ) );
 				echo ' · <a href="' . esc_url( get_edit_post_link( $event ) ) . '">' . esc_html__( 'upravit akci', 'reserveandpay' ) . '</a></p>';
@@ -219,7 +219,7 @@ class Resandpay_Admin_Reservations {
 		};
 		$rows = array(
 			__( 'Stav', 'reserveandpay' )              => '<span class="rap-status rap-status--' . esc_attr( $r['status'] ) . '">' . esc_html( $labels[ $r['status'] ] ) . '</span>',
-			__( 'Akce', 'reserveandpay' )              => $ev ? '<a href="' . esc_url( admin_url( 'admin.php?page=reserveandpay&event_id=' . $ev['id'] ) ) . '">' . esc_html( $ev['title'] ) . '</a> – ' . esc_html( Resandpay_Events::format_date( $ev ) ) . ( $ev['code'] ? ' · <code>' . esc_html( $ev['code'] ) . '</code>' : '' ) : '—',
+			__( 'Akce', 'reserveandpay' )              => $ev ? '<a href="' . esc_url( admin_url( 'admin.php?page=reserveandpay&event_id=' . $ev['id'] ) ) . '">' . esc_html( $ev['title'] ) . '</a> – ' . esc_html( Resandpay_Events::format_date_full( $ev ) ) . ( $ev['code'] ? ' · <code>' . esc_html( $ev['code'] ) . '</code>' : '' ) : '—',
 			__( 'Jméno', 'reserveandpay' )             => esc_html( $r['customer_name'] ),
 			__( 'E-mail', 'reserveandpay' )            => '<a href="mailto:' . esc_attr( $r['email'] ) . '">' . esc_html( $r['email'] ) . '</a>',
 			__( 'Telefon', 'reserveandpay' )           => esc_html( $r['phone'] ),
@@ -338,7 +338,7 @@ class Resandpay_Admin_Reservations {
 			<table class="form-table">
 				<tr><th><label for="event_id"><?php esc_html_e( 'Akce', 'reserveandpay' ); ?></label></th><td><select name="event_id" id="event_id" required>
 					<?php foreach ( $events as $ev ) : ?>
-						<option value="<?php echo (int) $ev['id']; ?>" <?php selected( $pre, $ev['id'] ); ?>><?php echo esc_html( $ev['title'] . ' – ' . Resandpay_Events::format_date( $ev ) . ' (' . Resandpay_Events::free_places( $ev['id'] ) . ' ' . __( 'volných', 'reserveandpay' ) . ')' ); ?></option>
+						<option value="<?php echo (int) $ev['id']; ?>" <?php selected( $pre, $ev['id'] ); ?>><?php echo esc_html( $ev['title'] . ' – ' . Resandpay_Events::format_date_full( $ev ) . ' (' . Resandpay_Events::free_places( $ev['id'] ) . ' ' . __( 'volných', 'reserveandpay' ) . ')' ); ?></option>
 					<?php endforeach; ?>
 				</select></td></tr>
 				<tr><th><label for="name"><?php esc_html_e( 'Jméno a příjmení', 'reserveandpay' ); ?> *</label></th><td><input type="text" name="name" id="name" class="regular-text" required></td></tr>

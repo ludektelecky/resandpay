@@ -106,7 +106,7 @@ class Resandpay_Admin_Events {
 				<p class="rap-row__cur"><label for="rap_currency"><?php esc_html_e( 'Měna', 'reserveandpay' ); ?></label>
 					<input type="text" id="rap_currency" name="rap_currency" value="<?php echo esc_attr( $ev['currency'] ); ?>" maxlength="3"></p>
 			</div>
-			<details class="rap-more" <?php echo ( '' !== $raw_due || '' !== get_post_meta( $post->ID, '_rap_due_mode', true ) || '' !== get_post_meta( $post->ID, '_rap_cash', true ) || in_array( get_post_meta( $post->ID, '_rap_part1_mode', true ), array( 'fixed', 'percent' ), true ) || $ev['close_hours'] || $ev['members_only'] || $ev['cancelled'] ) ? 'open' : ''; ?>>
+			<details class="rap-more" <?php echo ( '' !== $raw_due || '' !== get_post_meta( $post->ID, '_rap_due_mode', true ) || '' !== get_post_meta( $post->ID, '_rap_cash', true ) || in_array( get_post_meta( $post->ID, '_rap_part1_mode', true ), array( 'fixed', 'percent' ), true ) || '' !== get_post_meta( $post->ID, '_rap_time_display', true ) || $ev['close_hours'] || $ev['members_only'] || $ev['cancelled'] ) ? 'open' : ''; ?>>
 				<summary><?php esc_html_e( 'Další nastavení', 'reserveandpay' ); ?></summary>
 				<?php
 				self::payment_fields(
@@ -120,6 +120,7 @@ class Resandpay_Admin_Events {
 						'part1_days'  => get_post_meta( $post->ID, '_rap_part1_days', true ),
 					)
 				);
+				Resandpay_Events::time_display_field( get_post_meta( $post->ID, '_rap_time_display', true ) );
 				?>
 				<p><label for="rap_close_hours"><?php esc_html_e( 'Uzávěrka rezervací (hodin před začátkem)', 'reserveandpay' ); ?></label>
 					<input type="number" min="0" step="0.5" id="rap_close_hours" name="rap_close_hours" value="<?php echo esc_attr( $ev['close_hours'] ?: '' ); ?>" placeholder="0">
@@ -133,7 +134,7 @@ class Resandpay_Admin_Events {
 		if ( $overlaps ) {
 			echo '<div class="rap-overlap"><strong>' . esc_html__( 'Překrývá se s:', 'reserveandpay' ) . '</strong><ul>';
 			foreach ( $overlaps as $o ) {
-				echo '<li><a href="' . esc_url( get_edit_post_link( $o['id'] ) ) . '">' . esc_html( $o['title'] ) . '</a> – ' . esc_html( Resandpay_Events::format_date( $o ) ) . '</li>';
+				echo '<li><a href="' . esc_url( get_edit_post_link( $o['id'] ) ) . '">' . esc_html( $o['title'] ) . '</a> – ' . esc_html( Resandpay_Events::format_date_full( $o ) ) . '</li>';
 			}
 			echo '</ul><span class="rap-hint">' . esc_html__( 'Překrývání je povoleno, jde jen o informaci.', 'reserveandpay' ) . '</span></div>';
 		}
@@ -444,7 +445,7 @@ class Resandpay_Admin_Events {
 				if ( $missing ) {
 					echo '<span class="rap-tag rap-tag--off">' . esc_html( sprintf( /* translators: %s: pole */ __( 'Chybí: %s', 'reserveandpay' ), implode( ', ', $missing ) ) ) . '</span><br>';
 				}
-				echo esc_html( Resandpay_Events::format_date( $ev ) );
+				echo esc_html( Resandpay_Events::format_date_full( $ev ) );
 				if ( $ev['cancelled'] ) {
 					echo ' <span class="rap-tag rap-tag--off">' . esc_html__( 'zrušeno', 'reserveandpay' ) . '</span>';
 				}

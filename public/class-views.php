@@ -32,6 +32,14 @@ class Resandpay_Views {
 		if ( ! $s ) {
 			return '';
 		}
+		if ( empty( $ev['show_time'] ) && isset( $ev['show_time'] ) ) {
+			// Jen datum: „so 14. 11. 2026“ / „pá 12. – ne 14. 3. 2027“.
+			if ( $s->format( 'Y-m-d' ) === $e->format( 'Y-m-d' ) ) {
+				return $wd[ (int) $s->format( 'w' ) ] . ' ' . $s->format( 'j. n. Y' );
+			}
+			$first = $s->format( 'Y-m' ) === $e->format( 'Y-m' ) ? $s->format( 'j.' ) : ( $s->format( 'Y' ) === $e->format( 'Y' ) ? $s->format( 'j. n.' ) : $s->format( 'j. n. Y' ) );
+			return $wd[ (int) $s->format( 'w' ) ] . ' ' . $first . ' – ' . $wd[ (int) $e->format( 'w' ) ] . ' ' . $e->format( 'j. n. Y' );
+		}
 		if ( $s->format( 'Y-m-d' ) === $e->format( 'Y-m-d' ) ) {
 			return $wd[ (int) $s->format( 'w' ) ] . ' ' . $s->format( 'j. n. Y' ) . ' · ' . $s->format( 'G:i' ) . '–' . $e->format( 'G:i' );
 		}
@@ -177,7 +185,7 @@ class Resandpay_Views {
 			<div class="rap-item__main">
 				<p class="rap-eyebrow"><?php echo esc_html( $cats ? implode( ' · ', $cats ) : __( 'Individuální termíny', 'reserveandpay' ) ); ?></p>
 				<h3 class="rap-item__title"><a href="<?php echo esc_url( $it['url'] ); ?>"><?php echo esc_html( $svc['title'] ); ?></a></h3>
-				<p class="rap-item__meta"><?php echo esc_html( sprintf( /* translators: 1: den a čas, 2: délka */ __( 'Nejbližší volný termín: %1$s · %2$d min', 'reserveandpay' ), $wd[ (int) $s->format( 'w' ) ] . ' ' . $s->format( 'j. n.' ) . ' ' . $s->format( 'G:i' ), (int) round( ( Resandpay_Events::ts( $next['end'] ) - Resandpay_Events::ts( $next['start'] ) ) / 60 ) ) ); ?><?php if ( $next['location'] ) : ?> · <?php echo esc_html( $next['location'] ); ?><?php endif; ?></p>
+				<p class="rap-item__meta"><?php echo esc_html( sprintf( /* translators: 1: den a čas, 2: délka */ __( 'Nejbližší volný termín: %1$s · %2$d min', 'reserveandpay' ), $wd[ (int) $s->format( 'w' ) ] . ' ' . $s->format( 'j. n.' ) . ( ( $next['show_time'] ?? true ) ? ' ' . $s->format( 'G:i' ) : '' ), (int) round( ( Resandpay_Events::ts( $next['end'] ) - Resandpay_Events::ts( $next['start'] ) ) / 60 ) ) ); ?><?php if ( $next['location'] ) : ?> · <?php echo esc_html( $next['location'] ); ?><?php endif; ?></p>
 			</div>
 			<div class="rap-item__side">
 				<p class="rap-item__price"><?php echo esc_html( Resandpay_Events::format_price( $next['price'], $next['currency'] ) ); ?></p>
@@ -423,7 +431,7 @@ class Resandpay_Views {
 			echo '<div class="' . esc_attr( $class ) . '" role="gridcell"><span class="rap-calendar__num">' . esc_html( $d->format( 'j' ) ) . '</span>';
 			foreach ( $by_day[ $key ] ?? array() as $it ) {
 				$ev   = $it['ev'];
-				$time = $it['first'] ? self::dt( $ev['start'] )->format( 'G:i' ) . ' ' : '';
+				$time = $it['first'] && ( $ev['show_time'] ?? true ) ? self::dt( $ev['start'] )->format( 'G:i' ) . ' ' : '';
 				$cls  = 'rap-calendar__ev' . ( $it['first'] ? '' : ' is-cont' ) . ( $ev['cancelled'] || Resandpay_Events::free_places( $ev['id'] ) < 1 ? ' is-off' : '' );
 				echo '<a class="' . esc_attr( $cls ) . '" href="' . esc_url( get_permalink( $ev['id'] ) ) . '" title="' . esc_attr( $ev['title'] . ' – ' . self::when_line( $ev ) ) . '">' . esc_html( $time . $ev['title'] ) . '</a>';
 			}
@@ -541,8 +549,9 @@ class Resandpay_Views {
 			$d = date_create_immutable( $day . ' 00:00:00', $tz );
 			echo '<div class="rap-slots__day"><p class="rap-slots__date">' . esc_html( $wd[ (int) $d->format( 'w' ) ] . ' ' . $d->format( 'j. n.' ) ) . '</p><div class="rap-slots__times">';
 			foreach ( $items as $ev ) {
-				$t     = date_create_immutable( $ev['start'], $tz )->format( 'G:i' );
-				$label = sprintf( /* translators: 1: den, 2: čas */ __( 'Rezervovat %1$s v %2$s', 'reserveandpay' ), $d->format( 'j. n.' ), $t );
+				$show  = $ev['show_time'] ?? true;
+				$t     = $show ? date_create_immutable( $ev['start'], $tz )->format( 'G:i' ) : __( 'Rezervovat', 'reserveandpay' );
+				$label = $show ? sprintf( /* translators: 1: den, 2: čas */ __( 'Rezervovat %1$s v %2$s', 'reserveandpay' ), $d->format( 'j. n.' ), $t ) : sprintf( /* translators: %s: den */ __( 'Rezervovat %s', 'reserveandpay' ), $d->format( 'j. n.' ) );
 				$places = '';
 				if ( $ev['capacity'] > 1 ) {
 					$places = self::places_label( Resandpay_Events::free_places( $ev['id'] ) );

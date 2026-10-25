@@ -107,7 +107,7 @@ class Resandpay_Reservations_Table extends WP_List_Table {
 		echo '<div class="alignleft actions"><select name="event_id"><option value="0">' . esc_html__( 'Všechny akce', 'reserveandpay' ) . '</option>';
 		foreach ( $events as $e ) {
 			$ev = Resandpay_Events::get( $e->ID );
-			printf( '<option value="%d" %s>%s – %s</option>', (int) $e->ID, selected( $cur, $e->ID, false ), esc_html( $e->post_title ), esc_html( Resandpay_Events::format_date( $ev ) ) );
+			printf( '<option value="%d" %s>%s – %s</option>', (int) $e->ID, selected( $cur, $e->ID, false ), esc_html( $e->post_title ), esc_html( Resandpay_Events::format_date_full( $ev ) ) );
 		}
 		echo '</select>';
 		submit_button( __( 'Filtrovat', 'reserveandpay' ), '', 'filter_action', false );
@@ -147,7 +147,7 @@ class Resandpay_Reservations_Table extends WP_List_Table {
 		if ( ! $ev ) {
 			return '—';
 		}
-		return '<a href="' . esc_url( add_query_arg( 'event_id', $ev['id'], remove_query_arg( array( 'paged', 'rap_msg' ) ) ) ) . '">' . esc_html( $ev['title'] ) . '</a><br><small>' . esc_html( trim( $ev['code'] . ' · ' . Resandpay_Events::format_date( $ev ), ' ·' ) ) . '</small>';
+		return '<a href="' . esc_url( add_query_arg( 'event_id', $ev['id'], remove_query_arg( array( 'paged', 'rap_msg' ) ) ) ) . '">' . esc_html( $ev['title'] ) . '</a><br><small>' . esc_html( trim( $ev['code'] . ' · ' . Resandpay_Events::format_date_full( $ev ), ' ·' ) ) . '</small>';
 	}
 
 	protected function column_status( $item ) {
