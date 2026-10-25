@@ -33,7 +33,13 @@ class Resandpay_Mailer {
 
 	/** Vloží do e-mailu textovou verzi, QR kód (inline, cid:rap-qr) a PDF přílohu. */
 	public static function phpmailer_parts( $phpmailer ) {
-		if ( ! self::$sending || ! self::$parts ) {
+		if ( ! self::$sending ) {
+			return;
+		}
+		if ( false !== strpos( (string) $phpmailer->Body, 'cid:rap-logo' ) && ( $logo = Resandpay_Brand::email_image() ) ) {
+			$phpmailer->addStringEmbeddedImage( $logo['data'], 'rap-logo', $logo['name'], 'base64', $logo['mime'] );
+		}
+		if ( ! self::$parts ) {
 			return;
 		}
 		$p                  = self::$parts;
@@ -272,13 +278,12 @@ class Resandpay_Mailer {
 	public static function html_layout( $title, $body_html, $box_html = '' ) {
 		$s       = Resandpay_Settings::all();
 		$c       = self::colors();
-		$brand   = $s['brand_name'] ?: get_bloginfo( 'name' );
 		$contact = implode( ' · ', array_filter( array( $s['company_name'], $s['contact_web'], $s['contact_email'] ) ) );
 		return '<!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' . esc_html( $title ) . '</title></head>'
 			. '<body style="margin:0;padding:0;background:' . $c['bg'] . ';">'
 			. '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:' . $c['bg'] . ';"><tr><td align="center" style="padding:24px 12px;">'
 			. '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:' . $c['card'] . ';border-top:3px solid ' . $c['accent'] . ';">'
-			. '<tr><td style="padding:26px 30px 8px;font-family:Georgia,\'Times New Roman\',serif;font-size:22px;color:' . $c['accent'] . ';">' . esc_html( $brand ) . '</td></tr>'
+			. '<tr><td style="padding:26px 30px 8px;">' . Resandpay_Brand::email_header( $c ) . '</td></tr>'
 			. '<tr><td style="padding:10px 30px 8px;font-family:\'Work Sans\',Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:' . $c['ink'] . ';">' . $body_html . $box_html . '</td></tr>'
 			. '<tr><td style="padding:14px 30px 24px;border-top:1px solid ' . $c['line'] . ';font-family:Arial,Helvetica,sans-serif;font-size:12px;color:' . $c['soft'] . ';">' . esc_html( $contact ) . '</td></tr>'
 			. '</table></td></tr></table></body></html>';

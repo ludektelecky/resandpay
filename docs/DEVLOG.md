@@ -1,5 +1,14 @@
 # Vývojový deník ReserveAndPay
 
+## 0.8.2 (25. 10. 2026)
+
+- **Jednotné logo pro všechny výstupy ReserveAndPay** – platební pokyn (PDF), slevový poukaz (PDF) a HTML e-maily berou logo z jednoho místa (Nastavení → Identifikace → **Logo ve výstupech**):
+  - **Logo webu** (výchozí) – Vzhled → Přizpůsobit → Identita webu, PNG, JPG nebo SVG; změnou loga webu se změní všude
+  - dokud logo webu není nahrané (nebo volba **Vždy logo z nastavení pluginu**): řádková sestava dle grafického manuálu – symbol (SVG) + „s lehkou“ / *hlavou* z nastavení
+  - v e-mailu se PNG/JPG vkládá jako obrázek, SVG a symbol nahrazuje textová sestava loga (e-mailové programy SVG nezobrazí); průhlednost PNG v PDF zachována
+- Platební pokyn má nově v hlavičce logo i bez nahraného loga webu; hlavička e-mailů má textovou sestavu loga místo názvu značky
+- Testy: 455 kontrol + souběh (logo webu PNG i SVG, volba zdroje, vložení loga do e-mailu); analytické zadání v3.8 (kap. 3.10, 5.2)
+
 ## 0.8.1 (25. 10. 2026)
 
 - **Nový vzhled slevového poukazu (PDF)** dle grafického manuálu v1:

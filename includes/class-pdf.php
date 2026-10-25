@@ -71,13 +71,6 @@ class Resandpay_PDF {
 		require_once RESANDPAY_DIR . 'lib/tcpdf/tcpdf.php';
 	}
 
-	/** Cesta k logu webu (Vzhled → Přizpůsobit → Identita webu), jen PNG/JPG. */
-	private static function logo_path() {
-		$id   = (int) get_theme_mod( 'custom_logo' );
-		$file = $id ? get_attached_file( $id ) : '';
-		return $file && is_readable( $file ) && preg_match( '/\.(png|jpe?g)$/i', $file ) ? $file : '';
-	}
-
 	/**
 	 * Vytvoří PDF platebního pokynu.
 	 *
@@ -108,15 +101,8 @@ class Resandpay_PDF {
 			$pdf->AddPage();
 			$w = 174; // Šířka obsahu.
 
-			// Hlavička: logo vlevo, nadpis vpravo.
-			$logo = self::logo_path();
-			if ( $logo ) {
-				try {
-					$pdf->Image( $logo, 18, 14, 0, 16, '', '', '', true, 300, '', false, false, 0, 'LT' );
-				} catch ( Exception $e ) {
-					$logo = '';
-				}
-			}
+			// Hlavička: logo vlevo (jednotné pro všechny výstupy – Resandpay_Brand), nadpis vpravo.
+			Resandpay_Brand::pdf( $pdf, 18, 15, 10, 88 );
 			self::font( $pdf, 'worksansb', 8.5, self::C_PLUM );
 			$pdf->SetXY( 110, 15 );
 			$pdf->Cell( 82, 5, self::upper( __( 'Platební pokyn', 'reserveandpay' ) ), 0, 2, 'R' );
@@ -301,8 +287,6 @@ class Resandpay_PDF {
 		$bg_alt  = array( 240, 232, 218 );
 		$gold    = array( 184, 134, 46 );
 		$web     = preg_replace( '#^(https?://)?(www\.)?#i', '', rtrim( (string) ( $s['contact_web'] ?: wp_parse_url( home_url(), PHP_URL_HOST ) ), '/' ) );
-		// TCPDF nedědí fill="none" z kořene SVG – tahové motivy doplnit explicitně (manuál: žádná výplň).
-		$symbol  = preg_replace( '/<(path|g|circle|ellipse|polyline|line)(?![^>]*\bfill=)/i', '<$1 fill="none"', (string) $s['brand_symbol_svg'] );
 		$motto   = trim( (string) $s['brand_motto'] );
 		try {
 			$pdf = new TCPDF( 'L', 'mm', 'A5', true, 'UTF-8', false );
@@ -334,22 +318,8 @@ class Resandpay_PDF {
 				$pdf->SetDrawColor( 214, 195, 160 );
 				$pdf->SetLineWidth( 0.35 );
 				$pdf->Rect( 7, 7, 196, 134, 'D' );
-				// Logo – řádková sestava, decentně (symbol 1,5× výšky písma, mezera 0,4×).
-				$x = 17;
-				if ( $symbol ) {
-					try {
-						$pdf->ImageSVG( '@' . $symbol, $x, 14.2, 9.5, 7.6, '', '', '', 0, false );
-						$x += 9.5 + 1.6;
-					} catch ( Exception $e ) {
-						$x = 17;
-					}
-				}
-				self::font( $pdf, 'fraunces_md', 11, self::C_INK );
-				$pdf->SetXY( $x, 16 );
-				$l1 = trim( (string) $s['logo_line1'] );
-				$pdf->Cell( $pdf->GetStringWidth( $l1 . ' ' ), 5, $l1 . ' ', 0, 0, 'L' );
-				self::font( $pdf, 'fraunces_i', 12, self::C_ACCENT );
-				$pdf->Cell( 60, 5, trim( (string) $s['logo_line2'] ), 0, 0, 'L' );
+				// Logo – decentně, stejné jako v ostatních výstupech (Resandpay_Brand).
+				Resandpay_Brand::pdf( $pdf, 17, 14.2, 7.6, 70 );
 				// Eyebrow a výše slevy.
 				self::font( $pdf, 'worksansb', 8, self::C_PLUM );
 				$pdf->setFontSpacing( 0.32 );

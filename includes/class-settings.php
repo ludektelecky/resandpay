@@ -26,6 +26,7 @@ class Resandpay_Settings {
 			'qr_recipient_name'   => '',
 			'pdf_footer'          => 'Nejedná se o daňový doklad',
 			// Logo a motto pro tiskoviny pluginu (poukaz) – grafický manuál v1, kap. 01–02.
+			'logo_source'         => 'site',
 			'logo_line1'          => 's lehkou',
 			'logo_line2'          => 'hlavou',
 			'brand_motto'         => 'nádech — výdech — prostor',
