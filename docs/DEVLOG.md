@@ -6,6 +6,7 @@
 - Logo, QR kódy a PDF platebního pokynu se nově vkládají jako soubory (QR a PDF dočasně, po odeslání se smažou); funguje se standardním wp_mail() i s FluentSMTP (ověřeno s FluentSMTP 2.4.1 a testovacím SMTP serverem)
 - Pozn.: FluentSMTP vložené obrázky (logo, QR) přidá do zprávy ještě jednou jako běžné přílohy – v některých programech se tak zobrazí navíc i v seznamu příloh
 - Testy: 472 kontrol + souběh; analytické zadání v4.4 (kap. 4.5)
+- Analytické zadání v4.5: založena **kniha rozvoje** (kap. 15.1) – R1 stránka **ResAndPay → Statistika** (termíny akcí a služeb za období OD–DO, výběr akce / služby, rezervováno x z n, rozpad na rezervace se jménem a volná místa); zatím neimplementováno
 
 ## 0.9.0 – Externí rezervační systém (25. 10. 2026)
 
