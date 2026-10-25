@@ -185,7 +185,7 @@ class Resandpay_Views {
 			<div class="rap-item__main">
 				<p class="rap-eyebrow"><?php echo esc_html( $cats ? implode( ' · ', $cats ) : __( 'Individuální termíny', 'reserveandpay' ) ); ?></p>
 				<h3 class="rap-item__title"><a href="<?php echo esc_url( $it['url'] ); ?>"><?php echo esc_html( $svc['title'] ); ?></a></h3>
-				<p class="rap-item__meta"><?php echo esc_html( sprintf( /* translators: 1: den a čas, 2: délka */ __( 'Nejbližší volný termín: %1$s · %2$d min', 'reserveandpay' ), $wd[ (int) $s->format( 'w' ) ] . ' ' . $s->format( 'j. n.' ) . ( ( $next['show_time'] ?? true ) ? ' ' . $s->format( 'G:i' ) : '' ), (int) round( ( Resandpay_Events::ts( $next['end'] ) - Resandpay_Events::ts( $next['start'] ) ) / 60 ) ) ); ?><?php if ( $next['location'] ) : ?> · <?php echo esc_html( $next['location'] ); ?><?php endif; ?></p>
+				<p class="rap-item__meta"><?php echo esc_html( sprintf( /* translators: 1: den a čas, 2: délka */ __( 'Nejbližší volný termín: %1$s · %2$d min', 'reserveandpay' ), $wd[ (int) $s->format( 'w' ) ] . ' ' . $s->format( 'j. n. Y' ) . ( ( $next['show_time'] ?? true ) ? ' ' . $s->format( 'G:i' ) : '' ), (int) round( ( Resandpay_Events::ts( $next['end'] ) - Resandpay_Events::ts( $next['start'] ) ) / 60 ) ) ); ?><?php if ( $next['location'] ) : ?> · <?php echo esc_html( $next['location'] ); ?><?php endif; ?></p>
 			</div>
 			<div class="rap-item__side">
 				<p class="rap-item__price"><?php echo Resandpay_Frontend::price_html( $next ); // phpcs:ignore WordPress.Security.EscapeOutput ?></p>

@@ -283,7 +283,7 @@ $svc_page = wp_insert_post( array( 'post_type' => 'page', 'post_status' => 'publ
 update_post_meta( $svc_id, '_rap_page', $svc_page );
 $list = Resandpay_Views::render_list( array( 'limit' => 100, 'category' => '' ) );
 rap_t( 1 === substr_count( $list, 'rap-item--service' ), 'služba je v přehledu akcí jako jedna souhrnná karta' );
-rap_t( false !== strpos( $list, 'Nejbližší volný termín: út 2. 3. 10:15' ), 'karta služby ukazuje nejbližší volný termín (obsazený 9:00 přeskočí)' );
+rap_t( false !== strpos( $list, 'Nejbližší volný termín: út 2. 3. 2027 10:15' ), 'karta služby ukazuje nejbližší volný termín (obsazený 9:00 přeskočí)' );
 rap_t( false !== strpos( $list, 'Volných termínů: 7' ) && false !== strpos( $list, 'Vybrat termín →' ), 'karta ukazuje počet volných termínů a tlačítko' );
 rap_t( false !== strpos( $list, get_permalink( $svc_page ) . '#rap-slots' ), 'karta odkazuje na stránku s volnými termíny' );
 rap_t( strpos( $list, 'Bukální masáž' ) > strpos( $list, 'Večer 20. 1.' ) && strpos( $list, 'Bukální masáž' ) < strpos( $list, 'Jógový pobyt Estepona' ), 'karta služby je zařazena podle data nejbližšího termínu' );
@@ -1233,6 +1233,8 @@ $_GET = array( 'rap_from' => '2027-08-07' );
 $slh = Resandpay_Views::render_slots( array( 'service' => $tdS, 'days' => 7 ) );
 $_GET = array();
 rap_t( is_string( $slh ) && false !== strpos( $slh, '>Rezervovat<' ) && false === strpos( $slh, '>9:00<' ), 'výběr volných termínů: tlačítko „Rezervovat“ místo času' );
+$lsT = Resandpay_Views::render_list( array( 'limit' => 50, 'category' => '' ) );
+rap_t( is_string( $lsT ) && (bool) preg_match( '/Nejbližší volný termín: \S+ \d{1,2}\. \d{1,2}\. \d{4}/u', $lsT ), '0.8.4: nejbližší volný termín služby s rokem' );
 
 echo "== 0.8.0: slevy – sleva za včasnou rezervaci\n";
 global $wpdb;

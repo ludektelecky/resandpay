@@ -1,5 +1,10 @@
 # Vývojový deník ReserveAndPay
 
+## 0.8.4 (25. 10. 2026)
+
+- Karta služby v přehledu termínů: **nejbližší volný termín vždy s rokem** (např. „po 4. 1. 2027 18:45 · 60 min“), stejně jako u akcí
+- Testy: 459 kontrol + souběh; analytické zadání v4.0 (kap. 3.4)
+
 ## 0.8.3 (25. 10. 2026)
 
 - **Výraznější zobrazení slevy** – vše, co se týká slevy, je zlatohnědě:
