@@ -292,3 +292,10 @@
 .rap-coupon__msg { display: block; min-height: 1.2em; margin-top: .3rem; }
 .rap-coupon__msg.is-ok { color: var(--rap-ok); }
 .rap-coupon__msg.is-err { color: var(--rap-error); }
+/* Externí rezervační systém (SWD kap. 3.11) */
+.rap-external__facts { display: grid; grid-template-columns: auto 1fr; gap: .35rem 1rem; margin: 1rem 0; }
+.rap-external__facts dt { color: var(--rap-ink-soft); }
+.rap-external__facts dd { margin: 0; }
+.rap-external__facts .rap-early-price, .rap-external__facts .rap-early { display: block; }
+.rap-external__note { color: var(--rap-ink-soft); font-size: 15px; margin: 0 0 1rem; }
+.rap-external__cta .rap-button { display: block; width: 100%; text-align: center; box-sizing: border-box; }

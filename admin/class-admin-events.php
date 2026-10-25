@@ -53,7 +53,11 @@ class Resandpay_Admin_Events {
 		if ( ! $ev['end'] ) {
 			$m[] = __( 'konec', 'reserveandpay' );
 		}
-		if ( $ev['capacity'] < 1 ) {
+		if ( ! empty( $ev['external'] ) ) {
+			if ( '' === $ev['external']['url'] ) {
+				$m[] = __( 'adresa externí rezervace', 'reserveandpay' );
+			}
+		} elseif ( $ev['capacity'] < 1 ) {
 			$m[] = __( 'kapacita', 'reserveandpay' );
 		}
 		return $m;
@@ -106,6 +110,15 @@ class Resandpay_Admin_Events {
 				<p class="rap-row__cur"><label for="rap_currency"><?php esc_html_e( 'Měna', 'reserveandpay' ); ?></label>
 					<input type="text" id="rap_currency" name="rap_currency" value="<?php echo esc_attr( $ev['currency'] ); ?>" maxlength="3"></p>
 			</div>
+			<?php
+			if ( $ev['service_id'] ) {
+				if ( $ev['external'] ) {
+					Resandpay_Events::booking_fields( $post->ID, true, $ev['external'] );
+				}
+			} else {
+				Resandpay_Events::booking_fields( $post->ID );
+			}
+			?>
 			<details class="rap-more" <?php echo ( '' !== $raw_due || '' !== get_post_meta( $post->ID, '_rap_due_mode', true ) || '' !== get_post_meta( $post->ID, '_rap_cash', true ) || in_array( get_post_meta( $post->ID, '_rap_part1_mode', true ), array( 'fixed', 'percent' ), true ) || '' !== get_post_meta( $post->ID, '_rap_time_display', true ) || '' !== get_post_meta( $post->ID, '_rap_early_mode', true ) || $ev['close_hours'] || $ev['members_only'] || $ev['cancelled'] ) ? 'open' : ''; ?>>
 				<summary><?php esc_html_e( 'Další nastavení', 'reserveandpay' ); ?></summary>
 				<?php
@@ -124,6 +137,7 @@ class Resandpay_Admin_Events {
 				if ( 'slot' !== get_post_meta( $post->ID, '_rap_type', true ) ) {
 					Resandpay_Discounts::early_fields( $post->ID );
 				}
+
 				?>
 				<p><label for="rap_close_hours"><?php esc_html_e( 'Uzávěrka rezervací (hodin před začátkem)', 'reserveandpay' ); ?></label>
 					<input type="number" min="0" step="0.5" id="rap_close_hours" name="rap_close_hours" value="<?php echo esc_attr( $ev['close_hours'] ?: '' ); ?>" placeholder="0">
@@ -409,6 +423,11 @@ class Resandpay_Admin_Events {
 	}
 
 	public static function overlap_notice() {
+		$bad = 'resandpay_ext_url_bad_' . get_current_user_id();
+		if ( get_transient( $bad ) ) {
+			delete_transient( $bad );
+			echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__( 'Adresa externího rezervačního systému nebyla uložena – musí začínat https:// (proměnné %DATE%, %TIME%, %CODE% jsou povolené).', 'reserveandpay' ) . '</p></div>';
+		}
 		$key = 'resandpay_overlap_' . get_current_user_id();
 		$id  = get_transient( $key );
 		if ( ! $id ) {
@@ -452,6 +471,9 @@ class Resandpay_Admin_Events {
 				if ( $ev['cancelled'] ) {
 					echo ' <span class="rap-tag rap-tag--off">' . esc_html__( 'zrušeno', 'reserveandpay' ) . '</span>';
 				}
+				if ( $ev['external'] ) {
+					echo ' <span class="rap-tag rap-tag--ext">' . esc_html__( 'Externí', 'reserveandpay' ) . '</span>';
+				}
 				echo '<br><small>' . esc_html( Resandpay_Events::type_labels()[ $ev['type'] ] ?? '' ) . '</small>';
 				break;
 			case 'rap_location':
@@ -459,6 +481,10 @@ class Resandpay_Admin_Events {
 				break;
 			case 'rap_occ':
 				$b = Resandpay_Reservations::count_active( $post_id );
+				if ( $ev['external'] && ! $b ) {
+					echo '<span class="rap-hint">' . esc_html__( 'externí', 'reserveandpay' ) . '</span>';
+					break;
+				}
 				echo '<a href="' . esc_url( admin_url( 'admin.php?page=reserveandpay&event_id=' . $post_id ) ) . '">' . (int) $b . ' / ' . (int) $ev['capacity'] . '</a>';
 				break;
 			case 'rap_price':

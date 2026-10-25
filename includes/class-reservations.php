@@ -91,6 +91,9 @@ class Resandpay_Reservations {
 			return $check;
 		}
 		$ev = Resandpay_Events::get( $event_id );
+		if ( ! empty( $ev['external'] ) ) {
+			return new WP_Error( 'external', __( 'Rezervace na tento termín probíhá v externím rezervačním systému.', 'reserveandpay' ) );
+		}
 
 		$lock = 'event_' . (int) $event_id;
 		if ( ! Resandpay_Lock::acquire( $lock ) ) {

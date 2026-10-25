@@ -359,6 +359,7 @@ class Resandpay_Admin_Reservations {
 		$pre    = absint( $_GET['event_id'] ?? 0 );
 		echo '<div class="wrap"><h1>' . esc_html__( 'Nová rezervace (ručně)', 'reserveandpay' ) . '</h1>';
 		Resandpay_Admin::render_flash();
+		$events = array_values( array_filter( (array) $events, fn( $e ) => empty( $e['external'] ) ) ); // Externí rezervace (SWD kap. 3.11) se v ReserveAndPay nevytvářejí.
 		if ( ! $events ) {
 			echo '<p>' . esc_html__( 'Nejsou žádné nadcházející publikované akce.', 'reserveandpay' ) . '</p></div>';
 			return;

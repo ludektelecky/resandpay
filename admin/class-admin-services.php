@@ -69,6 +69,8 @@ class Resandpay_Admin_Services {
 				<td><?php Resandpay_Discounts::early_fields( $post->ID ); ?><p class="description"><?php esc_html_e( 'Platí pro všechny termíny služby (i již vypsané).', 'reserveandpay' ); ?></p></td></tr>
 			<tr><th><?php esc_html_e( 'Zobrazení', 'reserveandpay' ); ?></th>
 				<td><?php Resandpay_Events::time_display_field( get_post_meta( $post->ID, '_rap_time_display', true ), __( 'Platí pro všechny termíny služby (i již vypsané), pokud termín nemá vlastní volbu. Jen datum: na webu, v e-mailech a na platebním pokynu bez času; ve výběru volných termínů se pak u tlačítek místo času ukáže „Rezervovat“ – hodí se jen pro jeden termín denně.', 'reserveandpay' ) ); ?></td></tr>
+			<tr><th><?php esc_html_e( 'Rezervace', 'reserveandpay' ); ?></th>
+				<td><?php Resandpay_Events::booking_fields( $post->ID ); ?><p class="description"><?php esc_html_e( 'Platí pro všechny termíny služby (i již vypsané). U jednotlivého termínu lze zadat vlastní adresu.', 'reserveandpay' ); ?></p></td></tr>
 			<tr><th><label for="rap_page"><?php esc_html_e( 'Stránka s volnými termíny', 'reserveandpay' ); ?></label></th>
 				<td><?php wp_dropdown_pages( array( 'name' => 'rap_page', 'id' => 'rap_page', 'selected' => $svc['page_id'], 'show_option_none' => '— ' . __( 'nevybráno', 'reserveandpay' ) . ' —', 'option_none_value' => 0 ) ); ?>
 					<p class="description"><?php echo esc_html( sprintf( /* translators: %s: shortcode */ __( 'Na stránku vložte shortcode %s. Detail termínu na ni odkazuje.', 'reserveandpay' ), '[reserveandpay_slots service="' . ( $post->post_name ?: $post->ID ) . '"]' ) ); ?></p></td></tr>
@@ -140,6 +142,7 @@ class Resandpay_Admin_Services {
 		Resandpay_Events::save_part1_meta( $post_id, $in );
 		Resandpay_Events::save_time_display_meta( $post_id, $in );
 		Resandpay_Discounts::save_early_meta( $post_id, $in );
+		Resandpay_Events::save_booking_meta( $post_id, $in );
 	}
 
 	public static function columns( $cols ) {
@@ -155,14 +158,22 @@ class Resandpay_Admin_Services {
 		$svc = Resandpay_Services::get( $post_id );
 		if ( 'rap_code' === $col ) {
 			echo '<code>' . esc_html( $svc['code'] ?: '—' ) . '</code>';
+			if ( 'external' === get_post_meta( $post_id, '_rap_booking', true ) ) {
+				echo ' <span class="rap-tag rap-tag--ext">' . esc_html__( 'Externí', 'reserveandpay' ) . '</span>';
+			}
 		} elseif ( 'rap_params' === $col ) {
 			echo esc_html( $svc['duration'] . ' min · ' . $svc['pause'] . ' min · ' . $svc['capacity'] . ' · ' . Resandpay_Events::format_price( $svc['price'], $svc['currency'] ) );
 		} elseif ( 'rap_slots' === $col ) {
 			$now   = new DateTimeImmutable( 'now', wp_timezone() );
 			$slots = Resandpay_Services::slots( $post_id, $now, $now->modify( '+1 year' ) );
-			$free  = count( array_filter( $slots, fn( $e ) => ! $e['cancelled'] && Resandpay_Events::free_places( $e['id'] ) > 0 ) );
-			/* translators: 1: volné, 2: celkem */
-			echo esc_html( sprintf( __( '%1$d volných z %2$d', 'reserveandpay' ), $free, count( $slots ) ) );
+			if ( 'external' === get_post_meta( $post_id, '_rap_booking', true ) ) {
+				/* translators: %d: počet */
+				echo esc_html( sprintf( __( 'vypsaných: %d (externí rezervace)', 'reserveandpay' ), count( array_filter( $slots, fn( $e ) => ! $e['cancelled'] ) ) ) );
+			} else {
+				$free = count( array_filter( $slots, fn( $e ) => ! $e['cancelled'] && Resandpay_Events::free_places( $e['id'] ) > 0 ) );
+				/* translators: 1: volné, 2: celkem */
+				echo esc_html( sprintf( __( '%1$d volných z %2$d', 'reserveandpay' ), $free, count( $slots ) ) );
+			}
 			echo ' · <a href="' . esc_url( admin_url( 'admin.php?page=reserveandpay-generator&service=' . $post_id ) ) . '">' . esc_html__( 'generovat', 'reserveandpay' ) . '</a>';
 		}
 	}

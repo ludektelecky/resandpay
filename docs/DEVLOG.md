@@ -1,5 +1,16 @@
 # Vývojový deník ReserveAndPay
 
+## 0.9.0 – Externí rezervační systém (25. 10. 2026)
+
+- **Rezervace v externím systému** (SWD kap. 3.11) – termín se vypisuje na webu z ReserveAndPay, ale „Rezervovat“ vede do jiného rezervačního systému:
+  - u akce (editor akce, pod cenou) a u služby (řádek **Rezervace**) volba **Způsob rezervace**: ReserveAndPay / Externí rezervační systém
+  - adresa (jen `https://`), text tlačítka, otevřít v novém okně, poznámka pro zákazníka; proměnné termínu `%DATE%`, `%TIME%`, `%CODE%`
+  - termíny služby nastavení přebírají ze služby; jednotlivý termín může mít vlastní adresu
+- Web: výpis, kalendář, přehled na úvodní stránce, karta služby, výběr termínů (každý čas vede ven) i detail akce (karta s termínem, cenou, poznámkou a tlačítkem ven místo formuláře); **volná místa se nezobrazují**, cena a sleva beze změny; po uzávěrce rezervací tlačítko zmizí; odkazy `rel="noopener nofollow"`
+- ReserveAndPay u externích termínů nevytváří rezervace (ani ručně), neposílá e-maily ani platební údaje; externí akce nevyžaduje kapacitu
+- Administrace: štítek **Externí** v seznamu akcí a služeb, upozornění na nepřijatou adresu bez https a na stávající rezervace v ReserveAndPay
+- Testy: 470 kontrol + souběh; analytické zadání v4.3 (kap. 3.11)
+
 ## 0.8.5 (25. 10. 2026)
 
 - **Výpis volných termínů služby začíná nejbližším volným termínem** (`[reserveandpay_slots]`):

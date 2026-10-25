@@ -88,3 +88,4 @@ td.rap-box .rap-payfields { max-width: 520px; }
 .rap-coupon-list .rap-ok { color: #2e6b34; }
 .rap-coupon-list .rap-err { color: #a12b2b; }
 .rap-warn { color: #8a5a00; background: #fff4d6; padding: 4px 8px; }
+.rap-tag--ext { display: inline-block; background: #f3ede1; border: 1px solid #b8862e; color: #6b4b17; border-radius: 2px; padding: 0 5px; font-size: 11px; }

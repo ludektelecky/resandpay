@@ -240,7 +240,7 @@ class Resandpay_Frontend {
 		$cats    = get_the_terms( $event_id, Resandpay_Post_Types::CATEGORY );
 		$brow    = ( $cats && ! is_wp_error( $cats ) ) ? implode( ' · ', wp_list_pluck( $cats, 'name' ) ) : ( Resandpay_Events::type_labels()[ $ev['type'] ] ?? '' );
 		$is_slot = 'slot' === $ev['type'] && $ev['capacity'] <= 1;
-		$open    = ! $ev['cancelled'] && $free > 0 && ! is_wp_error( Resandpay_Events::check_bookable( $event_id ) );
+		$open    = ! $ev['cancelled'] && Resandpay_Events::is_open( $ev );
 		$photos  = Resandpay_Events::photos( $event_id );
 		$excerpt = has_excerpt( $event_id ) ? get_the_excerpt( $event_id ) : '';
 
@@ -283,15 +283,15 @@ class Resandpay_Frontend {
 			}
 			echo '</dd>';
 		}
-		if ( $is_slot ) {
+		if ( $is_slot && ! $ev['external'] ) {
 			echo '<dt>' . esc_html__( 'Termín', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev['cancelled'] ? __( 'zrušen', 'reserveandpay' ) : ( $free > 0 ? __( 'volný', 'reserveandpay' ) : __( 'obsazený', 'reserveandpay' ) ) ) . '</dd>';
 		}
 		echo '</dl>';
 		echo '<div class="rap-event__cta">';
 		echo '<p class="rap-event__price">' . self::price_html( $ev, 'multiday' === $ev['type'] ? __( 'za celou akci', 'reserveandpay' ) : __( '/ osoba', 'reserveandpay' ) ) . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno v price_html().
 		if ( $open ) {
-			echo '<a class="rap-button" href="#rap-booking">' . esc_html__( 'Rezervovat místo →', 'reserveandpay' ) . '</a>';
-		} elseif ( ! $ev['cancelled'] && $free < 1 ) {
+			echo '<a class="rap-button" href="' . esc_url( $ev['external'] ? $ev['external']['url'] : '#rap-booking' ) . '"' . Resandpay_Views::book_attrs( $ev ) . '>' . esc_html( Resandpay_Views::book_label( $ev, __( 'Rezervovat místo →', 'reserveandpay' ) ) ) . '</a>'; // phpcs:ignore WordPress.Security.EscapeOutput -- pevné atributy.
+		} elseif ( ! $ev['cancelled'] && ! $ev['external'] && $free < 1 ) {
 			echo '<span class="rap-event__full">' . esc_html__( 'Obsazeno', 'reserveandpay' ) . '</span>';
 		}
 		echo '</div>';
@@ -503,14 +503,18 @@ class Resandpay_Frontend {
 			echo '</dd>';
 		}
 		echo '<dt>' . esc_html__( 'Cena', 'reserveandpay' ) . '</dt><dd>' . self::price_html( $ev, 'multiday' === $ev['type'] ? __( '(za celou akci)', 'reserveandpay' ) : '' ) . '</dd>'; // phpcs:ignore WordPress.Security.EscapeOutput
-		if ( 'slot' === $ev['type'] && $ev['capacity'] <= 1 ) {
+		if ( $ev['external'] ) {
+			if ( $ev['cancelled'] ) {
+				echo '<dt>' . esc_html__( 'Termín', 'reserveandpay' ) . '</dt><dd>' . esc_html__( 'zrušen', 'reserveandpay' ) . '</dd>';
+			}
+		} elseif ( 'slot' === $ev['type'] && $ev['capacity'] <= 1 ) {
 			echo '<dt>' . esc_html__( 'Termín', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev['cancelled'] ? __( 'zrušen', 'reserveandpay' ) : ( $free > 0 ? __( 'volný', 'reserveandpay' ) : __( 'obsazený', 'reserveandpay' ) ) ) . '</dd>';
 		} else {
 			echo '<dt>' . esc_html__( 'Volná místa', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev['cancelled'] ? __( 'akce zrušena', 'reserveandpay' ) : ( $free > 0 ? sprintf( /* translators: 1: volno, 2: kapacita */ __( '%1$d z %2$d', 'reserveandpay' ), $free, $ev['capacity'] ) : __( 'obsazeno', 'reserveandpay' ) ) ) . '</dd>';
 		}
 		echo '</dl>';
-		if ( ! $ev['cancelled'] && $free > 0 && ! is_wp_error( Resandpay_Events::check_bookable( $event_id ) ) ) {
-			echo '<p class="rap-details__cta"><a class="rap-button" href="#rap-booking">' . esc_html__( 'Rezervovat termín →', 'reserveandpay' ) . '</a></p>';
+		if ( ! $ev['cancelled'] && Resandpay_Events::is_open( $ev ) ) {
+			echo '<p class="rap-details__cta"><a class="rap-button" href="' . esc_url( $ev['external'] ? $ev['external']['url'] : '#rap-booking' ) . '"' . Resandpay_Views::book_attrs( $ev ) . '>' . esc_html( Resandpay_Views::book_label( $ev, __( 'Rezervovat termín →', 'reserveandpay' ) ) ) . '</a></p>'; // phpcs:ignore WordPress.Security.EscapeOutput -- pevné atributy.
 		}
 		if ( 'multiday' === $ev['type'] && $ev['program'] ) {
 			echo '<div class="rap-program"><p class="rap-eyebrow">' . esc_html__( 'Program', 'reserveandpay' ) . '</p>' . wp_kses_post( wpautop( $ev['program'] ) ) . '</div>';
@@ -529,6 +533,29 @@ class Resandpay_Frontend {
 	 * @param int  $event_id ID akce.
 	 * @param bool $card     Rezervační karta vedle popisu (vzhled s galerií): nadpis „Rezervovat místo“ a obsazenost.
 	 */
+	/**
+	 * Rezervační karta termínu v externím rezervačním systému (SWD kap. 3.11):
+	 * termín, cena, poznámka a tlačítko ven – bez formuláře a bez volných míst.
+	 */
+	public static function render_external_card( array $ev, $card = false ) {
+		$out  = $card ? '<p class="rap-eyebrow">' . esc_html__( 'Rezervace', 'reserveandpay' ) . '</p>' : '';
+		$out .= '<h2 class="rap-booking__title">' . esc_html( $card ? __( 'Rezervovat místo', 'reserveandpay' ) : __( 'Rezervace', 'reserveandpay' ) ) . '</h2>';
+		$out .= '<dl class="rap-external__facts"><dt>' . esc_html__( 'Termín', 'reserveandpay' ) . '</dt><dd>' . esc_html( Resandpay_Views::when_line( $ev ) ) . '</dd>';
+		$out .= '<dt>' . esc_html__( 'Cena', 'reserveandpay' ) . '</dt><dd>' . self::price_html( $ev ) . '</dd></dl>';
+		$bookable = Resandpay_Events::check_bookable( $ev['id'] );
+		if ( is_wp_error( $bookable ) ) {
+			return $out . '<p class="rap-notice">' . esc_html( $bookable->get_error_message() ) . '</p>';
+		}
+		if ( '' === $ev['external']['url'] ) {
+			return $out . '<p class="rap-notice">' . esc_html__( 'Rezervace zatím není k dispozici.', 'reserveandpay' ) . '</p>';
+		}
+		if ( '' !== $ev['external']['note'] ) {
+			$out .= '<p class="rap-external__note">' . nl2br( esc_html( $ev['external']['note'] ) ) . '</p>';
+		}
+		$out .= '<p class="rap-external__cta"><a class="rap-button rap-button--block" href="' . esc_url( $ev['external']['url'] ) . '"' . Resandpay_Views::book_attrs( $ev ) . '>' . esc_html( Resandpay_Views::book_label( $ev, '' ) ) . '</a></p>';
+		return $out;
+	}
+
 	public static function render_booking( $event_id, $card = false ) {
 		$ev = Resandpay_Events::get( $event_id );
 		if ( ! $ev ) {
@@ -541,6 +568,12 @@ class Resandpay_Frontend {
 		$done = isset( $_GET['rap_done'] ) ? Resandpay_Reservations::get_by_token( sanitize_text_field( wp_unslash( $_GET['rap_done'] ) ) ) : null;
 		if ( $done && (int) $done['event_id'] === (int) $event_id ) {
 			self::render_confirmation( $done, $ev );
+			echo '</section>';
+			return ob_get_clean();
+		}
+
+		if ( $ev['external'] ) {
+			echo self::render_external_card( $ev, $card ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
 			echo '</section>';
 			return ob_get_clean();
 		}

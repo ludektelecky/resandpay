@@ -170,7 +170,100 @@ class Resandpay_Events {
 			'location'      => $location_id ? html_entity_decode( get_the_title( $location_id ), ENT_QUOTES, 'UTF-8' ) : '',
 			'location_addr' => $location_id ? (string) get_post_meta( $location_id, '_rap_address', true ) : '',
 			'location_map'  => $location_id ? (string) get_post_meta( $location_id, '_rap_map_url', true ) : '',
+			'service_id'    => (int) $m( 'service', 0 ),
+			'external'      => self::external( $event_id, (int) $m( 'service', 0 ), (string) $m( 'start' ) ),
 		);
+	}
+
+	/**
+	 * Externí rezervační systém (SWD kap. 3.11): akce / termín se vypisuje v ReserveAndPay,
+	 * ale tlačítko „Rezervovat“ vede na externí adresu. Termín služby přebírá nastavení ze služby,
+	 * vlastní může mít jen adresu.
+	 *
+	 * @return array|null url (s doplněnými proměnnými, '' = nevyplněno), label, new_tab, note; null = rezervace v ReserveAndPay.
+	 */
+	public static function external( $event_id, $service_id = 0, $start = '' ) {
+		$src = $service_id ? $service_id : $event_id;
+		if ( 'external' !== get_post_meta( $src, '_rap_booking', true ) ) {
+			return null;
+		}
+		$url = $service_id ? ( (string) get_post_meta( $event_id, '_rap_ext_url', true ) ?: (string) get_post_meta( $service_id, '_rap_ext_url', true ) ) : (string) get_post_meta( $event_id, '_rap_ext_url', true );
+		$ts  = $start ? self::ts( $start ) : 0;
+		$url = strtr(
+			$url,
+			array(
+				'%DATE%' => $ts ? wp_date( 'Y-m-d', $ts ) : '',
+				'%TIME%' => $ts ? wp_date( 'H:i', $ts ) : '',
+				'%CODE%' => rawurlencode( (string) Resandpay_Codes::get( $event_id ) ),
+			)
+		);
+		$tab = (string) get_post_meta( $src, '_rap_ext_new_tab', true );
+		return array(
+			'url'     => self::https_url( $url ),
+			'label'   => trim( (string) get_post_meta( $src, '_rap_ext_label', true ) ) ?: __( 'Rezervovat', 'reserveandpay' ),
+			'new_tab' => '0' !== $tab,
+			'note'    => trim( (string) get_post_meta( $src, '_rap_ext_note', true ) ),
+		);
+	}
+
+	/** Jen adresa https:// (jinak prázdný řetězec). */
+	public static function https_url( $url ) {
+		$url = trim( (string) $url );
+		return preg_match( '#^https://[^\s/$.?\#][^\s]*$#i', $url ) ? esc_url_raw( $url, array( 'https' ) ) : '';
+	}
+
+	/** Uloží nastavení způsobu rezervace (akce nebo služba; u termínu služby jen vlastní adresu). */
+	public static function save_booking_meta( $post_id, array $in, $url_only = false ) {
+		if ( array_key_exists( 'rap_ext_url', $in ) ) {
+			$raw = trim( (string) $in['rap_ext_url'] );
+			// Proměnné %DATE% apod. projdou kontrolou adresy až po doplnění – ověřit s ukázkovými hodnotami.
+			$ok  = '' === $raw || '' !== self::https_url( strtr( $raw, array( '%DATE%' => '2027-01-01', '%TIME%' => '10:00', '%CODE%' => 'X' ) ) );
+			update_post_meta( $post_id, '_rap_ext_url', $ok ? $raw : '' );
+			if ( ! $ok ) {
+				set_transient( 'resandpay_ext_url_bad_' . get_current_user_id(), 1, 60 );
+			}
+		}
+		if ( $url_only || ! array_key_exists( 'rap_booking', $in ) ) {
+			return;
+		}
+		update_post_meta( $post_id, '_rap_booking', 'external' === $in['rap_booking'] ? 'external' : '' );
+		update_post_meta( $post_id, '_rap_ext_label', sanitize_text_field( (string) ( $in['rap_ext_label'] ?? '' ) ) );
+		update_post_meta( $post_id, '_rap_ext_new_tab', empty( $in['rap_ext_new_tab'] ) ? '0' : '1' );
+		update_post_meta( $post_id, '_rap_ext_note', sanitize_textarea_field( (string) ( $in['rap_ext_note'] ?? '' ) ) );
+	}
+
+	/**
+	 * Pole „Způsob rezervace“ do editoru akce / služby.
+	 *
+	 * @param int  $post_id  Akce nebo služba.
+	 * @param bool $url_only Termín služby – jen vlastní adresa (ostatní ze služby).
+	 */
+	public static function booking_fields( $post_id, $url_only = false, $inherited = null ) {
+		$url = (string) get_post_meta( $post_id, '_rap_ext_url', true );
+		$h   = __( 'Jen adresa https://. Proměnné termínu: %DATE% (RRRR-MM-DD), %TIME% (HH:MM), %CODE% (kód termínu). Žádné osobní údaje se nepředávají.', 'reserveandpay' );
+		if ( $url_only ) {
+			echo '<p class="rap-hint"><strong>' . esc_html__( 'Rezervace v externím systému', 'reserveandpay' ) . '</strong> – ' . esc_html__( 'nastaveno u služby.', 'reserveandpay' ) . ( $inherited && $inherited['url'] ? ' ' . esc_html( $inherited['url'] ) : '' ) . '</p>';
+			echo '<p><label for="rap_ext_url">' . esc_html__( 'Vlastní adresa pro tento termín (nepovinné)', 'reserveandpay' ) . '</label> <input type="text" class="widefat" id="rap_ext_url" name="rap_ext_url" value="' . esc_attr( $url ) . '" placeholder="https://"><span class="rap-hint">' . esc_html( $h ) . '</span></p>';
+			return;
+		}
+		$mode = (string) get_post_meta( $post_id, '_rap_booking', true );
+		$tab  = (string) get_post_meta( $post_id, '_rap_ext_new_tab', true );
+		echo '<div class="rap-booking-mode"><p><label for="rap_booking">' . esc_html__( 'Způsob rezervace', 'reserveandpay' ) . '</label> <select id="rap_booking" name="rap_booking">';
+		echo '<option value="">' . esc_html__( 'Rezervace v ReserveAndPay', 'reserveandpay' ) . '</option>';
+		echo '<option value="external"' . selected( $mode, 'external', false ) . '>' . esc_html__( 'Externí rezervační systém', 'reserveandpay' ) . '</option></select></p>';
+		echo '<div class="rap-ext-fields"' . ( 'external' === $mode ? '' : ' hidden' ) . '>';
+		echo '<p><label for="rap_ext_url">' . esc_html__( 'Adresa (URL)', 'reserveandpay' ) . ' *</label> <input type="text" class="widefat" id="rap_ext_url" name="rap_ext_url" value="' . esc_attr( $url ) . '" placeholder="https://"><span class="rap-hint">' . esc_html( $h ) . '</span></p>';
+		echo '<p><label for="rap_ext_label">' . esc_html__( 'Text tlačítka', 'reserveandpay' ) . '</label> <input type="text" class="widefat" id="rap_ext_label" name="rap_ext_label" value="' . esc_attr( (string) get_post_meta( $post_id, '_rap_ext_label', true ) ) . '" placeholder="' . esc_attr__( 'Rezervovat', 'reserveandpay' ) . '"></p>';
+		echo '<p><label class="rap-inline"><input type="checkbox" name="rap_ext_new_tab" value="1"' . checked( '0' !== $tab, true, false ) . '> ' . esc_html__( 'Otevřít v novém okně', 'reserveandpay' ) . '</label></p>';
+		echo '<p><label for="rap_ext_note">' . esc_html__( 'Poznámka pro zákazníka', 'reserveandpay' ) . '</label> <textarea class="widefat" rows="2" id="rap_ext_note" name="rap_ext_note" placeholder="' . esc_attr__( 'Např. Rezervace a platba probíhá v systému XY.', 'reserveandpay' ) . '">' . esc_textarea( (string) get_post_meta( $post_id, '_rap_ext_note', true ) ) . '</textarea></p>';
+		echo '<p class="rap-hint">' . esc_html__( 'ReserveAndPay u externích termínů nevytváří rezervace, nepočítá obsazenost (volná místa se nezobrazují), neposílá e-maily ani platební údaje. Cenu a slevu na webu zobrazí – soulad s externím systémem si ohlídejte.', 'reserveandpay' ) . '</p>';
+		$active = $post_id && Resandpay_Post_Types::EVENT === get_post_type( $post_id ) ? Resandpay_Reservations::count_active( $post_id ) : 0;
+		if ( $active ) {
+			/* translators: %d: počet */
+			echo '<p class="rap-missing">' . esc_html( sprintf( __( 'Akce má %d aktivních rezervací v ReserveAndPay – zůstávají platné a vyřizují se zde (platby, e-maily).', 'reserveandpay' ), $active ) ) . '</p>';
+		}
+		echo '</div></div>';
+		echo "<script>(function(){var s=document.getElementById('rap_booking');if(!s)return;var f=s.closest('.rap-booking-mode').querySelector('.rap-ext-fields');s.addEventListener('change',function(){f.hidden=s.value!=='external';});})();</script>";
 	}
 
 	/** Galerie akce: seznam ID příloh (obrázků) bez duplicit, nejvýše 12. */
@@ -301,6 +394,18 @@ class Resandpay_Events {
 		return Resandpay_Reservations::count_active( $event_id );
 	}
 
+	/**
+	 * Lze termín teď rezervovat (zobrazit tlačítko „Rezervovat“)? Externí: jen otevřený a s adresou,
+	 * bez ohledu na obsazenost; v ReserveAndPay: otevřený a s volným místem.
+	 */
+	public static function is_open( $event_id, $now = null ) {
+		$ev = is_array( $event_id ) ? $event_id : self::get( $event_id );
+		if ( ! $ev || is_wp_error( self::check_bookable( $ev['id'], $now ) ) ) {
+			return false;
+		}
+		return $ev['external'] ? '' !== $ev['external']['url'] : self::free_places( $ev['id'] ) > 0;
+	}
+
 	public static function free_places( $event_id ) {
 		$ev = self::get( $event_id );
 		if ( ! $ev ) {
@@ -331,7 +436,7 @@ class Resandpay_Events {
 		if ( ! $ignore_close && $ev['close_hours'] > 0 && $now > $start - (int) round( $ev['close_hours'] * HOUR_IN_SECONDS ) ) {
 			return new WP_Error( 'closed', __( 'Rezervace na tuto akci jsou již uzavřeny.', 'reserveandpay' ) );
 		}
-		if ( $ev['capacity'] < 1 ) {
+		if ( $ev['capacity'] < 1 && ! $ev['external'] ) { // Externí termíny kapacitu v ReserveAndPay nemají.
 			return new WP_Error( 'no_capacity', __( 'Akce nemá nastavenou kapacitu.', 'reserveandpay' ) );
 		}
 		return true;
@@ -460,6 +565,7 @@ class Resandpay_Events {
 		update_post_meta( $post_id, '_rap_cash', in_array( $cash, array( '0', '1' ), true ) ? $cash : '' );
 		self::save_part1_meta( $post_id, $in );
 		self::save_time_display_meta( $post_id, $in );
+		self::save_booking_meta( $post_id, $in, 'slot' === $type && (int) get_post_meta( $post_id, '_rap_service', true ) );
 		Resandpay_Discounts::save_early_meta( $post_id, $in );
 		update_post_meta( $post_id, '_rap_close_hours', max( 0, (float) str_replace( ',', '.', (string) ( $in['rap_close_hours'] ?? 0 ) ) ) );
 		update_post_meta( $post_id, '_rap_members_only', empty( $in['rap_members_only'] ) ? 0 : 1 );

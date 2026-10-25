@@ -296,7 +296,7 @@ class Resandpay_Services {
 			)
 		);
 		foreach ( $ids as $id ) {
-			if ( ! is_wp_error( Resandpay_Events::check_bookable( $id ) ) && Resandpay_Events::free_places( $id ) > 0 ) {
+			if ( Resandpay_Events::is_open( $id ) ) {
 				return Resandpay_Events::get( $id );
 			}
 		}
@@ -309,7 +309,7 @@ class Resandpay_Services {
 			array_filter(
 				self::slots( $service_id, $from, $to ),
 				function ( $ev ) {
-					return ! is_wp_error( Resandpay_Events::check_bookable( $ev['id'] ) ) && Resandpay_Events::free_places( $ev['id'] ) > 0;
+					return Resandpay_Events::is_open( $ev );
 				}
 			)
 		);
