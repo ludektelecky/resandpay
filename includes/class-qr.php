@@ -61,11 +61,11 @@ class Resandpay_QR {
 	}
 
 	/** Matice QR kódu (pole řádků s 0/1). */
-	public static function matrix( $text ) {
+	public static function matrix( $text, $ecc = 'M' ) {
 		if ( ! class_exists( 'TCPDF2DBarcode' ) ) {
 			require_once RESANDPAY_DIR . 'lib/tcpdf/tcpdf_barcodes_2d.php';
 		}
-		$bc  = new TCPDF2DBarcode( $text, 'QRCODE,M' );
+		$bc  = new TCPDF2DBarcode( $text, 'QRCODE,' . ( in_array( $ecc, array( 'L', 'M', 'Q', 'H' ), true ) ? $ecc : 'M' ) );
 		$arr = $bc->getBarcodeArray();
 		return is_array( $arr ) && ! empty( $arr['bcode'] ) ? $arr['bcode'] : array();
 	}
@@ -99,6 +99,40 @@ class Resandpay_QR {
 		};
 		return "\x89PNG\r\n\x1a\n"
 			. $chunk( 'IHDR', pack( 'NNCCCCC', $size, $size, 8, 0, 0, 0, 0 ) ) // 8 bit, odstíny šedi.
+			. $chunk( 'IDAT', gzcompress( $raw, 9 ) )
+			. $chunk( 'IEND', '' );
+	}
+
+	/**
+	 * Barevný PNG (RGB) – QR kód slevového kupónu ve zlaté barvě, odlišený od platebních QR.
+	 *
+	 * @param array $fg Barva modulů [r,g,b]. @param array $bg Barva podkladu.
+	 */
+	public static function png_color( $text, $scale = 8, array $fg = array( 140, 100, 35 ), array $bg = array( 251, 247, 239 ), $ecc = 'Q' ) {
+		$m = self::matrix( $text, $ecc );
+		if ( ! $m ) {
+			return '';
+		}
+		$quiet = 4;
+		$n     = count( $m );
+		$size  = ( $n + 2 * $quiet ) * $scale;
+		$on    = chr( $fg[0] ) . chr( $fg[1] ) . chr( $fg[2] );
+		$off   = chr( $bg[0] ) . chr( $bg[1] ) . chr( $bg[2] );
+		$raw   = '';
+		for ( $y = 0; $y < $size; $y++ ) {
+			$my  = intdiv( $y, $scale ) - $quiet;
+			$row = "\0";
+			for ( $x = 0; $x < $size; $x++ ) {
+				$mx   = intdiv( $x, $scale ) - $quiet;
+				$row .= $my >= 0 && $my < $n && $mx >= 0 && $mx < $n && ! empty( $m[ $my ][ $mx ] ) ? $on : $off;
+			}
+			$raw .= $row;
+		}
+		$chunk = function ( $type, $data ) {
+			return pack( 'N', strlen( $data ) ) . $type . $data . pack( 'N', crc32( $type . $data ) );
+		};
+		return "\x89PNG\r\n\x1a\n"
+			. $chunk( 'IHDR', pack( 'NNCCCCC', $size, $size, 8, 2, 0, 0, 0 ) ) // 8 bit, RGB.
 			. $chunk( 'IDAT', gzcompress( $raw, 9 ) )
 			. $chunk( 'IEND', '' );
 	}

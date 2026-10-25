@@ -174,7 +174,14 @@ class Resandpay_Reservations_Table extends WP_List_Table {
 				if ( Resandpay_Reservations::PAID !== $item['status'] && (float) $item['amount_paid'] > 0 ) {
 					/* translators: %s: zaplaceno */
 					$out .= '<br><small>' . esc_html( sprintf( __( 'zaplaceno %s', 'reserveandpay' ), Resandpay_Events::format_price( $item['amount_paid'], $item['currency'] ) ) ) . '</small>';
-				} elseif ( Resandpay_Reservations::is_split( $item ) && Resandpay_Reservations::PAID !== $item['status'] ) {
+				}
+				if ( Resandpay_Reservations::discount_now( $item ) > 0 ) {
+					/* translators: %s: sleva */
+					$out .= '<br><small class="rap-tag--discount">' . esc_html( sprintf( __( 'sleva −%s', 'reserveandpay' ), Resandpay_Events::format_price( $item['discount_amount'], $item['currency'] ) ) ) . '</small>';
+				} elseif ( ! empty( $item['discount_lost_at'] ) ) {
+					$out .= '<br><small>' . esc_html__( 'sleva zanikla', 'reserveandpay' ) . '</small>';
+				}
+				if ( Resandpay_Reservations::is_split( $item ) && Resandpay_Reservations::PAID !== $item['status'] && ! ( (float) $item['amount_paid'] > 0 ) ) {
 					$out .= '<br><small>' . esc_html__( 've 2 částech', 'reserveandpay' ) . '</small>';
 				}
 				return $out;

@@ -89,7 +89,7 @@ class Resandpay_Views {
 				<p class="rap-item__meta"><?php echo esc_html( self::when_line( $ev ) ); ?><?php if ( $ev['location'] ) : ?> · <?php echo esc_html( $ev['location'] ); ?><?php endif; ?></p>
 			</div>
 			<div class="rap-item__side">
-				<p class="rap-item__price"><?php echo esc_html( Resandpay_Events::format_price( $ev['price'], $ev['currency'] ) ); ?></p>
+				<p class="rap-item__price"><?php echo Resandpay_Frontend::price_html( $ev ); // phpcs:ignore WordPress.Security.EscapeOutput ?></p>
 				<?php if ( 'cancelled' === $state ) : ?>
 					<p class="rap-item__free rap-item__free--off"><?php esc_html_e( 'Zrušeno', 'reserveandpay' ); ?></p>
 					<a class="rap-button rap-button--ghost" href="<?php echo esc_url( $url ); ?>"><?php esc_html_e( 'Zobrazit detail →', 'reserveandpay' ); ?></a>
@@ -188,7 +188,7 @@ class Resandpay_Views {
 				<p class="rap-item__meta"><?php echo esc_html( sprintf( /* translators: 1: den a čas, 2: délka */ __( 'Nejbližší volný termín: %1$s · %2$d min', 'reserveandpay' ), $wd[ (int) $s->format( 'w' ) ] . ' ' . $s->format( 'j. n.' ) . ( ( $next['show_time'] ?? true ) ? ' ' . $s->format( 'G:i' ) : '' ), (int) round( ( Resandpay_Events::ts( $next['end'] ) - Resandpay_Events::ts( $next['start'] ) ) / 60 ) ) ); ?><?php if ( $next['location'] ) : ?> · <?php echo esc_html( $next['location'] ); ?><?php endif; ?></p>
 			</div>
 			<div class="rap-item__side">
-				<p class="rap-item__price"><?php echo esc_html( Resandpay_Events::format_price( $next['price'], $next['currency'] ) ); ?></p>
+				<p class="rap-item__price"><?php echo Resandpay_Frontend::price_html( $next ); // phpcs:ignore WordPress.Security.EscapeOutput ?></p>
 				<p class="rap-item__free"><?php
 				if ( $next['capacity'] > 1 ) {
 					$n = Resandpay_Events::free_places( $next['id'] );
@@ -433,7 +433,8 @@ class Resandpay_Views {
 				$ev   = $it['ev'];
 				$time = $it['first'] && ( $ev['show_time'] ?? true ) ? self::dt( $ev['start'] )->format( 'G:i' ) . ' ' : '';
 				$cls  = 'rap-calendar__ev' . ( $it['first'] ? '' : ' is-cont' ) . ( $ev['cancelled'] || Resandpay_Events::free_places( $ev['id'] ) < 1 ? ' is-off' : '' );
-				echo '<a class="' . esc_attr( $cls ) . '" href="' . esc_url( get_permalink( $ev['id'] ) ) . '" title="' . esc_attr( $ev['title'] . ' – ' . self::when_line( $ev ) ) . '">' . esc_html( $time . $ev['title'] ) . '</a>';
+				$early_note = Resandpay_Discounts::price_note( $ev );
+				echo '<a class="' . esc_attr( $cls ) . '" href="' . esc_url( get_permalink( $ev['id'] ) ) . '" title="' . esc_attr( $ev['title'] . ' – ' . self::when_line( $ev ) . ' · ' . Resandpay_Events::format_price( $ev['price'], $ev['currency'] ) . ( $early_note ? ', ' . $early_note : '' ) ) . '">' . esc_html( $time . $ev['title'] ) . ( $early_note ? ' <span class="rap-early-dot" aria-hidden="true">%</span>' : '' ) . '</a>'; // phpcs:ignore WordPress.Security.EscapeOutput
 			}
 			echo '</div>';
 		}
@@ -538,6 +539,10 @@ class Resandpay_Views {
 		echo '<div class="rap-program-view rap-slots" id="rap-slots">';
 		echo '<p class="rap-slots__info"><span class="rap-eyebrow">' . esc_html( $svc['title'] ) . '</span> ';
 		echo esc_html( sprintf( /* translators: 1: délka, 2: cena */ __( '%1$d min · %2$s', 'reserveandpay' ), $svc['duration'], Resandpay_Events::format_price( $svc['price'], $svc['currency'] ) ) );
+		$early_note = Resandpay_Discounts::price_note( $svc );
+		if ( $early_note ) {
+			echo ' <span class="rap-early">· ' . esc_html( $early_note ) . '</span>';
+		}
 		if ( $svc['capacity'] > 1 ) {
 			echo esc_html( ' · ' . sprintf( /* translators: %d: kapacita */ __( 'max. %d osob', 'reserveandpay' ), $svc['capacity'] ) );
 		}

@@ -213,7 +213,7 @@ class Resandpay_Payments {
 		if ( is_wp_error( $check ) ) {
 			return self::store( $row + array( 'status' => self::REVIEW, 'reason' => $check->get_error_message(), 'reservation_id' => (int) $r['id'] ), null );
 		}
-		$paid = Resandpay_Reservations::add_payment( $r['id'], $p['amount'], 'cron' === $trigger ? 'transfer_auto' : 'transfer_run' );
+		$paid = Resandpay_Reservations::add_payment( $r['id'], $p['amount'], 'cron' === $trigger ? 'transfer_auto' : 'transfer_run', array( 'booked_at' => $p['booked_at'] ?: null ) );
 		if ( is_wp_error( $paid ) ) {
 			return self::store( $row + array( 'status' => self::REVIEW, 'reason' => $paid->get_error_message(), 'reservation_id' => (int) $r['id'] ), null );
 		}
@@ -249,7 +249,7 @@ class Resandpay_Payments {
 		if ( Resandpay_Reservations::CANCELLED === $r['status'] ) {
 			return new WP_Error( 'cancelled', __( 'Rezervace je zrušená – platbu je potřeba vyřešit ručně (vrátit?).', 'reserveandpay' ) );
 		}
-		$left = Resandpay_Reservations::remaining( $r );
+		$left = Resandpay_Reservations::remaining_for_payment( $r, $payment['booked_at'] ?? null );
 		if ( (float) $payment['amount'] > $left + 0.009 ) {
 			/* translators: 1: přijato, 2: zbývá */
 			return new WP_Error( 'overpay', sprintf( __( 'Přeplatek: přijato %1$s, zbývalo zaplatit %2$s.', 'reserveandpay' ), Resandpay_Events::format_price( $payment['amount'], $payment['currency'] ), Resandpay_Events::format_price( $left, $r['currency'] ) ) );
@@ -333,6 +333,7 @@ class Resandpay_Payments {
 				'allow_overbook' => true,
 				'payment_id'     => (int) $payment_id,
 				'note'           => $note,
+				'booked_at'      => $p['booked_at'] ?: null,
 			)
 		);
 		if ( is_wp_error( $paid ) ) {

@@ -17,6 +17,8 @@
 	--rap-font-heading: "Fraunces", Georgia, serif;
 	--rap-max: 1120px;
 	--rap-gold-light: #c9a86a;  /* vlny, dekor */
+	--rap-gold: #b8862e;        /* sleva, slevový kupón */
+	--rap-ok: #2e6b34;
 	--rap-card-top: #7a8466;    /* náhradní plocha galerie – přechod tmavé karty */
 	--rap-card-bottom: #1e1b16;
 	--rap-on-dark: #faf6ef;
@@ -271,3 +273,15 @@
 	.rap-event__facts dd { margin-bottom: 10px; }
 }
 @media (prefers-reduced-motion: reduce) { .rap-breath path { animation: none; } .rap-gallery__thumb { transition: none; } }
+
+/* Slevy (0.8.0) */
+.rap-early { color: var(--rap-accent); font-family: var(--rap-font); font-size: .85em; font-weight: 500; white-space: normal; }
+.rap-item__price .rap-early, .rap-event__price .rap-early, .rap-details .rap-early { display: block; font-size: 14px; line-height: 1.4; margin-top: .2rem; }
+.rap-summary--early { color: var(--rap-accent); border-color: var(--rap-gold); }
+.rap-early-dot { display: inline-block; margin-left: .25em; color: var(--rap-gold); font-weight: 700; }
+.rap-coupon__row { display: flex; gap: .5rem; align-items: stretch; flex-wrap: wrap; }
+.rap-coupon__row input { flex: 1 1 10rem; min-width: 0; text-transform: uppercase; letter-spacing: .04em; }
+.rap-coupon__row .rap-button { padding-top: .45rem; padding-bottom: .45rem; }
+.rap-coupon__msg { display: block; min-height: 1.2em; margin-top: .3rem; }
+.rap-coupon__msg.is-ok { color: var(--rap-ok); }
+.rap-coupon__msg.is-err { color: var(--rap-error); }

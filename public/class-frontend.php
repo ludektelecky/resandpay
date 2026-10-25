@@ -21,6 +21,66 @@ class Resandpay_Frontend {
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'assets' ) );
 		add_action( 'template_redirect', array( __CLASS__, 'redirect_archives' ), 5 );
 		add_action( 'template_redirect', array( __CLASS__, 'detail_theme_hooks' ), 20 );
+		add_action( 'template_redirect', array( __CLASS__, 'remember_coupon' ), 2 );
+		add_action( 'wp_ajax_resandpay_coupon', array( __CLASS__, 'ajax_coupon' ) );
+		add_action( 'wp_ajax_nopriv_resandpay_coupon', array( __CLASS__, 'ajax_coupon' ) );
+	}
+
+	/** Kupón z odkazu / QR (?kupon=…) si web zapamatuje na 7 dní, aby se vyplnil v rezervaci. */
+	public static function remember_coupon() {
+		if ( empty( $_GET['kupon'] ) || headers_sent() ) {
+			return;
+		}
+		$code = substr( preg_replace( '/[^A-Za-z0-9\-]/', '', (string) wp_unslash( $_GET['kupon'] ) ), 0, 60 ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		setcookie( 'rap_kupon', $code, time() + 7 * DAY_IN_SECONDS, COOKIEPATH ?: '/', COOKIE_DOMAIN, is_ssl(), true );
+		$_COOKIE['rap_kupon'] = $code;
+	}
+
+	/** Kód kupónu předvyplněný do formuláře (z odkazu nebo zapamatovaný). */
+	public static function prefilled_coupon() {
+		$src = $_GET['kupon'] ?? ( $_COOKIE['rap_kupon'] ?? '' ); // phpcs:ignore WordPress.Security.NonceVerification
+		return substr( preg_replace( '/[^A-Za-z0-9\-]/', '', (string) wp_unslash( $src ) ), 0, 60 );
+	}
+
+	/** Cena rezervace pro formulář (bez ukládání) – kupón / sleva za včasnou rezervaci. */
+	public static function quote( $event_id, $code = '', $email = '', $cash = false ) {
+		$ev = Resandpay_Events::get( $event_id );
+		if ( ! $ev ) {
+			return new WP_Error( 'not_found', __( 'Akce nenalezena.', 'reserveandpay' ) );
+		}
+		$due   = Resandpay_Events::compute_due( $ev, time() );
+		$part1 = $cash || $due['last_minute'] || ! empty( $due['late'] ) ? 0.0 : Resandpay_Events::part1_amount( $ev );
+		return Resandpay_Discounts::compute( $ev, array( 'cash' => $cash, 'last_minute' => $due['last_minute'], 'part1' => $part1, 'coupon' => $code, 'email' => $email ) ) + array( 'currency' => $ev['currency'] );
+	}
+
+	/** AJAX „Použít“ u slevového kupónu. */
+	public static function ajax_coupon() {
+		$event_id = absint( $_POST['event_id'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification -- jen výpočet ceny, nic se neukládá.
+		$code     = sanitize_text_field( wp_unslash( $_POST['code'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification
+		$email    = sanitize_email( wp_unslash( $_POST['email'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification
+		if ( '' === $code ) {
+			wp_send_json( array( 'ok' => false, 'message' => __( 'Zadejte kód kupónu.', 'reserveandpay' ) ) );
+		}
+		$q = self::quote( $event_id, $code, $email, 'cash' === ( $_POST['pay'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification
+		if ( is_wp_error( $q ) || $q['error'] ) {
+			wp_send_json( array( 'ok' => false, 'message' => is_wp_error( $q ) ? $q->get_error_message() : $q['error']->get_error_message() ) );
+		}
+		wp_send_json( array( 'ok' => true, 'message' => self::quote_text( $q ) ) );
+	}
+
+	public static function quote_text( array $q ) {
+		if ( $q['free'] ) {
+			/* translators: %s: popis slevy */
+			return sprintf( __( '%s uplatněn – rezervace bude zdarma.', 'reserveandpay' ), $q['label'] );
+		}
+		/* translators: 1: popis slevy, 2: sleva, 3: cena po slevě, 4: plná cena */
+		return sprintf( __( '%1$s: −%2$s. Cena po slevě %3$s (místo %4$s).', 'reserveandpay' ), $q['label'], Resandpay_Events::format_price( $q['discount'], $q['currency'] ), Resandpay_Events::format_price( $q['price_full'] - $q['discount'], $q['currency'] ), Resandpay_Events::format_price( $q['price_full'], $q['currency'] ) );
+	}
+
+	/** Cena na webu s informací o slevě za včasnou rezervaci (escapované HTML). */
+	public static function price_html( array $ev, $suffix = '' ) {
+		$note = Resandpay_Discounts::price_note( $ev );
+		return esc_html( Resandpay_Events::format_price( $ev['price'], $ev['currency'] ) ) . ( $suffix ? ' <small>' . esc_html( $suffix ) . '</small>' : '' ) . ( $note ? ' <span class="rap-early">' . esc_html( $note ) . '</span>' : '' );
 	}
 
 	/** Vzhled detailu akce s galerií (nastavení „Detail akce“). */
@@ -78,6 +138,7 @@ class Resandpay_Frontend {
 			'consent_terms' => ! empty( $_POST['rap_terms'] ),
 			'newsletter'    => ! empty( $_POST['rap_newsletter'] ),
 			'pay_choice'    => 'cash' === ( $_POST['rap_pay'] ?? '' ) ? 'cash' : 'transfer',
+			'coupon'        => substr( sanitize_text_field( wp_unslash( $_POST['rap_coupon'] ?? '' ) ), 0, 60 ),
 		);
 		$errors   = array();
 
@@ -222,7 +283,7 @@ class Resandpay_Frontend {
 		}
 		echo '</dl>';
 		echo '<div class="rap-event__cta">';
-		echo '<p class="rap-event__price">' . esc_html( Resandpay_Events::format_price( $ev['price'], $ev['currency'] ) ) . ' <small>' . esc_html( 'multiday' === $ev['type'] ? __( 'za celou akci', 'reserveandpay' ) : __( '/ osoba', 'reserveandpay' ) ) . '</small></p>';
+		echo '<p class="rap-event__price">' . self::price_html( $ev, 'multiday' === $ev['type'] ? __( 'za celou akci', 'reserveandpay' ) : __( '/ osoba', 'reserveandpay' ) ) . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno v price_html().
 		if ( $open ) {
 			echo '<a class="rap-button" href="#rap-booking">' . esc_html__( 'Rezervovat místo →', 'reserveandpay' ) . '</a>';
 		} elseif ( ! $ev['cancelled'] && $free < 1 ) {
@@ -436,7 +497,7 @@ class Resandpay_Frontend {
 			}
 			echo '</dd>';
 		}
-		echo '<dt>' . esc_html__( 'Cena', 'reserveandpay' ) . '</dt><dd>' . esc_html( Resandpay_Events::format_price( $ev['price'], $ev['currency'] ) ) . ( 'multiday' === $ev['type'] ? ' <small>' . esc_html__( '(za celou akci)', 'reserveandpay' ) . '</small>' : '' ) . '</dd>';
+		echo '<dt>' . esc_html__( 'Cena', 'reserveandpay' ) . '</dt><dd>' . self::price_html( $ev, 'multiday' === $ev['type'] ? __( '(za celou akci)', 'reserveandpay' ) : '' ) . '</dd>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		if ( 'slot' === $ev['type'] && $ev['capacity'] <= 1 ) {
 			echo '<dt>' . esc_html__( 'Termín', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev['cancelled'] ? __( 'zrušen', 'reserveandpay' ) : ( $free > 0 ? __( 'volný', 'reserveandpay' ) : __( 'obsazený', 'reserveandpay' ) ) ) . '</dd>';
 		} else {
@@ -580,6 +641,7 @@ class Resandpay_Frontend {
 			<?php else : ?>
 			<p class="rap-summary"><?php echo esc_html( sprintf( /* translators: %s: cena */ __( 'Cena za jedno místo: %s. Platba převodem (QR platba) – platební údaje obdržíte e-mailem.', 'reserveandpay' ), Resandpay_Events::format_price( $ev['price'], $ev['currency'] ) ) ); ?></p>
 			<?php endif; ?>
+			<?php echo self::coupon_field( $ev, $values ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř. ?>
 			<p><button type="submit" class="rap-button"><?php esc_html_e( 'Závazně rezervovat místo →', 'reserveandpay' ); ?></button></p>
 		</form>
 		<?php
@@ -587,8 +649,37 @@ class Resandpay_Frontend {
 		return ob_get_clean();
 	}
 
+	/** Pole „Slevový kupón“ s tlačítkem „Použít“ (skryté, platí-li sleva za včasnou rezervaci). */
+	public static function coupon_field( array $ev, array $values ) {
+		if ( (float) $ev['price'] <= 0 ) {
+			return '';
+		}
+		$early = Resandpay_Discounts::early_open( $ev );
+		if ( $early ) {
+			/* translators: %s: popis slevy */
+			$q = self::quote( $ev['id'] );
+			/* translators: 1: popis slevy, 2: cena po slevě */
+			return '<p class="rap-summary rap-summary--early">' . esc_html( sprintf( __( '%1$s: cena po slevě %2$s – uplatní se automaticky při platbě převodem ve splatnosti. Nelze ji kombinovat se slevovým kupónem.', 'reserveandpay' ), $early['label'], str_replace( ' ', "\u{00A0}", Resandpay_Events::format_price( is_wp_error( $q ) ? $ev['price'] : $q['price_full'] - $q['discount'], $ev['currency'] ) ) ) ) . '</p>';
+		}
+		$code = (string) ( $values['coupon'] ?? self::prefilled_coupon() );
+		$uid  = wp_unique_id( 'rap-coupon-' );
+		$out  = '<div class="rap-coupon" id="' . esc_attr( $uid ) . '"><p class="rap-field"><label for="' . esc_attr( $uid ) . '-in">' . esc_html__( 'Slevový kupón', 'reserveandpay' ) . '</label>';
+		$out .= '<span class="rap-coupon__row"><input id="' . esc_attr( $uid ) . '-in" type="text" name="rap_coupon" value="' . esc_attr( $code ) . '" autocomplete="off" autocapitalize="characters" spellcheck="false"> <button type="button" class="rap-button rap-button--ghost" data-rap-coupon-apply>' . esc_html__( 'Použít', 'reserveandpay' ) . '</button></span>';
+		$out .= '<small class="rap-coupon__msg" aria-live="polite"></small></p></div>';
+		$out .= '<script>(function(){var b=document.getElementById(' . wp_json_encode( $uid ) . ');if(!b||!window.fetch)return;var f=b.closest("form"),i=b.querySelector("input"),m=b.querySelector(".rap-coupon__msg");function go(){var d=new FormData();d.append("action","resandpay_coupon");d.append("event_id",' . (int) $ev['id'] . ');d.append("code",i.value);var e=f.querySelector("[name=rap_email]");if(e)d.append("email",e.value);var p=f.querySelector("[name=rap_pay]:checked");if(p)d.append("pay",p.value);m.textContent="…";fetch(' . wp_json_encode( admin_url( 'admin-ajax.php' ) ) . ',{method:"POST",body:d,credentials:"same-origin"}).then(function(r){return r.json();}).then(function(j){m.textContent=j.message;m.className="rap-coupon__msg "+(j.ok?"is-ok":"is-err");}).catch(function(){m.textContent="";});}b.querySelector("[data-rap-coupon-apply]").addEventListener("click",go);i.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();go();}});if(i.value)go();})();</script>';
+		return $out;
+	}
+
 	private static function render_confirmation( array $r, array $ev ) {
 		$s = Resandpay_Settings::all();
+		if ( Resandpay_Mailer::is_free( $r ) ) {
+			echo '<div class="rap-success" role="status"><h2>' . esc_html__( 'Děkujeme, rezervace je potvrzena', 'reserveandpay' ) . '</h2>';
+			/* translators: 1: akce, 2: e-mail */
+			echo '<p>' . esc_html( sprintf( __( 'Díky slevovému kupónu je rezervace akce %1$s zdarma – nic neplatíte. Potvrzení jsme poslali na e-mail %2$s.', 'reserveandpay' ), $ev['title'] . ' (' . Resandpay_Events::format_date( $ev ) . ')', $r['email'] ) ) . '</p>';
+			/* translators: %s: VS */
+			echo '<p class="rap-small">' . esc_html( sprintf( __( 'Číslo rezervace (VS): %s', 'reserveandpay' ), $r['vs'] ) ) . '</p></div>';
+			return;
+		}
 		echo '<div class="rap-success" role="status">';
 		echo '<h2>' . esc_html__( 'Děkujeme, rezervace je přijata', 'reserveandpay' ) . '</h2>';
 		$cash = 'cash' === ( $r['pay_choice'] ?? '' );
@@ -614,6 +705,10 @@ class Resandpay_Frontend {
 		echo '<dt>' . esc_html__( 'Variabilní symbol', 'reserveandpay' ) . '</dt><dd><strong>' . esc_html( $r['vs'] ) . '</strong></dd>';
 		if ( ! $cash ) {
 			echo '<dt>' . esc_html__( 'Splatnost', 'reserveandpay' ) . '</dt><dd>' . esc_html( wp_date( 'j. n. Y G:i', Resandpay_Events::ts( Resandpay_Reservations::due_now( $r ) ) ) ) . '</dd>';
+		}
+		if ( Resandpay_Reservations::discount_now( $r ) > 0 ) {
+			echo '<dt>' . esc_html__( 'Cena', 'reserveandpay' ) . '</dt><dd>' . esc_html( Resandpay_Events::format_price( $r['price_full'], $r['currency'] ) ) . '</dd>';
+			echo '<dt>' . esc_html( $r['discount_label'] ) . '</dt><dd>−' . esc_html( Resandpay_Events::format_price( $r['discount_amount'], $r['currency'] ) ) . ( Resandpay_Reservations::early_active( $r ) ? ' <small>' . esc_html__( '(platí při úhradě ve splatnosti)', 'reserveandpay' ) . '</small>' : '' ) . '</dd>';
 		}
 		if ( $split ) {
 			/* translators: 1: doplatek, 2: datum */

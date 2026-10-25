@@ -79,3 +79,12 @@ td.rap-box .rap-payfields { max-width: 520px; }
 .rap-ledger .rap-err { color: #a12b2b; }
 .rap-ledger--void td { color: #8c8f94; }
 .rap-ledger--void td strong { text-decoration: line-through; }
+.rap-coupon-card { display: flex; gap: 20px; align-items: flex-start; background: #fbf7ef; border: 2px solid #b8862e; padding: 16px 20px; margin: 16px 0; max-width: 900px; }
+.rap-coupon-card img { display: block; }
+.rap-coupon-card__code code { font-size: 20px; padding: 4px 8px; background: #fff; }
+.rap-coupon-scope { display: flex; gap: 16px; flex-wrap: wrap; }
+.rap-coupon-scope label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
+.rap-coupon-scope select { min-width: 260px; }
+.rap-coupon-list .rap-ok { color: #2e6b34; }
+.rap-coupon-list .rap-err { color: #a12b2b; }
+.rap-warn { color: #8a5a00; background: #fff4d6; padding: 4px 8px; }

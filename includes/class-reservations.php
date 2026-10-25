@@ -37,6 +37,7 @@ class Resandpay_Reservations {
 			'transfer_auto'   => __( 'Převod – automaticky', 'reserveandpay' ),
 			'transfer_run'    => __( 'Převod – ruční běh kontroly', 'reserveandpay' ),
 			'transfer_manual' => __( 'Převod – ručně označeno', 'reserveandpay' ),
+			'free'            => __( 'Zdarma (slevový kupón)', 'reserveandpay' ),
 			'cash'            => __( 'Hotově na místě', 'reserveandpay' ),
 			'onsite'          => __( 'Na místě', 'reserveandpay' ),
 		);
@@ -96,6 +97,12 @@ class Resandpay_Reservations {
 			return new WP_Error( 'busy', __( 'Systém je právě vytížen, zkuste to prosím za chvíli znovu.', 'reserveandpay' ) );
 		}
 
+		$coupon_code = trim( (string) ( $data['coupon'] ?? '' ) );
+		$coupon_lock = '' !== $coupon_code;
+		if ( $coupon_lock && ! Resandpay_Lock::acquire( 'coupons' ) ) {
+			Resandpay_Lock::release( $lock );
+			return new WP_Error( 'busy', __( 'Systém je právě vytížen, zkuste to prosím za chvíli znovu.', 'reserveandpay' ) );
+		}
 		try {
 			if ( self::count_active( $event_id ) >= $ev['capacity'] ) {
 				return new WP_Error( 'full', __( 'Akce je bohužel již obsazena.', 'reserveandpay' ) );
@@ -118,11 +125,31 @@ class Resandpay_Reservations {
 				$p1       = ( new DateTimeImmutable( '@' . $now_ts ) )->setTimezone( wp_timezone() )->modify( '+' . max( 0, (int) $ev['part1_days'] ) . ' days' )->setTime( 23, 59, 59 );
 				$part1_ts = min( $p1->getTimestamp(), $due_ts );
 			}
+			// Slevy (SWD kap. 3.10): kupón, nebo sleva za včasnou rezervaci (jen převod); 1. část z plné ceny.
+			$price = Resandpay_Discounts::compute(
+				$ev,
+				array(
+					'now'         => $now_ts,
+					'cash'        => $cash,
+					'last_minute' => $last_minute,
+					'part1'       => $part1,
+					'coupon'      => $coupon_code,
+					'email'       => $email,
+				)
+			);
+			if ( $price['error'] ) {
+				return $price['error'];
+			}
+			$amount = round( $price['price_full'] - $price['discount'], 2 );
+			if ( $price['free'] ) {
+				$amount = 0.0;
+				$part1  = 0.0;
+			}
 
 			$now_local = wp_date( 'Y-m-d H:i:s', $now_ts );
 			$row       = array(
 				'event_id'         => (int) $event_id,
-				'status'           => $cash ? self::ONSITE : self::PENDING,
+				'status'           => $price['free'] ? self::PAID : ( $cash ? self::ONSITE : self::PENDING ),
 				'pay_choice'       => $cash ? 'cash' : 'transfer',
 				'vs'               => self::format_vs( $seq, $now_ts ),
 				'proforma_no'      => self::format_proforma( $seq, $now_ts ),
@@ -134,7 +161,14 @@ class Resandpay_Reservations {
 				'company_ic'       => mb_substr( sanitize_text_field( $data['company_ic'] ?? '' ), 0, 20 ),
 				'company_dic'      => mb_substr( sanitize_text_field( $data['company_dic'] ?? '' ), 0, 20 ),
 				'note'             => sanitize_textarea_field( $data['note'] ?? '' ),
-				'amount'           => $ev['price'],
+				'amount'           => $amount,
+				'price_full'       => $price['price_full'],
+				'discount_amount'  => $price['discount'],
+				'discount_type'    => $price['type'],
+				'discount_label'   => mb_substr( $price['label'], 0, 190 ),
+				'coupon_id'        => $price['coupon_id'],
+				'paid_at'          => $price['free'] ? $now_local : null,
+				'paid_method'      => $price['free'] ? 'free' : '',
 				'currency'         => $ev['currency'],
 				'last_minute'      => $last_minute ? 1 : 0,
 				'due_at'           => wp_date( 'Y-m-d H:i:s', $due_ts ),
@@ -156,7 +190,14 @@ class Resandpay_Reservations {
 			}
 			$id = (int) $wpdb->insert_id;
 		} finally {
+			if ( $coupon_lock ) {
+				Resandpay_Lock::release( 'coupons' );
+			}
 			Resandpay_Lock::release( $lock );
+		}
+		if ( $price['discount'] > 0 ) {
+			/* translators: 1: popis slevy, 2: částka */
+			Resandpay_Discounts::log( $id, 'discount', sprintf( __( 'Uplatněna sleva: %1$s −%2$s', 'reserveandpay' ), $price['label'], Resandpay_Events::format_price( $price['discount'], $ev['currency'] ) ) );
 		}
 
 		$reservation = self::get( $id );
@@ -320,6 +361,12 @@ class Resandpay_Reservations {
 		if ( self::CANCELLED === $r['status'] ) {
 			return new WP_Error( 'cancelled', __( 'Rezervace je zrušená – platbu je potřeba vyřešit ručně (vrátit?).', 'reserveandpay' ) );
 		}
+		// Sleva za včasnou rezervaci zaniká platbou po splatnosti (rozhoduje datum připsání na účet).
+		$lost = false;
+		if ( $amount > 0 && self::CANCELLED !== $r['status'] && self::PAID !== $r['status'] && self::early_active( $r ) && self::payment_is_late( $r, $opts['booked_at'] ?? null ) ) {
+			$r    = self::lose_discount( $id, __( 'platba připsána po splatnosti', 'reserveandpay' ) );
+			$lost = true;
+		}
 		$remaining = self::remaining( $r );
 		if ( self::PAID === $r['status'] || $remaining <= 0 ) {
 			return new WP_Error( 'paid', __( 'Rezervace už je zaplacená – možná duplicitní platba (vrátit?).', 'reserveandpay' ) );
@@ -375,6 +422,8 @@ class Resandpay_Reservations {
 		if ( $opts['notify'] ) {
 			if ( $full ) {
 				Resandpay_Mailer::send_paid( $new );
+			} elseif ( $lost ) {
+				Resandpay_Mailer::send_template( $new['email'], 'discount_lost', $new ); // Sleva zanikla – nový předpis s QR na zbytek.
 			} elseif ( self::is_split( $new ) && $old_paid + 0.009 < (float) $new['part1_amount'] && $new_paid + 0.009 >= (float) $new['part1_amount'] ) {
 				Resandpay_Mailer::send_template( $new['email'], 'part1', $new ); // 1. část zaplacena – místo potvrzeno.
 			} else {
@@ -409,7 +458,11 @@ class Resandpay_Reservations {
 			}
 			$start = Resandpay_Events::ts( $ev['start'] );
 			$paid  = (float) $r['amount_paid'] > 0;
+			$early = self::early_active( $r );
 			if ( ! $paid && $due < $start - 60 ) {
+				if ( $early ) {
+					self::lose_discount( $r['id'], __( 'platba nedorazila do splatnosti – rezervace vypršela', 'reserveandpay' ) );
+				}
 				$new = self::set_status( $r['id'], self::EXPIRED );
 				if ( ! is_wp_error( $new ) ) {
 					++$count;
@@ -423,12 +476,16 @@ class Resandpay_Reservations {
 				}
 				continue;
 			}
+			if ( $early ) {
+				self::lose_discount( $r['id'], __( 'platba (nebo její část) nedorazila do splatnosti', 'reserveandpay' ) );
+			}
 			$new = self::set_status( $r['id'], self::OVERDUE );
 			if ( is_wp_error( $new ) ) {
 				continue;
 			}
 			++$count;
-			if ( empty( $new['reminded_at'] ) && Resandpay_Mailer::send_template( $new['email'], 'overdue', $new ) ) {
+			// Zanikla-li sleva, e-mail o změně předpisu nahrazuje připomínku po splatnosti (nechodí dva e-maily).
+			if ( empty( $new['reminded_at'] ) && Resandpay_Mailer::send_template( $new['email'], $early ? 'discount_lost' : 'overdue', $new ) ) {
 				$wpdb->update( self::table(), array( 'reminded_at' => current_time( 'mysql' ) ), array( 'id' => (int) $new['id'] ) );
 			}
 		}
@@ -625,6 +682,90 @@ class Resandpay_Reservations {
 			} elseif ( self::CANCELLED === $status ) {
 				Resandpay_Mailer::send_cancelled( $new );
 			}
+		}
+		return $new;
+	}
+
+	/* ---------------------------------------------------------------------
+	 * Slevy u rezervace (0.8.0, SWD kap. 3.10)
+	 * ------------------------------------------------------------------- */
+
+	/** Platí u rezervace (ještě) sleva za včasnou rezervaci? */
+	public static function early_active( array $r ) {
+		return Resandpay_Discounts::EARLY === ( $r['discount_type'] ?? '' ) && (float) ( $r['discount_amount'] ?? 0 ) > 0 && empty( $r['discount_lost_at'] );
+	}
+
+	/** Uplatněná sleva v Kč (0, pokud sleva zanikla). */
+	public static function discount_now( array $r ) {
+		return empty( $r['discount_lost_at'] ) ? (float) ( $r['discount_amount'] ?? 0 ) : 0.0;
+	}
+
+	/** Je platba připsaná v daný čas po splatnosti toho, co se má teď platit? */
+	public static function payment_is_late( array $r, $booked = null ) {
+		$ts  = is_numeric( $booked ) ? (int) $booked : ( $booked ? Resandpay_Events::ts( $booked ) : time() );
+		$due = Resandpay_Events::ts( self::due_now( $r ) );
+		return $due && $ts > $due;
+	}
+
+	/** Zbývající částka, se kterou se porovná platba (po případném zániku slevy). */
+	public static function remaining_for_payment( array $r, $booked = null ) {
+		if ( self::early_active( $r ) && self::payment_is_late( $r, $booked ) ) {
+			return round( max( 0, (float) $r['price_full'] - (float) $r['amount_paid'] ), 2 );
+		}
+		return self::remaining( $r );
+	}
+
+	/** Zánik slevy za včasnou rezervaci: částka = plná cena, splatnost i stav se nemění. */
+	public static function lose_discount( $id, $reason ) {
+		global $wpdb;
+		$r = self::get( $id );
+		if ( ! $r || ! self::early_active( $r ) ) {
+			return $r;
+		}
+		$wpdb->update(
+			self::table(),
+			array(
+				'amount'           => (float) $r['price_full'],
+				'discount_lost_at' => current_time( 'mysql' ),
+				'updated_at'       => current_time( 'mysql' ),
+			),
+			array( 'id' => (int) $id )
+		);
+		/* translators: 1: popis slevy, 2: částka, 3: důvod */
+		Resandpay_Discounts::log( $id, 'discount_lost', sprintf( __( '%1$s (%2$s) zanikla – %3$s', 'reserveandpay' ), $r['discount_label'], Resandpay_Events::format_price( $r['discount_amount'], $r['currency'] ), $reason ) );
+		$new = self::get( $id );
+		do_action( 'resandpay_discount_lost', $new, $reason );
+		return $new;
+	}
+
+	/** Ponechat slevu (výjimka správkyně): vrátí zaniklou slevu a přepočítá stav. @return array|WP_Error */
+	public static function keep_discount( $id, $reason ) {
+		global $wpdb;
+		$reason = trim( sanitize_text_field( (string) $reason ) );
+		$r      = self::get( $id );
+		if ( ! $r || Resandpay_Discounts::EARLY !== $r['discount_type'] || empty( $r['discount_lost_at'] ) ) {
+			return new WP_Error( 'state', __( 'Rezervace nemá zaniklou slevu.', 'reserveandpay' ) );
+		}
+		if ( '' === $reason ) {
+			return new WP_Error( 'reason', __( 'Uveďte důvod ponechání slevy.', 'reserveandpay' ) );
+		}
+		$amount = round( (float) $r['price_full'] - (float) $r['discount_amount'], 2 );
+		$update = array(
+			'amount'           => $amount,
+			'discount_lost_at' => null,
+			'updated_at'       => current_time( 'mysql' ),
+		);
+		$paid_now = self::CANCELLED !== $r['status'] && self::PAID !== $r['status'] && (float) $r['amount_paid'] + 0.009 >= $amount;
+		if ( $paid_now ) {
+			$update['status']  = self::PAID;
+			$update['paid_at'] = current_time( 'mysql' );
+		}
+		$wpdb->update( self::table(), $update, array( 'id' => (int) $id ) );
+		/* translators: 1: popis slevy, 2: důvod */
+		Resandpay_Discounts::log( $id, 'discount_kept', sprintf( __( '%1$s ponechána – %2$s', 'reserveandpay' ), $r['discount_label'], $reason ) );
+		$new = self::get( $id );
+		if ( $paid_now ) {
+			Resandpay_Mailer::send_paid( $new );
 		}
 		return $new;
 	}

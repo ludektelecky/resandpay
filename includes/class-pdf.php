@@ -286,6 +286,120 @@ class Resandpay_PDF {
 		}
 	}
 
+	/**
+	 * PDF poukaz se slevovým kupónem (A5 na šířku) v grafice webu – SWD kap. 3.10.
+	 * QR kód kupónu je ve zlaté barvě, aby se nepletl s platebním QR kódem.
+	 *
+	 * @param array $coupons Jeden nebo více kupónů (každý na vlastní stránce).
+	 */
+	public static function voucher( array $coupons ) {
+		self::load();
+		$s = Resandpay_Settings::all();
+		try {
+			$pdf = new TCPDF( 'L', 'mm', 'A5', true, 'UTF-8', false );
+			$pdf->SetCreator( 'ReserveAndPay' );
+			$pdf->SetAuthor( $s['company_name'] );
+			$pdf->SetTitle( __( 'Slevový kupón', 'reserveandpay' ) );
+			$pdf->setPrintHeader( false );
+			$pdf->setPrintFooter( false );
+			$pdf->SetMargins( 14, 12, 14 );
+			$pdf->SetAutoPageBreak( false );
+			$pdf->setCellPaddings( 0, 0, 0, 0 );
+			$gold = array( 184, 134, 46 );
+			$logo = self::logo_path();
+			foreach ( $coupons as $c ) {
+				$pdf->AddPage();
+				$pdf->SetFillColor( 251, 247, 239 );
+				$pdf->Rect( 0, 0, 210, 148, 'F' );
+				$pdf->SetDrawColor( ...$gold );
+				$pdf->SetLineWidth( 1.2 );
+				$pdf->Rect( 7, 7, 196, 134, 'D' );
+				$pdf->SetLineWidth( 0.3 );
+				$pdf->Rect( 9.5, 9.5, 191, 129, 'D' );
+				if ( $logo ) {
+					try {
+						$pdf->Image( $logo, 16, 15, 0, 13, '', '', '', true, 300, '', false, false, 0, 'LT' );
+					} catch ( Exception $e ) {
+						$logo = '';
+					}
+				}
+				if ( ! $logo ) {
+					self::font( $pdf, 'fraunces_sb', 13, self::C_ACCENT );
+					$pdf->SetXY( 16, 16 );
+					$pdf->Cell( 110, 6, $s['brand_name'] ?: $s['company_name'], 0, 0, 'L' );
+				}
+				self::font( $pdf, 'worksansb', 8.5, self::C_PLUM );
+				$pdf->SetXY( 16, 34 );
+				$pdf->Cell( 110, 5, self::upper( __( 'Slevový kupón', 'reserveandpay' ) ), 0, 2, 'L' );
+				self::font( $pdf, 'fraunces_sb', 40, self::C_ACCENT );
+				$pdf->Cell( 110, 18, '−' . Resandpay_Discounts::value_label( $c['mode'], $c['value'] ), 0, 2, 'L' );
+				self::font( $pdf, 'worksans', 10, self::C_INK );
+				/* translators: %s: rozsah */
+				$pdf->MultiCell( 112, 5, sprintf( __( 'Sleva na: %s', 'reserveandpay' ), Resandpay_Discounts::scope_label( $c ) ), 0, 'L', false, 1, 16 );
+				$valid = array();
+				if ( $c['valid_from'] ) {
+					/* translators: %s: datum */
+					$valid[] = sprintf( __( 'od %s', 'reserveandpay' ), wp_date( 'j. n. Y', strtotime( $c['valid_from'] . ' 12:00' ) ) );
+				}
+				if ( $c['valid_to'] ) {
+					/* translators: %s: datum */
+					$valid[] = sprintf( __( 'do %s', 'reserveandpay' ), wp_date( 'j. n. Y', strtotime( $c['valid_to'] . ' 12:00' ) ) );
+				}
+				if ( $valid ) {
+					self::font( $pdf, 'worksans', 9.5, self::C_SOFT );
+					/* translators: %s: platnost */
+					$pdf->MultiCell( 112, 5, sprintf( __( 'Platnost %s', 'reserveandpay' ), implode( ' ', $valid ) ), 0, 'L', false, 1, 16 );
+				}
+				// Kód.
+				$pdf->SetFillColor( 255, 255, 255 );
+				$pdf->SetDrawColor( ...self::C_LINE );
+				$pdf->Rect( 16, 92, 104, 17, 'DF' );
+				self::font( $pdf, 'worksansb', 7, self::C_PLUM );
+				$pdf->SetXY( 20, 94.5 );
+				$pdf->Cell( 96, 3.5, self::upper( __( 'Kód kupónu', 'reserveandpay' ) ), 0, 2, 'L' );
+				self::font( $pdf, 'fraunces_sb', 17, self::C_INK );
+				$pdf->Cell( 96, 8, $c['code'], 0, 0, 'L' );
+				self::font( $pdf, 'worksans', 8.5, self::C_SOFT );
+				$pdf->SetXY( 16, 113 );
+				$pdf->MultiCell( 112, 4.4, __( 'Naskenujte QR kód – kupón se v rezervaci vyplní sám. Nebo zadejte kód do pole „Slevový kupón“ při rezervaci na webu. Kupón nelze kombinovat s jinou slevou.', 'reserveandpay' ), 0, 'L', false, 1 );
+				// Zlatý QR kód s rámečkem a popiskem.
+				$pdf->SetDrawColor( ...$gold );
+				$pdf->SetLineWidth( 0.8 );
+				$pdf->SetFillColor( 251, 247, 239 );
+				$pdf->Rect( 136, 34, 58, 70, 'DF' );
+				$pdf->write2DBarcode(
+					Resandpay_Discounts::coupon_url( $c ),
+					'QRCODE,Q',
+					141,
+					39,
+					48,
+					48,
+					array(
+						'border'  => false,
+						'padding' => 0,
+						'fgcolor' => self::C_ACCENT,
+						'bgcolor' => array( 251, 247, 239 ),
+					),
+					'N'
+				);
+				self::font( $pdf, 'worksansb', 8, $gold );
+				$pdf->SetXY( 136, 92 );
+				$pdf->Cell( 58, 5, self::upper( __( 'Slevový kupón', 'reserveandpay' ) ), 0, 2, 'C' );
+				self::font( $pdf, 'worksans', 7, self::C_SOFT );
+				$pdf->Cell( 58, 4, __( 'není platební QR kód', 'reserveandpay' ), 0, 0, 'C' );
+				// Patička.
+				$contact = array_filter( array( $s['contact_web'], $s['contact_email'] ) );
+				self::font( $pdf, 'worksans', 8, self::C_SOFT );
+				$pdf->SetXY( 16, 129 );
+				$pdf->Cell( 178, 4, trim( ( $s['brand_name'] ?: $s['company_name'] ) . ( $contact ? ' · ' . implode( ' · ', $contact ) : '' ), ' ·' ), 0, 0, 'L' );
+			}
+			return $pdf->Output( '', 'S' );
+		} catch ( Exception $e ) {
+			error_log( 'RAP PDF poukaz: ' . $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
+			return '';
+		}
+	}
+
 	/** Texty pod platebními údaji podle situace rezervace. */
 	public static function notes( array $r, array $ev, array $s ) {
 		$out = array();

@@ -33,6 +33,11 @@ class Resandpay_Install {
 			if ( $from && $from < 8 ) {
 				self::backfill_ledger();
 			}
+			if ( $from && $from < 9 ) {
+				// 0.8.0: plná cena = dosavadní částka (rezervace bez slev).
+				global $wpdb;
+				$wpdb->query( "UPDATE {$wpdb->prefix}resandpay_reservations SET price_full = amount WHERE price_full = 0" );
+			}
 			update_option( 'resandpay_codes_backfill', 1, false );
 		}
 	}
@@ -94,6 +99,12 @@ class Resandpay_Install {
 			company_dic varchar(20) NOT NULL DEFAULT '',
 			note text NULL,
 			amount decimal(12,2) NOT NULL DEFAULT 0,
+			price_full decimal(12,2) NOT NULL DEFAULT 0,
+			discount_amount decimal(12,2) NOT NULL DEFAULT 0,
+			discount_type varchar(20) NOT NULL DEFAULT '',
+			discount_label varchar(190) NOT NULL DEFAULT '',
+			coupon_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			discount_lost_at datetime NULL,
 			currency varchar(3) NOT NULL DEFAULT 'CZK',
 			last_minute tinyint(1) NOT NULL DEFAULT 0,
 			due_at datetime NULL,
@@ -189,6 +200,40 @@ class Resandpay_Install {
 			PRIMARY KEY  (id),
 			KEY reservation_id (reservation_id),
 			KEY payment_id (payment_id)
+		) {$charset};
+		CREATE TABLE {$wpdb->prefix}resandpay_coupons (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			guid varchar(36) NOT NULL DEFAULT '',
+			code varchar(60) NOT NULL,
+			code_norm varchar(60) NOT NULL,
+			mode varchar(10) NOT NULL DEFAULT 'percent',
+			value decimal(12,2) NOT NULL DEFAULT 0,
+			valid_from date NULL,
+			valid_to date NULL,
+			scope_all tinyint(1) NOT NULL DEFAULT 1,
+			scope_events text NULL,
+			scope_services text NULL,
+			scope_cats text NULL,
+			max_uses int(11) NOT NULL DEFAULT 0,
+			max_per_email int(11) NOT NULL DEFAULT 0,
+			active tinyint(1) NOT NULL DEFAULT 1,
+			note varchar(255) NOT NULL DEFAULT '',
+			batch varchar(40) NOT NULL DEFAULT '',
+			created_at datetime NOT NULL,
+			updated_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY code_norm (code_norm),
+			KEY batch (batch)
+		) {$charset};
+		CREATE TABLE {$wpdb->prefix}resandpay_res_log (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			reservation_id bigint(20) unsigned NOT NULL,
+			created_at datetime NOT NULL,
+			user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			type varchar(30) NOT NULL DEFAULT '',
+			message varchar(255) NOT NULL DEFAULT '',
+			PRIMARY KEY  (id),
+			KEY reservation_id (reservation_id)
 		) {$charset};
 		CREATE TABLE {$wpdb->prefix}resandpay_mails (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,

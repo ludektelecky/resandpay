@@ -23,7 +23,7 @@ class Resandpay_Mailer {
 	public static $last_parts = array();
 
 	/** Šablony, ke kterým patří platební údaje, QR kód a PDF platebního pokynu. */
-	const PAYMENT_KEYS = array( 'received', 'received_cash', 'overdue', 'reminder', 'partial', 'part1' );
+	const PAYMENT_KEYS = array( 'received', 'received_cash', 'overdue', 'reminder', 'partial', 'part1', 'discount_lost' );
 
 	public static function init() {
 		add_filter( 'wp_mail', array( __CLASS__, 'redirect_in_test_mode' ), 99 );
@@ -98,6 +98,10 @@ class Resandpay_Mailer {
 			'{last_minute_note}' => ! empty( $r['last_minute'] ) && 'cash' !== ( $r['pay_choice'] ?? '' ) ? $s['tpl_lastminute_note'] : '',
 			'{pay_choice}'       => Resandpay_Reservations::pay_choice_labels()[ $r['pay_choice'] ?? 'transfer' ] ?? '',
 			'{total}'            => Resandpay_Events::format_price( $r['amount'], $r['currency'] ),
+			'{price_full}'       => Resandpay_Events::format_price( (float) ( $r['price_full'] ?? 0 ) ?: (float) $r['amount'], $r['currency'] ),
+			'{discount}'         => (float) ( $r['discount_amount'] ?? 0 ) > 0 ? Resandpay_Events::format_price( $r['discount_amount'], $r['currency'] ) : '',
+			'{discount_label}'   => (string) ( $r['discount_label'] ?? '' ),
+			'{coupon}'           => ( ! empty( $r['coupon_id'] ) && ( $cp = Resandpay_Discounts::get( $r['coupon_id'] ) ) ) ? $cp['code'] : '',
 			'{paid}'             => Resandpay_Events::format_price( $r['amount_paid'] ?? 0, $r['currency'] ),
 			'{remaining}'        => Resandpay_Events::format_price( Resandpay_Reservations::remaining( $r ), $r['currency'] ),
 			'{amount_now}'       => Resandpay_Events::format_price( Resandpay_Reservations::amount_now( $r ), $r['currency'] ),
@@ -193,6 +197,16 @@ class Resandpay_Mailer {
 		$due = Resandpay_Reservations::due_now( $r );
 		if ( 'cash' !== ( $r['pay_choice'] ?? '' ) && $due ) {
 			$rows[ __( 'Splatnost', 'reserveandpay' ) ] = wp_date( 'j. n. Y', Resandpay_Events::ts( $due ) );
+		}
+		if ( (float) ( $r['discount_amount'] ?? 0 ) > 0 ) {
+			// OP01: sleva v textu, QR kódy už s částkou po slevě.
+			$rows[ __( 'Cena', 'reserveandpay' ) ] = Resandpay_Events::format_price( $r['price_full'], $r['currency'] );
+			if ( Resandpay_Reservations::discount_now( $r ) > 0 ) {
+				$rows[ $r['discount_label'] ?: __( 'Sleva', 'reserveandpay' ) ] = '−' . Resandpay_Events::format_price( $r['discount_amount'], $r['currency'] ) . ( Resandpay_Reservations::early_active( $r ) ? ' ' . __( '(platí při úhradě ve splatnosti)', 'reserveandpay' ) : '' );
+			} else {
+				/* translators: %s: popis slevy */
+				$rows[ __( 'Sleva', 'reserveandpay' ) ] = sprintf( __( '%s zanikla (platba po splatnosti)', 'reserveandpay' ), $r['discount_label'] );
+			}
 		}
 		if ( Resandpay_Reservations::is_split( $r ) ) {
 			/* translators: 1: 1. část, 2: datum, 3: doplatek, 4: datum */
@@ -328,7 +342,15 @@ class Resandpay_Mailer {
 
 	/** Šablona potvrzení rezervace podle zvoleného způsobu platby. */
 	public static function received_key( array $r ) {
+		if ( self::is_free( $r ) ) {
+			return 'free';
+		}
 		return 'cash' === ( $r['pay_choice'] ?? '' ) ? 'received_cash' : 'received';
+	}
+
+	/** Rezervace zdarma (kupón 100 %). */
+	public static function is_free( array $r ) {
+		return 'free' === ( $r['paid_method'] ?? '' ) && (float) $r['amount'] <= 0;
 	}
 
 	public static function send_received( array $r ) {
@@ -368,6 +390,8 @@ class Resandpay_Mailer {
 			'cancelled'     => __( 'Zrušení rezervace', 'reserveandpay' ),
 			'test'          => __( 'Zkušební e-mail', 'reserveandpay' ),
 			'security'      => __( 'Upozornění – zablokované rezervace', 'reserveandpay' ),
+			'discount_lost' => __( 'Změna předpisu – sleva zanikla', 'reserveandpay' ),
+			'free'          => __( 'Rezervace zdarma potvrzena', 'reserveandpay' ),
 		);
 	}
 

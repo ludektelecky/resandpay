@@ -1,5 +1,25 @@
 # Vývojový deník ReserveAndPay
 
+## 0.8.0 – Slevy (25. 10. 2026)
+
+- **Slevové kupóny** – nová stránka **ResAndPay → Slevové kupóny**:
+  - kód automaticky ve tvaru **SLH-XXXX-XXXX-XX** (neuhodnutelný, bez 0/O/1/I/L; předpona v nastavení) nebo **vlastní** (např. JARO2027); interní GUID
+  - sleva v % nebo Kč, platnost od–do, rozsah **všechny / vybrané akce / služby (všechny termíny) / kategorie**, limit použití celkem a na e-mail, zapnuto / vypnuto, poznámka
+  - **hromadné generování** jednorázových kupónů (dárkové poukazy) – stažení CSV, ZIP (CSV + QR PNG + PDF poukazy) nebo všechny poukazy v jednom PDF
+  - **QR kód kupónu ve zlaté barvě** (odlišený od platebních QR) s odkazem `?kupon=…` – kupón se v rezervaci vyplní sám (zapamatuje se na 7 dní); **PDF poukaz** v grafice webu
+  - ve formuláři pole „Slevový kupón“ s tlačítkem **Použít** (hned ukáže cenu po slevě nebo důvod odmítnutí); kupón i při ruční rezervaci v administraci
+  - **kupón 100 %** → rezervace zdarma, rovnou potvrzená, e-mail bez platebních údajů
+  - po vypršení / zrušení rezervace se použití kupónu vrátí; sleva z kupónu pozdní platbou nezaniká
+- **Sleva za včasnou rezervaci** u akce („Další nastavení“) i služby (platí pro všechny termíny): Kč / %, „při rezervaci do“, popis
+  - jen při platbě převodem; na webu všude u ceny („4 900 Kč · při rezervaci do 31. 12. a platbě ve splatnosti 4 400 Kč“), v kalendáři v popisku
+  - **zaniká**, když platba, část platby nebo nedoplatek přijde po splatnosti – rozhoduje **datum připsání z avíza**; zákazník dostane jeden e-mail **„Změna platebního předpisu – sleva zanikla“** (nahrazuje připomínku po splatnosti); splatnost a pravidla pozdní úhrady beze změny
+  - **Ponechat slevu** v detailu rezervace (s důvodem); historie slevy u rezervace
+- **OP01**: sleva v textu e-mailu, PDF a na potvrzovací stránce; QR kódy s částkami po slevě; u dvou plateb se 1. část počítá z plné ceny a sleva se odečte z doplatku (nejvýš do jeho výše, administrace upozorní)
+- Jen jedna sleva na rezervaci (kupón nelze kombinovat se slevou za včasnou rezervaci)
+- Seznam rezervací, detail a CSV: plná cena, sleva, kupón
+- Databáze verze 9 (kupóny, historie slev, sleva u rezervace)
+- Testy: 446 kontrol + souběh + kontrola v prohlížeči (Použít, dekódování zlatého QR); analytické zadání v3.6 (kap. 3.10, 8, 13)
+
 ## 0.7.6 (25. 10. 2026)
 
 - **Zobrazení času akcí a termínů** – nová volba **„Zobrazení času“**: u akce v „Další nastavení“, u služby v řádku „Zobrazení“ (platí pro všechny termíny služby, i již vypsané); hodnoty Výchozí z nastavení / Zobrazovat čas / **Jen datum**
