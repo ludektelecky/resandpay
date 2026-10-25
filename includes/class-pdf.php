@@ -179,6 +179,7 @@ class Resandpay_PDF {
 			$paid  = Resandpay_Reservations::PAID === $r['status'];
 			$spd   = $paid || Resandpay_Reservations::amount_now( $r ) <= 0 ? '' : Resandpay_QR::spd( $r );
 			$spd2  = $paid ? '' : Resandpay_QR::spd_full( $r );
+			Resandpay_Mailer::$discount_keys = array();
 			if ( $paid ) {
 				$items = array(
 					__( 'Částka', 'reserveandpay' )            => Resandpay_Events::format_price( $r['amount'], $r['currency'] ),
@@ -194,7 +195,7 @@ class Resandpay_PDF {
 			$rows_h = 13;
 			$i      = 0;
 			foreach ( $items as $k => $v ) {
-				$rows_h += $i < 2 ? 9 : ( mb_strlen( (string) $v ) > 44 ? 10 : 6.5 );
+				$rows_h += ( $i < 2 ? 9 : ( mb_strlen( (string) $v ) > 44 ? 10 : 6.5 ) ) + ( mb_strlen( (string) $k ) > 22 ? 2.6 : 0 );
 				++$i;
 			}
 			$top_h = max( 62, $rows_h + 3 );
@@ -209,19 +210,26 @@ class Resandpay_PDF {
 			$y = $box_y + 13;
 			$i = 0;
 			foreach ( $items as $k => $v ) {
-				$big = $i < 2;
+				$big  = $i < 2;
+				$disc = in_array( $k, Resandpay_Mailer::$discount_keys, true ); // Sleva zlatě (zlatohnědá).
 				++$i;
-				self::font( $pdf, 'worksans', 8.5, self::C_SOFT );
+				self::font( $pdf, 'worksans', 8.5, $disc ? self::C_ACCENT : self::C_SOFT );
 				$pdf->SetXY( 24, $y + ( $big ? 1.2 : 0 ) );
-				$pdf->Cell( 34, 5, $k, 0, 0, 'L' );
+				if ( $pdf->GetStringWidth( $k ) > 33 ) {
+					// Dlouhý popis (např. název slevy) do dvou řádků, aby nepřekrýval hodnotu.
+					$pdf->MultiCell( 33, 3.6, $k, 0, 'L' );
+					$y += 2.6;
+				} else {
+					$pdf->Cell( 34, 5, $k, 0, 0, 'L' );
+				}
 				if ( ! $big && mb_strlen( (string) $v ) > 44 ) {
-					self::font( $pdf, 'worksans', 8.5, self::C_INK );
+					self::font( $pdf, $disc ? 'worksansb' : 'worksans', 8.5, $disc ? self::C_ACCENT : self::C_INK );
 					$pdf->SetXY( 58, $y + 0.4 );
 					$pdf->MultiCell( 78, 4.2, (string) $v, 0, 'L' );
 					$y += 10;
 					continue;
 				}
-				self::font( $pdf, $big ? 'fraunces_sb' : 'worksans', $big ? 14 : 9.5, $big ? self::C_ACCENT : self::C_INK );
+				self::font( $pdf, $big ? 'fraunces_sb' : ( $disc ? 'worksansb' : 'worksans' ), $big ? 14 : 9.5, $big || $disc ? self::C_ACCENT : self::C_INK );
 				$pdf->SetXY( 58, $y );
 				$pdf->Cell( 78, $big ? 7 : 5, (string) $v, 0, 0, 'L' );
 				$y += $big ? 9 : 6.5;

@@ -275,9 +275,15 @@
 @media (prefers-reduced-motion: reduce) { .rap-breath path { animation: none; } .rap-gallery__thumb { transition: none; } }
 
 /* Slevy (0.8.0) */
+/* Sleva za včasnou rezervaci: cena po slevě zlatě a stejně velkým písmem jako základní cena, podmínka menším písmem – vše ke slevě zlatě (gold-deep, kontrast 4,9 : 1). */
+.rap-early-price { color: var(--rap-accent); font: inherit; font-weight: inherit; white-space: nowrap; }
 .rap-early { color: var(--rap-accent); font-family: var(--rap-font); font-size: .85em; font-weight: 500; white-space: normal; }
-.rap-item__price .rap-early, .rap-event__price .rap-early, .rap-details .rap-early { display: block; font-size: 14px; line-height: 1.4; margin-top: .2rem; }
-.rap-summary--early { color: var(--rap-accent); border-color: var(--rap-gold); }
+.rap-item__price .rap-early-price, .rap-event__price .rap-early-price, .rap-details .rap-early-price { display: block; margin-top: .15rem; }
+.rap-item__price .rap-early, .rap-event__price .rap-early, .rap-details .rap-early { display: block; font-size: 14px; line-height: 1.4; margin-top: .1rem; }
+.rap-summary--early .rap-early-price { font-weight: 600; }
+.rap-pay .rap-is-discount { color: var(--rap-accent); }
+.rap-pay dd.rap-early-price { font-weight: 600; }
+.rap-summary.rap-summary--early, .rap-booking--card .rap-summary.rap-summary--early { color: var(--rap-accent); border-color: var(--rap-gold); }
 .rap-early-dot { display: inline-block; margin-left: .25em; color: var(--rap-gold); font-weight: 700; }
 .rap-coupon__row { display: flex; gap: .5rem; align-items: stretch; flex-wrap: wrap; }
 .rap-coupon__row input { flex: 1 1 10rem; min-width: 0; text-transform: uppercase; letter-spacing: .04em; }

@@ -1249,6 +1249,10 @@ rap_t( false !== strpos( Resandpay_QR::spd( $d1 ), '*AM:2000.00*' ) && false !==
 $m1 = $GLOBALS['rap_mails'][0]['message'] ?? '';
 rap_t( false !== strpos( $m1, 'Sleva za včasnou rezervaci' ) && false !== strpos( $m1, '−500 Kč' ) && false !== strpos( $m1, 'doplatek 2 400 Kč' ) && false !== strpos( $m1, 've splatnosti' ), 'e-mail: rozpis se slevou a podmínkou, doplatek 2 400' );
 rap_t( 0 === strpos( Resandpay_PDF::render( $d1 ), '%PDF' ), 'platební pokyn PDF se slevou' );
+rap_t( false !== strpos( Resandpay_Frontend::price_html( $dEv ), '<span class="rap-early-price">4 400 Kč</span>' ) && false !== strpos( Resandpay_Frontend::price_html( $dEv ), 'class="rap-early"' ), '0.8.3: cena po slevě samostatně (zlatě, velikost základní ceny), podmínka zvlášť' );
+$pr = Resandpay_Mailer::payment_rows( $d1 );
+rap_t( '4 400 Kč' === ( $pr['Cena po slevě'] ?? '' ) && in_array( 'Cena po slevě', Resandpay_Mailer::$discount_keys, true ) && in_array( 'Sleva za včasnou rezervaci', Resandpay_Mailer::$discount_keys, true ), '0.8.3: e-mail a PDF – řádek „Cena po slevě“, slevové řádky zlatě' );
+rap_t( false !== strpos( $m1, 'Cena po slevě' ), '0.8.3: e-mail obsahuje cenu po slevě' );
 rap_t( 'coupon_combine' === Resandpay_Reservations::create( $dE, array_merge( rap_person( 201 ), array( 'coupon' => 'NECO' ) ), array( 'notify' => false ) )->get_error_code(), 'kupón nelze kombinovat se slevou za včasnou rezervaci' );
 $dc = Resandpay_Reservations::create( $dE, array_merge( rap_person( 202 ), array( 'pay_choice' => 'cash' ) ), array( 'notify' => false ) );
 rap_t( 0.0 === (float) $dc['discount_amount'] && 4900.0 === (float) $dc['amount'], 'hotovost na místě: bez slevy za včasnou rezervaci' );

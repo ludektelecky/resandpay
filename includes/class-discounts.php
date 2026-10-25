@@ -433,18 +433,35 @@ class Resandpay_Discounts {
 
 	/** Text u ceny na webu: „4 900 Kč · při rezervaci do 31. 12. a platbě ve splatnosti 4 400 Kč“. */
 	public static function price_note( array $ev, $now = null ) {
+		$o = self::early_offer( $ev, $now );
+		return $o ? $o['condition'] . ' ' . $o['price_text'] : '';
+	}
+
+	/**
+	 * Nabídka slevy za včasnou rezervaci pro zobrazení u ceny: cena po slevě (zlatě, stejně
+	 * velkým písmem jako základní cena) a podmínka („při rezervaci do … a platbě ve splatnosti“).
+	 *
+	 * @return array|null price, price_text, condition, label.
+	 */
+	public static function early_offer( array $ev, $now = null ) {
 		$cfg = self::early_open( $ev, $now );
 		if ( ! $cfg || (float) $ev['price'] <= 0 ) {
-			return '';
+			return null;
 		}
 		$part1 = Resandpay_Events::part1_amount( $ev );
 		$d     = self::amount( $cfg['mode'], $cfg['value'], (float) $ev['price'], $part1 );
 		if ( $d <= 0 ) {
-			return '';
+			return null;
 		}
 		$until = date_create_immutable( $cfg['until'] . ' 12:00:00', wp_timezone() );
-		/* translators: 1: datum, 2: cena po slevě */
-		return sprintf( __( 'při rezervaci do %1$s a platbě ve splatnosti %2$s', 'reserveandpay' ), $until ? $until->format( 'j. n.' ) . ( $until->format( 'Y' ) !== wp_date( 'Y' ) ? ' ' . $until->format( 'Y' ) : '' ) : $cfg['until'], Resandpay_Events::format_price( (float) $ev['price'] - $d, $ev['currency'] ) );
+		$price = (float) $ev['price'] - $d;
+		return array(
+			'price'      => $price,
+			'price_text' => Resandpay_Events::format_price( $price, $ev['currency'] ),
+			/* translators: %s: datum */
+			'condition'  => sprintf( __( 'při rezervaci do %s a platbě ve splatnosti', 'reserveandpay' ), $until ? $until->format( 'j. n.' ) . ( $until->format( 'Y' ) !== wp_date( 'Y' ) ? ' ' . $until->format( 'Y' ) : '' ) : $cfg['until'] ),
+			'label'      => $cfg['label'],
+		);
 	}
 
 	/* ---------------------------------------------------------------------

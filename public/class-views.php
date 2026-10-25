@@ -539,9 +539,9 @@ class Resandpay_Views {
 		echo '<div class="rap-program-view rap-slots" id="rap-slots">';
 		echo '<p class="rap-slots__info"><span class="rap-eyebrow">' . esc_html( $svc['title'] ) . '</span> ';
 		echo esc_html( sprintf( /* translators: 1: délka, 2: cena */ __( '%1$d min · %2$s', 'reserveandpay' ), $svc['duration'], Resandpay_Events::format_price( $svc['price'], $svc['currency'] ) ) );
-		$early_note = Resandpay_Discounts::price_note( $svc );
-		if ( $early_note ) {
-			echo ' <span class="rap-early">· ' . esc_html( $early_note ) . '</span>';
+		$early_offer = Resandpay_Discounts::early_offer( $svc );
+		if ( $early_offer ) {
+			echo ' · <span class="rap-early-price">' . esc_html( $early_offer['price_text'] ) . '</span> <span class="rap-early">' . esc_html( $early_offer['condition'] ) . '</span>';
 		}
 		if ( $svc['capacity'] > 1 ) {
 			echo esc_html( ' · ' . sprintf( /* translators: %d: kapacita */ __( 'max. %d osob', 'reserveandpay' ), $svc['capacity'] ) );

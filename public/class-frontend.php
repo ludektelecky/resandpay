@@ -79,8 +79,13 @@ class Resandpay_Frontend {
 
 	/** Cena na webu s informací o slevě za včasnou rezervaci (escapované HTML). */
 	public static function price_html( array $ev, $suffix = '' ) {
-		$note = Resandpay_Discounts::price_note( $ev );
-		return esc_html( Resandpay_Events::format_price( $ev['price'], $ev['currency'] ) ) . ( $suffix ? ' <small>' . esc_html( $suffix ) . '</small>' : '' ) . ( $note ? ' <span class="rap-early">' . esc_html( $note ) . '</span>' : '' );
+		$o   = Resandpay_Discounts::early_offer( $ev );
+		$out = '<span class="rap-price-base">' . esc_html( Resandpay_Events::format_price( $ev['price'], $ev['currency'] ) ) . '</span>' . ( $suffix ? ' <small>' . esc_html( $suffix ) . '</small>' : '' );
+		if ( $o ) {
+			// Cena po slevě zlatě a stejně velkým písmem jako základní cena, podmínka menším písmem (vše ke slevě zlatě).
+			$out .= ' <span class="rap-early-price">' . esc_html( $o['price_text'] ) . '</span> <span class="rap-early">' . esc_html( $o['condition'] ) . '</span>';
+		}
+		return $out;
 	}
 
 	/** Vzhled detailu akce s galerií (nastavení „Detail akce“). */
@@ -659,7 +664,9 @@ class Resandpay_Frontend {
 			/* translators: %s: popis slevy */
 			$q = self::quote( $ev['id'] );
 			/* translators: 1: popis slevy, 2: cena po slevě */
-			return '<p class="rap-summary rap-summary--early">' . esc_html( sprintf( __( '%1$s: cena po slevě %2$s – uplatní se automaticky při platbě převodem ve splatnosti. Nelze ji kombinovat se slevovým kupónem.', 'reserveandpay' ), $early['label'], str_replace( ' ', "\u{00A0}", Resandpay_Events::format_price( is_wp_error( $q ) ? $ev['price'] : $q['price_full'] - $q['discount'], $ev['currency'] ) ) ) ) . '</p>';
+			$after = str_replace( ' ', "\u{00A0}", Resandpay_Events::format_price( is_wp_error( $q ) ? $ev['price'] : $q['price_full'] - $q['discount'], $ev['currency'] ) );
+			/* translators: %s: popis slevy */
+			return '<p class="rap-summary rap-summary--early">' . esc_html( sprintf( __( '%s – cena po slevě', 'reserveandpay' ), $early['label'] ) ) . ' <strong class="rap-early-price">' . esc_html( $after ) . '</strong><br>' . esc_html__( 'Uplatní se automaticky při platbě převodem ve splatnosti. Nelze ji kombinovat se slevovým kupónem.', 'reserveandpay' ) . '</p>';
 		}
 		$code = (string) ( $values['coupon'] ?? self::prefilled_coupon() );
 		$uid  = wp_unique_id( 'rap-coupon-' );
@@ -708,7 +715,8 @@ class Resandpay_Frontend {
 		}
 		if ( Resandpay_Reservations::discount_now( $r ) > 0 ) {
 			echo '<dt>' . esc_html__( 'Cena', 'reserveandpay' ) . '</dt><dd>' . esc_html( Resandpay_Events::format_price( $r['price_full'], $r['currency'] ) ) . '</dd>';
-			echo '<dt>' . esc_html( $r['discount_label'] ) . '</dt><dd>−' . esc_html( Resandpay_Events::format_price( $r['discount_amount'], $r['currency'] ) ) . ( Resandpay_Reservations::early_active( $r ) ? ' <small>' . esc_html__( '(platí při úhradě ve splatnosti)', 'reserveandpay' ) . '</small>' : '' ) . '</dd>';
+			echo '<dt class="rap-is-discount">' . esc_html( $r['discount_label'] ) . '</dt><dd class="rap-is-discount">−' . esc_html( Resandpay_Events::format_price( $r['discount_amount'], $r['currency'] ) ) . ( Resandpay_Reservations::early_active( $r ) ? ' <small>' . esc_html__( '(platí při úhradě ve splatnosti)', 'reserveandpay' ) . '</small>' : '' ) . '</dd>';
+			echo '<dt class="rap-is-discount">' . esc_html__( 'Cena po slevě', 'reserveandpay' ) . '</dt><dd class="rap-is-discount rap-early-price">' . esc_html( Resandpay_Events::format_price( $r['amount'], $r['currency'] ) ) . '</dd>';
 		}
 		if ( $split ) {
 			/* translators: 1: doplatek, 2: datum */

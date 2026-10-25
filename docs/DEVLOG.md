@@ -1,5 +1,14 @@
 # Vývojový deník ReserveAndPay
 
+## 0.8.3 (25. 10. 2026)
+
+- **Výraznější zobrazení slevy** – vše, co se týká slevy, je zlatohnědě:
+  - na webu (výpis termínů, kalendář, detail akce, výběr termínů služby) je **cena po slevě stejně velkým písmem jako základní cena**, na samostatném řádku pod ní; podmínka „při rezervaci do … a platbě ve splatnosti“ zůstává menším písmem
+  - rezervační formulář: celé upozornění na slevu zlatohnědě, cena po slevě tučně
+  - potvrzovací stránka, HTML e-maily zákazníkovi a platební pokyn (PDF): řádky slevy zlatohnědě a nový řádek **Cena po slevě**
+- PDF platebního pokynu: dlouhý název slevy se zalomí do dvou řádků (dřív překrýval hodnotu)
+- Testy: 458 kontrol + souběh; analytické zadání v3.9 (kap. 3.10)
+
 ## 0.8.2 (25. 10. 2026)
 
 - **Jednotné logo pro všechny výstupy ReserveAndPay** – platební pokyn (PDF), slevový poukaz (PDF) a HTML e-maily berou logo z jednoho místa (Nastavení → Identifikace → **Logo ve výstupech**):

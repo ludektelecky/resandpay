@@ -22,6 +22,9 @@ class Resandpay_Mailer {
 	/** @var array Části posledního sestaveného e-mailu (diagnostika a testy). */
 	public static $last_parts = array();
 
+	/** @var array Řádky platebních údajů týkající se slevy (zobrazují se zlatě – e-mail i PDF). */
+	public static $discount_keys = array();
+
 	/** Šablony, ke kterým patří platební údaje, QR kód a PDF platebního pokynu. */
 	const PAYMENT_KEYS = array( 'received', 'received_cash', 'overdue', 'reminder', 'partial', 'part1', 'discount_lost' );
 
@@ -191,6 +194,7 @@ class Resandpay_Mailer {
 
 	/** Řádky platebních údajů (stejné v HTML i textové verzi). */
 	public static function payment_rows( array $r ) {
+		self::$discount_keys = array();
 		$s     = Resandpay_Settings::all();
 		$p1    = Resandpay_Reservations::in_part1( $r );
 		$label = $p1 ? __( '1. část platby', 'reserveandpay' ) : ( (float) ( $r['amount_paid'] ?? 0 ) > 0 ? __( 'Zbývá zaplatit', 'reserveandpay' ) : __( 'Částka', 'reserveandpay' ) );
@@ -208,9 +212,14 @@ class Resandpay_Mailer {
 			// OP01: sleva v textu, QR kódy už s částkou po slevě.
 			$rows[ __( 'Cena', 'reserveandpay' ) ] = Resandpay_Events::format_price( $r['price_full'], $r['currency'] );
 			if ( Resandpay_Reservations::discount_now( $r ) > 0 ) {
-				$rows[ $r['discount_label'] ?: __( 'Sleva', 'reserveandpay' ) ] = '−' . Resandpay_Events::format_price( $r['discount_amount'], $r['currency'] ) . ( Resandpay_Reservations::early_active( $r ) ? ' ' . __( '(platí při úhradě ve splatnosti)', 'reserveandpay' ) : '' );
+				$dk                   = $r['discount_label'] ?: __( 'Sleva', 'reserveandpay' );
+				$after                = __( 'Cena po slevě', 'reserveandpay' );
+				self::$discount_keys = array( $dk, $after );
+				$rows[ $dk ]          = '−' . Resandpay_Events::format_price( $r['discount_amount'], $r['currency'] ) . ( Resandpay_Reservations::early_active( $r ) ? ' ' . __( '(platí při úhradě ve splatnosti)', 'reserveandpay' ) : '' );
+				$rows[ $after ]       = Resandpay_Events::format_price( $r['amount'], $r['currency'] );
 			} else {
 				/* translators: %s: popis slevy */
+				self::$discount_keys = array( __( 'Sleva', 'reserveandpay' ) );
 				$rows[ __( 'Sleva', 'reserveandpay' ) ] = sprintf( __( '%s zanikla (platba po splatnosti)', 'reserveandpay' ), $r['discount_label'] );
 			}
 		}
@@ -242,7 +251,8 @@ class Resandpay_Mailer {
 		$i = 0;
 		foreach ( $rows as $k => $v ) {
 			$big  = $i < 2;
-			$out .= '<tr><td style="padding:3px 14px 3px 0;font-size:13px;color:' . $c['soft'] . ';white-space:nowrap;">' . esc_html( $k ) . '</td><td style="padding:3px 0;' . ( $big ? 'font-family:Georgia,\'Times New Roman\',serif;font-size:20px;font-weight:bold;color:' . $c['accent'] . ';' : 'font-size:14px;color:' . $c['ink'] . ';' ) . '">' . esc_html( $v ) . '</td></tr>';
+			$disc = in_array( $k, self::$discount_keys, true );
+			$out .= '<tr><td style="padding:3px 14px 3px 0;font-size:13px;color:' . ( $disc ? $c['accent'] : $c['soft'] ) . ';white-space:nowrap;">' . esc_html( $k ) . '</td><td style="padding:3px 0;' . ( $big ? 'font-family:Georgia,\'Times New Roman\',serif;font-size:20px;font-weight:bold;color:' . $c['accent'] . ';' : 'font-size:14px;color:' . ( $disc ? $c['accent'] . ';font-weight:bold' : $c['ink'] ) . ';' ) . '">' . esc_html( $v ) . '</td></tr>';
 			++$i;
 		}
 		$out .= '</table></td>';
