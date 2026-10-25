@@ -39,23 +39,55 @@ class Resandpay_Mailer {
 		if ( ! self::$sending ) {
 			return;
 		}
-		if ( false !== strpos( (string) $phpmailer->Body, 'cid:rap-logo' ) && ( $logo = Resandpay_Brand::email_image() ) ) {
-			$phpmailer->addStringEmbeddedImage( $logo['data'], 'rap-logo', $logo['name'], 'base64', $logo['mime'] );
+		// Obrázky a PDF se vkládají ze souborů (ne z řetězce): SMTP pluginy jako FluentSMTP
+		// přílohy znovu přidávají podle cesty k souboru a přílohu z řetězce neumí odeslat.
+		try {
+			if ( false !== strpos( (string) $phpmailer->Body, 'cid:rap-logo' ) && ( $logo = Resandpay_Brand::email_image() ) ) {
+				$phpmailer->addEmbeddedImage( $logo['path'], 'rap-logo', $logo['name'], 'base64', $logo['mime'] );
+			}
+			if ( ! self::$parts ) {
+				return;
+			}
+			$p                  = self::$parts;
+			$phpmailer->AltBody = $p['text'];
+			if ( ! empty( $p['qr_png'] ) && ( $f = self::tmp_file( $p['qr_png'], 'qr-platba.png' ) ) ) {
+				$phpmailer->addEmbeddedImage( $f, 'rap-qr', 'qr-platba.png', 'base64', 'image/png' );
+			}
+			if ( ! empty( $p['qr2_png'] ) && ( $f = self::tmp_file( $p['qr2_png'], 'qr-platba-vse.png' ) ) ) {
+				$phpmailer->addEmbeddedImage( $f, 'rap-qr2', 'qr-platba-vse.png', 'base64', 'image/png' );
+			}
+			if ( ! empty( $p['pdf'] ) && ( $f = self::tmp_file( $p['pdf'], $p['pdf_name'] ) ) ) {
+				$phpmailer->addAttachment( $f, $p['pdf_name'], 'base64', 'application/pdf' );
+			}
+		} catch ( Exception $e ) {
+			error_log( 'RAP mail parts: ' . $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
 		}
-		if ( ! self::$parts ) {
-			return;
+	}
+
+	/** @var string[] Dočasné soubory příloh aktuálního e-mailu (po odeslání se smažou). */
+	private static $tmp_files = array();
+
+	/** Uloží obsah přílohy do dočasného souboru s daným názvem; vrací cestu, nebo ''. */
+	private static function tmp_file( $data, $name ) {
+		$dir = trailingslashit( get_temp_dir() ) . 'rap-' . wp_generate_password( 12, false );
+		if ( ! wp_mkdir_p( $dir ) ) {
+			return '';
 		}
-		$p                  = self::$parts;
-		$phpmailer->AltBody = $p['text'];
-		if ( ! empty( $p['qr_png'] ) ) {
-			$phpmailer->addStringEmbeddedImage( $p['qr_png'], 'rap-qr', 'qr-platba.png', 'base64', 'image/png' );
+		$file = $dir . '/' . sanitize_file_name( $name );
+		if ( false === file_put_contents( $file, $data ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions
+			return '';
 		}
-		if ( ! empty( $p['qr2_png'] ) ) {
-			$phpmailer->addStringEmbeddedImage( $p['qr2_png'], 'rap-qr2', 'qr-platba-vse.png', 'base64', 'image/png' );
+		self::$tmp_files[] = $file;
+		return $file;
+	}
+
+	/** Smaže dočasné soubory příloh. */
+	private static function cleanup_tmp() {
+		foreach ( self::$tmp_files as $f ) {
+			@unlink( $f ); // phpcs:ignore WordPress.PHP.NoSilencedErrors, WordPress.WP.AlternativeFunctions
+			@rmdir( dirname( $f ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors, WordPress.WP.AlternativeFunctions
 		}
-		if ( ! empty( $p['pdf'] ) ) {
-			$phpmailer->addStringAttachment( $p['pdf'], $p['pdf_name'], 'base64', 'application/pdf' );
-		}
+		self::$tmp_files = array();
 	}
 
 	/** Zaznamená chybu odesílání (posledních 20) – zobrazuje se v Nástrojích. */
@@ -316,6 +348,7 @@ class Resandpay_Mailer {
 		$ok               = wp_mail( $to, $subject, $html, $headers );
 		self::$sending    = false;
 		self::$parts      = null;
+		self::cleanup_tmp();
 		return $ok;
 	}
 
@@ -333,6 +366,7 @@ class Resandpay_Mailer {
 		$ok               = wp_mail( $to, $parts['subject'], $parts['html'], $headers );
 		self::$sending    = false;
 		self::$parts      = null;
+		self::cleanup_tmp();
 		self::record( $key, $to, $parts['subject'], $ok, (int) ( $r['id'] ?? 0 ) );
 		do_action( 'resandpay_mail_sent', $key, $to, $r, $ok );
 		return $ok;

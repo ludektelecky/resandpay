@@ -124,6 +124,7 @@ class Resandpay_Brand {
 		}
 		$size = @getimagesize( $logo['path'] ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 		return array(
+			'path'   => $logo['path'],
 			'data'   => (string) file_get_contents( $logo['path'] ), // phpcs:ignore WordPress.WP.AlternativeFunctions
 			'mime'   => $logo['mime'],
 			'name'   => basename( $logo['path'] ),

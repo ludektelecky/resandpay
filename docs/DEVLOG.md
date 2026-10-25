@@ -1,5 +1,12 @@
 # Vývojový deník ReserveAndPay
 
+## 0.9.1 – oprava odesílání e-mailů (25. 10. 2026)
+
+- **Oprava:** s pluginem FluentSMTP (SMTP spojení) e-maily s logem webu, QR kódem nebo PDF neodcházely – chyba „Nelze přistupovat k souboru: ‰PNG…“. FluentSMTP přílohy přidává znovu podle cesty k souboru a přílohu vloženou z paměti neumí odeslat.
+- Logo, QR kódy a PDF platebního pokynu se nově vkládají jako soubory (QR a PDF dočasně, po odeslání se smažou); funguje se standardním wp_mail() i s FluentSMTP (ověřeno s FluentSMTP 2.4.1 a testovacím SMTP serverem)
+- Pozn.: FluentSMTP vložené obrázky (logo, QR) přidá do zprávy ještě jednou jako běžné přílohy – v některých programech se tak zobrazí navíc i v seznamu příloh
+- Testy: 472 kontrol + souběh; analytické zadání v4.4 (kap. 4.5)
+
 ## 0.9.0 – Externí rezervační systém (25. 10. 2026)
 
 - **Rezervace v externím systému** (SWD kap. 3.11) – termín se vypisuje na webu z ReserveAndPay, ale „Rezervovat“ vede do jiného rezervačního systému:
