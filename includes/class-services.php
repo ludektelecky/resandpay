@@ -266,6 +266,43 @@ class Resandpay_Services {
 		return array_filter( array_map( array( 'Resandpay_Events', 'get' ), $ids ) );
 	}
 
+	/**
+	 * První volný rezervovatelný termín služby od daného okamžiku – bez omezení dopředu.
+	 *
+	 * @return array|null Termín (Resandpay_Events::get), nebo null.
+	 */
+	public static function first_free( $service_id, DateTimeImmutable $from ) {
+		$ids = get_posts(
+			array(
+				'post_type'      => Resandpay_Post_Types::EVENT,
+				'post_status'    => 'publish',
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+				'meta_key'       => '_rap_start',
+				'orderby'        => 'meta_value',
+				'order'          => 'ASC',
+				'meta_query'     => array(
+					array(
+						'key'   => '_rap_service',
+						'value' => (int) $service_id,
+					),
+					array(
+						'key'     => '_rap_start',
+						'value'   => $from->format( 'Y-m-d H:i:s' ),
+						'compare' => '>=',
+						'type'    => 'DATETIME',
+					),
+				),
+			)
+		);
+		foreach ( $ids as $id ) {
+			if ( ! is_wp_error( Resandpay_Events::check_bookable( $id ) ) && Resandpay_Events::free_places( $id ) > 0 ) {
+				return Resandpay_Events::get( $id );
+			}
+		}
+		return null;
+	}
+
 	/** Volné rezervovatelné termíny služby. */
 	public static function free_slots( $service_id, DateTimeImmutable $from, DateTimeImmutable $to ) {
 		return array_values(

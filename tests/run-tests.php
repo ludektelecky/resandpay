@@ -1236,6 +1236,32 @@ rap_t( is_string( $slh ) && false !== strpos( $slh, '>Rezervovat<' ) && false ==
 $lsT = Resandpay_Views::render_list( array( 'limit' => 50, 'category' => '' ) );
 rap_t( is_string( $lsT ) && (bool) preg_match( '/Nejbližší volný termín: \S+ \d{1,2}\. \d{1,2}\. \d{4}/u', $lsT ), '0.8.4: nejbližší volný termín služby s rokem' );
 
+echo "== 0.8.5: výpis termínů služby začíná nejbližším volným termínem\n";
+$fy  = (int) wp_date( 'Y' ) + 3;
+$fjS = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::SERVICE, 'post_status' => 'publish', 'post_title' => 'Vzdálená služba' ) );
+Resandpay_Admin_Services::save_service_meta( $fjS, array( 'rap_duration' => 60, 'rap_pause' => 0, 'rap_capacity' => 1, 'rap_price' => 1000, 'rap_time_display' => 'show' ) );
+$pvF = Resandpay_Services::preview( $fjS, array( 'weekdays' => array( 1, 2, 3, 4, 5, 6, 0 ), 'time_from' => '10:00', 'time_to' => '11:00', 'date_from' => $fy . '-03-02', 'date_to' => $fy . '-03-03' ) );
+Resandpay_Services::create_slots( $fjS, wp_list_pluck( $pvF, 'start' ) );
+$fFirst = Resandpay_Services::first_free( $fjS, new DateTimeImmutable( 'now', wp_timezone() ) );
+rap_t( $fFirst && 0 === strpos( $fFirst['start'], $fy . '-03-02 10:00' ), 'první volný termín se najde i víc než rok dopředu' );
+$_GET = array();
+$fh = Resandpay_Views::render_slots( array( 'service' => $fjS, 'days' => 14 ) );
+rap_t( false !== strpos( $fh, '2. 3. ' . $fy . ' 10:00' ) && false !== strpos( $fh, 'rap-slots__first' ) && false === strpos( $fh, 'rap-empty' ) && false !== strpos( $fh, '← Předchozí termíny' ), 'bez data v odkazu začne výpis dnem nejbližšího volného termínu, s větou nahoře' );
+rap_t( false === strpos( $fh, 'dřívější termíny jsou obsazené' ), 'bez dřívějších termínů se neříká „obsazené“' );
+Resandpay_Reservations::create( $fFirst['id'], rap_person( 500 ), array( 'notify' => false ) );
+$fh2 = Resandpay_Views::render_slots( array( 'service' => $fjS, 'days' => 14 ) );
+rap_t( false !== strpos( $fh2, 'Nejbližší volný termín je' ) && false !== strpos( $fh2, '3. 3. ' . $fy ) && false !== strpos( $fh2, 'dřívější termíny jsou obsazené' ), 'po obsazení začne výpis dalším volným termínem, věta „dřívější termíny jsou obsazené“' );
+$_GET = array( 'rap_from' => wp_date( 'Y-m-d' ) );
+$fh3 = Resandpay_Views::render_slots( array( 'service' => $fjS, 'days' => 14 ) );
+$_GET = array();
+rap_t( false !== strpos( $fh3, 'rap-empty' ) && false === strpos( $fh3, 'rap-slots__first' ) && false !== strpos( $fh3, 'Další termíny →' ), 'odkaz s datem (rap_from) začne tím datem, šipka „Další termíny“ najde vzdálený termín' );
+$fsum = wp_list_filter( Resandpay_Views::service_summaries( '' ), array() );
+$fsum = array_values( array_filter( $fsum, fn( $x ) => (int) $x['service']['id'] === (int) $fjS ) );
+rap_t( $fsum && 0 === strpos( $fsum[0]['next']['start'], $fy . '-03-03' ), 'karta služby v přehledu najde nejbližší volný termín bez omezení dopředu' );
+Resandpay_Services::bulk_cancel( $fjS, new DateTimeImmutable( $fy . '-01-01', wp_timezone() ), new DateTimeImmutable( $fy . '-12-31', wp_timezone() ), false );
+$fh4 = Resandpay_Views::render_slots( array( 'service' => $fjS, 'days' => 14 ) );
+rap_t( false !== strpos( $fh4, 'rap-empty' ) && false === strpos( $fh4, 'rap-slots__first' ), 'bez volného termínu výpis začne dneškem s hláškou' );
+
 echo "== 0.8.0: slevy – sleva za včasnou rezervaci\n";
 global $wpdb;
 require_once RESANDPAY_DIR . 'admin/class-admin-coupons.php';

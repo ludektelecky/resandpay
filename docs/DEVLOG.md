@@ -1,5 +1,15 @@
 # Vývojový deník ReserveAndPay
 
+## 0.8.5 (25. 10. 2026)
+
+- **Výpis volných termínů služby začíná nejbližším volným termínem** (`[reserveandpay_slots]`):
+  - bez data v odkazu začne výpis dnem nejbližšího volného termínu – hledá se **bez omezení dopředu**
+  - nad výpisem věta „Nejbližší volný termín je út 9. 3. 2027 9:00 – dřívější termíny jsou obsazené.“ (druhá část jen tehdy, když dřívější termíny existují)
+  - „← Předchozí termíny“ vede nejvýše k dnešku; odkaz s datem (šipky, `rap_from`) začíná tímto datem; „Další termíny →“ najde i vzdálený termín
+  - bez volného termínu výpis začne dneškem s hláškou a výzvou ke kontaktu
+- Karta služby v přehledu termínů hledá nejbližší volný termín také bez omezení dopředu
+- Testy: +7 kontrol (vše PASS) + souběh; analytické zadání v4.1 (kap. 3.4)
+
 ## 0.8.4 (25. 10. 2026)
 
 - Karta služby v přehledu termínů: **nejbližší volný termín vždy s rokem** (např. „po 4. 1. 2027 18:45 · 60 min“), stejně jako u akcí

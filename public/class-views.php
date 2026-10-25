@@ -155,11 +155,12 @@ class Resandpay_Views {
 		$out = array();
 		foreach ( get_posts( $query ) as $sid ) {
 			$svc  = Resandpay_Services::get( $sid );
-			$free = $svc ? Resandpay_Services::free_slots( $sid, $now, $now->modify( '+1 year' ) ) : array();
-			if ( ! $free ) {
+			$next = $svc ? Resandpay_Services::first_free( $sid, $now ) : null;
+			if ( ! $next ) {
 				continue;
 			}
-			$next  = $free[0];
+			// Počet volných termínů do roka od nejbližšího (nejbližší se najde vždy, i za víc než rok).
+			$free = Resandpay_Services::free_slots( $sid, $now, max( $now->modify( '+1 year' ), date_create_immutable( $next['start'], wp_timezone() )->modify( '+1 year' ) ) );
 			$url   = $svc['page_id'] && 'publish' === get_post_status( $svc['page_id'] ) ? get_permalink( $svc['page_id'] ) . '#rap-slots' : get_permalink( $next['id'] ) . '#rap-booking';
 			$out[] = array(
 				'service' => $svc,
@@ -527,6 +528,18 @@ class Resandpay_Views {
 		if ( ! $from || $from < $today ) {
 			$from = $today;
 		}
+		// Bez data v odkazu začne výpis dnem nejbližšího volného termínu (hledá se bez omezení dopředu).
+		$jump = null;
+		if ( '' === $param ) {
+			$first = Resandpay_Services::first_free( $svc['id'], new DateTimeImmutable( 'now', $tz ) );
+			if ( $first ) {
+				$fday = date_create_immutable( substr( $first['start'], 0, 10 ) . ' 00:00:00', $tz );
+				if ( $fday > $today ) {
+					$from = $fday;
+					$jump = $first;
+				}
+			}
+		}
 		$to    = $from->modify( '+' . $days . ' days' );
 		$slots = Resandpay_Services::free_slots( $svc['id'], $from > $today ? $from : new DateTimeImmutable( 'now', $tz ), $to );
 		$wd    = self::weekdays_short();
@@ -547,6 +560,18 @@ class Resandpay_Views {
 			echo esc_html( ' · ' . sprintf( /* translators: %d: kapacita */ __( 'max. %d osob', 'reserveandpay' ), $svc['capacity'] ) );
 		}
 		echo '</p>';
+		if ( $jump ) {
+			$js    = date_create_immutable( $jump['start'], $tz );
+			$when  = $wd[ (int) $js->format( 'w' ) ] . ' ' . $js->format( 'j. n. Y' ) . ( ( $jump['show_time'] ?? true ) ? ' ' . $js->format( 'G:i' ) : '' );
+			$taken = (bool) Resandpay_Services::slots( $svc['id'], new DateTimeImmutable( 'now', $tz ), $js->modify( '-1 second' ) );
+			echo '<p class="rap-slots__first">' . esc_html(
+				$taken
+					/* translators: %s: den, datum a čas */
+					? sprintf( __( 'Nejbližší volný termín je %s – dřívější termíny jsou obsazené.', 'reserveandpay' ), $when )
+					/* translators: %s: den, datum a čas */
+					: sprintf( __( 'Nejbližší volný termín je %s.', 'reserveandpay' ), $when )
+			) . '</p>';
+		}
 		if ( ! $by ) {
 			echo '<p class="rap-empty">' . esc_html__( 'V tomto období nejsou volné termíny. Zkuste další týdny, nebo mi napište – rádi se domluvíme.', 'reserveandpay' ) . '</p>';
 		}
@@ -571,7 +596,7 @@ class Resandpay_Views {
 			$prev = $from->modify( '-' . $days . ' days' );
 			echo '<a class="rap-button rap-button--ghost" rel="nofollow" href="' . esc_url( add_query_arg( 'rap_from', ( $prev < $today ? $today : $prev )->format( 'Y-m-d' ), $base ) . '#rap-slots' ) . '">' . esc_html__( '← Předchozí termíny', 'reserveandpay' ) . '</a> ';
 		}
-		$later = Resandpay_Services::free_slots( $svc['id'], $to, $to->modify( '+1 year' ) );
+		$later = Resandpay_Services::first_free( $svc['id'], $to );
 		if ( $later ) {
 			echo '<a class="rap-button rap-button--ghost" rel="nofollow" href="' . esc_url( add_query_arg( 'rap_from', $to->format( 'Y-m-d' ), $base ) . '#rap-slots' ) . '">' . esc_html__( 'Další termíny →', 'reserveandpay' ) . '</a>';
 		}

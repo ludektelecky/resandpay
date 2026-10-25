@@ -99,6 +99,7 @@
 /* Volné termíny služby */
 .rap-slots__info { margin: 0 0 1.25rem; color: var(--rap-ink-soft); }
 .rap-slots__info .rap-eyebrow { display: inline; margin-right: .5rem; }
+.rap-slots__first { margin: -0.5rem 0 1.25rem; color: var(--rap-ink); font-weight: 500; }
 .rap-slots__day { display: grid; grid-template-columns: 110px 1fr; gap: 1rem; align-items: baseline; padding: 1rem 0; border-top: 1px solid var(--rap-line); }
 .rap-slots__day:last-of-type { border-bottom: 1px solid var(--rap-line); }
 .rap-slots__date { margin: 0; font-family: var(--rap-font-heading); font-size: 19px; color: var(--rap-accent-2); }
