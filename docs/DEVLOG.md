@@ -9,6 +9,7 @@
   - bez volného termínu výpis začne dneškem s hláškou a výzvou ke kontaktu
 - Karta služby v přehledu termínů hledá nejbližší volný termín také bez omezení dopředu
 - Testy: +7 kontrol (vše PASS) + souběh; analytické zadání v4.1 (kap. 3.4)
+- Analytické zadání v4.2: návrh ke schválení – **externí rezervační systém** (kap. 3.11): termíny v ReserveAndPay, tlačítko „Rezervovat“ vede na externí adresu, bez volných míst a zpětné vazby
 
 ## 0.8.4 (25. 10. 2026)
 
