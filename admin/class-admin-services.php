@@ -69,6 +69,8 @@ class Resandpay_Admin_Services {
 				<td><?php Resandpay_Discounts::early_fields( $post->ID ); ?><p class="description"><?php esc_html_e( 'Platí pro všechny termíny služby (i již vypsané).', 'reserveandpay' ); ?></p></td></tr>
 			<tr><th><?php esc_html_e( 'Zobrazení', 'reserveandpay' ); ?></th>
 				<td><?php Resandpay_Events::time_display_field( get_post_meta( $post->ID, '_rap_time_display', true ), __( 'Platí pro všechny termíny služby (i již vypsané), pokud termín nemá vlastní volbu. Jen datum: na webu, v e-mailech a na platebním pokynu bez času; ve výběru volných termínů se pak u tlačítek místo času ukáže „Rezervovat“ – hodí se jen pro jeden termín denně.', 'reserveandpay' ) ); ?></td></tr>
+			<tr><th><?php esc_html_e( 'Připomínka', 'reserveandpay' ); ?></th>
+				<td><?php Resandpay_Events::reminder_fields( $post->ID ); ?><p class="description"><?php esc_html_e( 'Platí pro všechny termíny služby, pokud termín nemá vlastní nastavení.', 'reserveandpay' ); ?></p></td></tr>
 			<tr><th><?php esc_html_e( 'Rezervace', 'reserveandpay' ); ?></th>
 				<td><?php Resandpay_Events::booking_fields( $post->ID ); ?><p class="description"><?php esc_html_e( 'Platí pro všechny termíny služby (i již vypsané). U jednotlivého termínu lze zadat vlastní adresu.', 'reserveandpay' ); ?></p></td></tr>
 			<tr><th><label for="rap_page"><?php esc_html_e( 'Stránka s volnými termíny', 'reserveandpay' ); ?></label></th>
@@ -143,6 +145,7 @@ class Resandpay_Admin_Services {
 		Resandpay_Events::save_time_display_meta( $post_id, $in );
 		Resandpay_Discounts::save_early_meta( $post_id, $in );
 		Resandpay_Events::save_booking_meta( $post_id, $in );
+		Resandpay_Events::save_reminder_meta( $post_id, $in );
 	}
 
 	public static function columns( $cols ) {

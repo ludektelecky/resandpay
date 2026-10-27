@@ -119,7 +119,7 @@ class Resandpay_Admin_Events {
 				Resandpay_Events::booking_fields( $post->ID );
 			}
 			?>
-			<details class="rap-more" <?php echo ( '' !== $raw_due || '' !== get_post_meta( $post->ID, '_rap_due_mode', true ) || '' !== get_post_meta( $post->ID, '_rap_cash', true ) || in_array( get_post_meta( $post->ID, '_rap_part1_mode', true ), array( 'fixed', 'percent' ), true ) || '' !== get_post_meta( $post->ID, '_rap_time_display', true ) || '' !== get_post_meta( $post->ID, '_rap_early_mode', true ) || $ev['close_hours'] || $ev['members_only'] || $ev['cancelled'] ) ? 'open' : ''; ?>>
+			<details class="rap-more" <?php echo ( '' !== $raw_due || '' !== get_post_meta( $post->ID, '_rap_due_mode', true ) || '' !== get_post_meta( $post->ID, '_rap_cash', true ) || in_array( get_post_meta( $post->ID, '_rap_part1_mode', true ), array( 'fixed', 'percent' ), true ) || '' !== get_post_meta( $post->ID, '_rap_time_display', true ) || '' !== get_post_meta( $post->ID, '_rap_early_mode', true ) || '' !== (string) get_post_meta( $post->ID, '_rap_reminder_hours', true ) || '' !== (string) get_post_meta( $post->ID, '_rap_reminder_note', true ) || $ev['close_hours'] || $ev['members_only'] || $ev['cancelled'] ) ? 'open' : ''; ?>>
 				<summary><?php esc_html_e( 'Další nastavení', 'reserveandpay' ); ?></summary>
 				<?php
 				self::payment_fields(
@@ -138,6 +138,10 @@ class Resandpay_Admin_Events {
 					Resandpay_Discounts::early_fields( $post->ID );
 				}
 
+				?>
+				<?php
+				$rsvc = (int) get_post_meta( $post->ID, '_rap_service', true );
+				Resandpay_Events::reminder_fields( $post->ID, $rsvc ? sprintf( /* translators: %d: hodin */ __( 'ze služby (%d h)', 'reserveandpay' ), Resandpay_Events::resolve_reminder_hours( '', $rsvc ) ) : '' );
 				?>
 				<p><label for="rap_close_hours"><?php esc_html_e( 'Uzávěrka rezervací (hodin před začátkem)', 'reserveandpay' ); ?></label>
 					<input type="number" min="0" step="0.5" id="rap_close_hours" name="rap_close_hours" value="<?php echo esc_attr( $ev['close_hours'] ?: '' ); ?>" placeholder="0">

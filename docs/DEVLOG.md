@@ -1,5 +1,17 @@
 # Vývojový deník ReserveAndPay
 
+## 0.11.0 – Připomínka akce (27. 10. 2026)
+
+- **Připomínka akce zákazníkům** (SWD kap. 15.1, R2) – e-mail N hodin před začátkem akce nebo termínu služby:
+  - výchozí 48 h v **Nastavení → Připomínky akcí**, u akce i služby lze změnit (termín služby přebírá ze služby), 0 = vypnuto
+  - každé aktivní rezervaci jednou; ne rezervaci vzniklé až po okamžiku připomínky, ne zrušeným a externím termínům
+  - termín, místo s odkazem na mapu, odkaz na detail a volitelný **text do připomínky** u akce / služby (např. co si vzít s sebou)
+  - stav platby: uhrazeno / „Na místě prosím zaplaťte …“ / nezaplacený převod s platebními údaji a QR kódem
+  - nová šablona „Připomínka akce“ v Nastavení → E-maily; proměnné `{reminder_note}`, `{payment_note}`, `{where}`, `{map_url}`
+- **Přehled účastníků den předem** – jednou denně po nastaveném čase (výchozí 18:00) e-mail se zítřejšími akcemi a termíny: jméno, telefon, stav platby, zbývající částka, poznámka, volná místa; na zvláštní e-mail nebo na e-mail pro upozornění
+- Databáze verze 10 (sloupec pro odeslanou připomínku)
+- Testy: 497 kontrol + souběh; analytické zadání v4.8 (kap. 15.1)
+
 ## 0.10.0 – Statistika (27. 10. 2026)
 
 - **Statistika – přehled termínů a obsazenosti** (SWD kap. 15.1, R1) v administraci (**ResAndPay → Statistika**) i na webové stránce se shortcodem `[reserveandpay_stats]`:

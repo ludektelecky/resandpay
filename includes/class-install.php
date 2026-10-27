@@ -112,6 +112,7 @@ class Resandpay_Install {
 			part1_due_at datetime NULL,
 			amount_paid decimal(12,2) NOT NULL DEFAULT 0,
 			reminded_due_at datetime NULL,
+			reminded_event_at datetime NULL,
 			paid_at datetime NULL,
 			pay_choice varchar(20) NOT NULL DEFAULT 'transfer',
 			paid_method varchar(30) NOT NULL DEFAULT '',

@@ -171,6 +171,8 @@ class Resandpay_Events {
 			'location_addr' => $location_id ? (string) get_post_meta( $location_id, '_rap_address', true ) : '',
 			'location_map'  => $location_id ? (string) get_post_meta( $location_id, '_rap_map_url', true ) : '',
 			'service_id'    => (int) $m( 'service', 0 ),
+			'reminder_hours' => self::resolve_reminder_hours( $m( 'reminder_hours', '' ), (int) $m( 'service', 0 ) ),
+			'reminder_note'  => trim( (string) $m( 'reminder_note', '' ) ) ?: ( (int) $m( 'service', 0 ) ? trim( (string) get_post_meta( (int) $m( 'service', 0 ), '_rap_reminder_note', true ) ) : '' ),
 			'external'      => self::external( $event_id, (int) $m( 'service', 0 ), (string) $m( 'start' ) ),
 		);
 	}
@@ -204,6 +206,40 @@ class Resandpay_Events {
 			'new_tab' => '0' !== $tab,
 			'note'    => trim( (string) get_post_meta( $src, '_rap_ext_note', true ) ),
 		);
+	}
+
+	/**
+	 * Připomínka akce (SWD kap. 15.1, R2): kolik hodin před začátkem. Vlastní hodnota akce / termínu,
+	 * jinak ze služby, jinak z nastavení; 0 = vypnuto.
+	 */
+	public static function resolve_reminder_hours( $own, $service_id = 0 ) {
+		$v = trim( (string) $own );
+		if ( '' === $v && $service_id ) {
+			$v = trim( (string) get_post_meta( $service_id, '_rap_reminder_hours', true ) );
+		}
+		if ( '' === $v ) {
+			$v = (string) Resandpay_Settings::get( 'event_reminder_hours' );
+		}
+		return max( 0, min( 720, (int) $v ) );
+	}
+
+	/** Uloží připomínku akce (jen když ji formulář posílá). */
+	public static function save_reminder_meta( $post_id, array $in ) {
+		if ( array_key_exists( 'rap_reminder_hours', $in ) ) {
+			$v = trim( (string) $in['rap_reminder_hours'] );
+			update_post_meta( $post_id, '_rap_reminder_hours', '' === $v ? '' : max( 0, min( 720, (int) $v ) ) );
+		}
+		if ( array_key_exists( 'rap_reminder_note', $in ) ) {
+			update_post_meta( $post_id, '_rap_reminder_note', sanitize_textarea_field( (string) $in['rap_reminder_note'] ) );
+		}
+	}
+
+	/** Pole připomínky do editoru akce / služby. */
+	public static function reminder_fields( $post_id, $inherit_label = '' ) {
+		$h   = (string) get_post_meta( $post_id, '_rap_reminder_hours', true );
+		$def = $inherit_label ?: sprintf( /* translators: %d: hodin */ __( 'z nastavení (%d h)', 'reserveandpay' ), (int) Resandpay_Settings::get( 'event_reminder_hours' ) );
+		echo '<p><label for="rap_reminder_hours">' . esc_html__( 'Připomínka akce zákazníkům (hodin před začátkem)', 'reserveandpay' ) . '</label> <input type="number" min="0" max="720" step="1" id="rap_reminder_hours" name="rap_reminder_hours" value="' . esc_attr( $h ) . '" placeholder="' . esc_attr( $def ) . '" style="width:8em"> <span class="rap-hint">' . esc_html( sprintf( /* translators: %s: výchozí */ __( 'Prázdné = %s, 0 = nepřipomínat.', 'reserveandpay' ), $def ) ) . '</span></p>';
+		echo '<p><label for="rap_reminder_note">' . esc_html__( 'Text do připomínky (např. co si vzít s sebou)', 'reserveandpay' ) . '</label> <textarea class="widefat" rows="2" id="rap_reminder_note" name="rap_reminder_note">' . esc_textarea( (string) get_post_meta( $post_id, '_rap_reminder_note', true ) ) . '</textarea></p>';
 	}
 
 	/** Jen adresa https:// (jinak prázdný řetězec). */
@@ -566,6 +602,7 @@ class Resandpay_Events {
 		self::save_part1_meta( $post_id, $in );
 		self::save_time_display_meta( $post_id, $in );
 		self::save_booking_meta( $post_id, $in, 'slot' === $type && (int) get_post_meta( $post_id, '_rap_service', true ) );
+		self::save_reminder_meta( $post_id, $in );
 		Resandpay_Discounts::save_early_meta( $post_id, $in );
 		update_post_meta( $post_id, '_rap_close_hours', max( 0, (float) str_replace( ',', '.', (string) ( $in['rap_close_hours'] ?? 0 ) ) ) );
 		update_post_meta( $post_id, '_rap_members_only', empty( $in['rap_members_only'] ) ? 0 : 1 );

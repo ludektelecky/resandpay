@@ -105,6 +105,12 @@ class Resandpay_Admin_Settings {
 				'turnstile_site_key'     => array( __( 'Turnstile – Site Key', 'reserveandpay' ), $text ),
 				'turnstile_secret'       => array( __( 'Turnstile – Secret Key', 'reserveandpay' ), $text ),
 			),
+			__( 'Připomínky akcí', 'reserveandpay' )   => array(
+				'event_reminder_hours'  => array( __( 'Připomínka akce zákazníkům (hodin před začátkem)', 'reserveandpay' ), 'number', __( 'Výchozí hodnota; u akce i služby ji lze změnit. Připomínka přijde jednou každé aktivní rezervaci (ne rezervaci vzniklé až po tomto okamžiku a ne u externích termínů). 0 = nepřipomínat.', 'reserveandpay' ) ),
+				'event_summary_enabled' => array( __( 'Přehled účastníků den předem', 'reserveandpay' ), 'checkbox', __( 'Jednou denně e-mail se seznamem zítřejších akcí a termínů s rezervacemi (jméno, telefon, stav platby, poznámka).', 'reserveandpay' ) ),
+				'event_summary_time'    => array( __( 'Čas odeslání přehledu', 'reserveandpay' ), 'text', __( 'Ve formátu HH:MM (např. 18:00). Přehled odejde při první kontrole po tomto čase.', 'reserveandpay' ) ),
+				'event_summary_email'   => array( __( 'E-mail pro přehled účastníků', 'reserveandpay' ), 'email', __( 'Prázdné = e-mail pro upozornění na nové rezervace.', 'reserveandpay' ) ),
+			),
 			__( 'Statistika', 'reserveandpay' )        => array(
 				'stats_roles' => array( __( 'Statistiku vidí role', 'reserveandpay' ), 'roles', __( 'Přehled termínů a obsazenosti (ResAndPay → Statistika a stránka se shortcodem [reserveandpay_stats]). Uživatelé s oprávněním vidí jména zákazníků a stav plateb – přidělujte jen těm, kdo s rezervacemi pracují.', 'reserveandpay' ) ),
 			),
@@ -118,6 +124,10 @@ class Resandpay_Admin_Settings {
 				'tpl_received_cash_body'    => array( __( 'Přijetí rezervace (hotovost) – text', 'reserveandpay' ), 'textarea', __( 'Posílá se, když zákazník zvolí platbu hotově; obsahuje i údaje pro platbu převodem předem.', 'reserveandpay' ) ),
 				'tpl_overdue_subject'   => array( __( 'Připomínka platby po splatnosti – předmět', 'reserveandpay' ), $text ),
 				'tpl_overdue_body'      => array( __( 'Připomínka platby po splatnosti – text', 'reserveandpay' ), 'textarea' ),
+				'tpl_event_reminder_subject' => array( __( 'Připomínka akce – předmět', 'reserveandpay' ), $text ),
+				'tpl_event_reminder_body'    => array( __( 'Připomínka akce – text', 'reserveandpay' ), 'textarea', __( 'Posílá se N hodin před začátkem (Připomínky akcí). {reminder_note} = text u akce / služby, {payment_note} = stav platby, {where} = „Kde: místo“ (jen je-li místo zadané), {map_url} = odkaz na mapu místa.', 'reserveandpay' ) ),
+				'tpl_event_summary_subject'  => array( __( 'Přehled účastníků – předmět', 'reserveandpay' ), $text, __( '{date} = datum, {count} = počet rezervací.', 'reserveandpay' ) ),
+				'tpl_event_summary_body'     => array( __( 'Přehled účastníků – úvodní text', 'reserveandpay' ), 'textarea', __( 'Pod text se automaticky připojí seznam akcí a účastníků.', 'reserveandpay' ) ),
 				'tpl_reminder_subject'  => array( __( 'Připomínka před splatností – předmět', 'reserveandpay' ), $text ),
 				'tpl_reminder_body'     => array( __( 'Připomínka před splatností – text', 'reserveandpay' ), 'textarea' ),
 				'tpl_expired_subject'   => array( __( 'Vypršení rezervace – předmět', 'reserveandpay' ), $text ),
@@ -238,7 +248,7 @@ class Resandpay_Admin_Settings {
 		foreach ( self::fields() as $title => $section ) {
 			echo '<h2' . ( __( 'Kontrola plateb', 'reserveandpay' ) === $title ? ' id="rap-payments"' : '' ) . '>' . esc_html( $title ) . '</h2>';
 			if ( __( 'E-maily', 'reserveandpay' ) === $title ) {
-				echo '<p class="description">' . esc_html__( 'Proměnné:', 'reserveandpay' ) . ' <code>{name} {email} {phone} {note} {event} {date} {location} {amount} {vs} {proforma} {due_date} {account} {iban} {company} {free} {reason} {last_minute_note} {pay_choice} {event_code} {event_url} {total} {paid} {remaining} {last_payment} {amount_now} {due_now} {part1} {part1_due} {final_due} {split_note} {price_full} {discount} {discount_label} {coupon}</code></p>';
+				echo '<p class="description">' . esc_html__( 'Proměnné:', 'reserveandpay' ) . ' <code>{name} {email} {phone} {note} {event} {date} {location} {amount} {vs} {proforma} {due_date} {account} {iban} {company} {free} {reason} {last_minute_note} {pay_choice} {event_code} {event_url} {total} {paid} {remaining} {last_payment} {amount_now} {due_now} {part1} {part1_due} {final_due} {split_note} {price_full} {discount} {discount_label} {coupon} {reminder_note} {payment_note} {where} {map_url}</code></p>';
 			}
 			echo '<table class="form-table">';
 			foreach ( $section as $key => $def ) {

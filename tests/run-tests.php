@@ -1561,6 +1561,54 @@ require_once ABSPATH . 'wp-admin/includes/user.php';
 wp_delete_user( $uC );
 wp_delete_user( $uS );
 
+echo "== 0.11.0: připomínka akce a přehled účastníků (SWD kap. 15.1, R2)\n";
+global $wpdb;
+$rt  = Resandpay_Reservations::table();
+Resandpay_Settings::update( array( 'event_reminder_hours' => 48, 'event_summary_enabled' => 1, 'event_summary_time' => '18:00', 'event_summary_email' => 'lektorka@example.com', 'reminder_days' => 0 ) );
+$rmE = rap_event( 'Připomínaná akce', $now + 40 * HOUR_IN_SECONDS, $now + 42 * HOUR_IN_SECONDS, 10, array( 'rap_price' => '900', 'rap_reminder_note' => 'Vezměte si podložku.' ) );
+$rm1 = Resandpay_Reservations::create( $rmE, rap_person( 800 ), array( 'notify' => false ) );
+$rm2 = Resandpay_Reservations::create( $rmE, array_merge( rap_person( 801 ), array( 'pay_choice' => 'cash' ) ), array( 'notify' => false, 'source' => 'admin' ) );
+$rm3 = Resandpay_Reservations::create( $rmE, rap_person( 802 ), array( 'notify' => false ) );
+Resandpay_Reservations::add_payment( $rm3['id'], 900, 'transfer_manual', array( 'notify' => false ) );
+$wpdb->query( $wpdb->prepare( "UPDATE {$rt} SET created_at = %s WHERE id IN (%d, %d, %d)", wp_date( 'Y-m-d H:i:s', $now - 3 * DAY_IN_SECONDS ), $rm1['id'], $rm2['id'], $rm3['id'] ) ); // phpcs:ignore
+$rmLate = Resandpay_Reservations::create( $rmE, rap_person( 803 ), array( 'notify' => false ) );
+$GLOBALS['rap_mails'] = array();
+$rmN = Resandpay_Reservations::remind_before_event( $now );
+$rmTo = wp_list_pluck( $GLOBALS['rap_mails'], 'to' );
+rap_t( 3 === $rmN && ! in_array( 'osoba803@example.com', array_map( 'strval', $rmTo ), true ), 'připomínka 48 h předem: 3 rezervace, ne rezervace vzniklá až v okně připomínky' );
+rap_t( 0 === Resandpay_Reservations::remind_before_event( $now + 600 ), 'připomínka se posílá jen jednou' );
+$rmB1 = Resandpay_Mailer::build( 'event_reminder', Resandpay_Reservations::get( $rm1['id'] ) );
+$rmB2 = Resandpay_Mailer::build( 'event_reminder', Resandpay_Reservations::get( $rm2['id'] ) );
+$rmB3 = Resandpay_Mailer::build( 'event_reminder', Resandpay_Reservations::get( $rm3['id'] ) );
+rap_t( false !== strpos( $rmB1['text'], 'Vezměte si podložku.' ) && false !== strpos( $rmB1['text'], 'zatím neobdrželi' ) && '' !== $rmB1['qr_png'] && false === strpos( $rmB1['text'], "\n\n\n" ), 'nezaplacený převod: text u akce, upozornění na platbu a QR kód' );
+rap_t( false !== strpos( $rmB2['text'], 'Na místě prosím zaplaťte 900 Kč' ) && '' === $rmB2['qr_png'], 'hotovost: „Na místě prosím zaplaťte“, bez QR' );
+rap_t( false !== strpos( $rmB3['text'], 'Platba je uhrazena' ) && '' === $rmB3['qr_png'] && '' === $rmB3['pdf'], 'zaplaceno: bez platebních údajů' );
+$rmOff = rap_event( 'Bez připomínky', $now + 20 * HOUR_IN_SECONDS, $now + 21 * HOUR_IN_SECONDS, 5, array( 'rap_reminder_hours' => '0' ) );
+$rmO1  = Resandpay_Reservations::create( $rmOff, rap_person( 804 ), array( 'notify' => false ) );
+$wpdb->query( $wpdb->prepare( "UPDATE {$rt} SET created_at = %s WHERE id = %d", wp_date( 'Y-m-d H:i:s', $now - 3 * DAY_IN_SECONDS ), $rmO1['id'] ) ); // phpcs:ignore
+rap_t( 0 === Resandpay_Reservations::remind_before_event( $now ) && 0 === Resandpay_Events::get( $rmOff )['reminder_hours'], 'u akce lze připomínku vypnout (0)' );
+$rmS = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::SERVICE, 'post_status' => 'publish', 'post_title' => 'Masáž s připomínkou' ) );
+Resandpay_Admin_Services::save_service_meta( $rmS, array( 'rap_duration' => 60, 'rap_pause' => 0, 'rap_capacity' => 1, 'rap_price' => 1300, 'rap_reminder_hours' => '24', 'rap_reminder_note' => 'Přijďte 5 minut předem.' ) );
+$rmy = (int) wp_date( 'Y' ) + 2;
+$pvR = Resandpay_Services::preview( $rmS, array( 'weekdays' => array( 1, 2, 3, 4, 5, 6, 0 ), 'time_from' => '09:00', 'time_to' => '10:00', 'date_from' => $rmy . '-02-03', 'date_to' => $rmy . '-02-03' ) );
+Resandpay_Services::create_slots( $rmS, wp_list_pluck( $pvR, 'start' ) );
+$rmSl = array_values( Resandpay_Services::slots( $rmS, date_create_immutable( $rmy . '-02-03 00:00:00', wp_timezone() ), date_create_immutable( $rmy . '-02-04 00:00:00', wp_timezone() ) ) )[0];
+rap_t( 24 === $rmSl['reminder_hours'] && 'Přijďte 5 minut předem.' === $rmSl['reminder_note'], 'termín služby přebírá připomínku a text ze služby' );
+// Přehled účastníků na zítřek.
+delete_option( 'resandpay_summary_last' );
+$smDay = wp_date( 'Y-m-d', $now + 5 * DAY_IN_SECONDS );
+$smE   = rap_event( 'Zítřejší lekce', strtotime( $smDay . ' 10:00' ), strtotime( $smDay . ' 11:00' ), 8, array( 'rap_price' => '300' ) );
+Resandpay_Reservations::create( $smE, array_merge( rap_person( 805 ), array( 'note' => 'bolí záda' ) ), array( 'notify' => false ) );
+$smBefore = Resandpay_Events::ts( wp_date( 'Y-m-d', Resandpay_Events::ts( $smDay . ' 12:00:00' ) - DAY_IN_SECONDS ) . ' 17:00:00' );
+$GLOBALS['rap_mails'] = array();
+rap_t( 0 === Resandpay_Reservations::send_event_summary( $smBefore ), 'přehled se nepošle před nastaveným časem' );
+$smAt = $smBefore + 2 * HOUR_IN_SECONDS;
+$smOk = Resandpay_Reservations::send_event_summary( $smAt );
+$smM  = $GLOBALS['rap_mails'][0] ?? array();
+rap_t( 1 === $smOk && ( 'lektorka@example.com' === ( is_array( $smM['to'] ?? '' ) ? $smM['to'][0] : ( $smM['to'] ?? '' ) ) || false !== strpos( (string) ( $smM['message'] ?? '' ), 'lektorka@example.com' ) ) && false !== strpos( (string) ( $smM['message'] ?? '' ), 'Test Osoba 805' ) && false !== strpos( (string) ( $smM['message'] ?? '' ), 'bolí záda' ) && false !== strpos( (string) ( $smM['message'] ?? '' ), 'Zítřejší lekce' ), 'přehled účastníků na zítřek: jméno, poznámka, akce – na nastavený e-mail' );
+rap_t( 0 === Resandpay_Reservations::send_event_summary( $smAt + HOUR_IN_SECONDS ), 'přehled jen jednou denně' );
+Resandpay_Settings::update( array( 'reminder_days' => 1 ) );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );

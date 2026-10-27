@@ -43,6 +43,10 @@ class Resandpay_Settings {
 			'cash_enabled'        => 0,
 			// Připomínka N dní před splatností (0 = vypnuto).
 			'reminder_days'       => 1,
+			'event_reminder_hours'  => 48, // Připomínka akce zákazníkům (SWD kap. 15.1, R2); 0 = vypnuto.
+			'event_summary_enabled' => 1,
+			'event_summary_time'    => '18:00',
+			'event_summary_email'   => '',
 			'last_minute_hours'   => 24,
 			'gdpr_page'           => 0,
 			'terms_page'          => 0,
@@ -109,6 +113,10 @@ class Resandpay_Settings {
 			'tpl_received_cash_body'    => "Dobrý den, {name},\n\nděkujeme za rezervaci akce {event} ({date}, {location}).\n\nZvolili jste platbu v hotovosti na místě ({amount}). Pokud Vám to vyhovuje, můžete pohodlně zaplatit předem převodem – stačí naskenovat QR kód níže v bankovní aplikaci a na místě pak nemusíte řešit hotovost.\n\nVariabilní symbol {vs} prosím mějte u sebe i na místě – podle něj Vás rychle odbavíme.\n\nS pozdravem\n{company}",
 			'tpl_overdue_subject'  => 'Připomínka platby: {event}',
 			'tpl_overdue_body'     => "Dobrý den, {name},\n\nk rezervaci akce {event} ({date}) zatím evidujeme nezaplacenou částku {amount_now}. Splatnost byla {due_now}. Platební údaje a QR kód najdete níže.\n\nPokud jste již zaplatili, považujte prosím tento e-mail za bezpředmětný.\n\nS pozdravem\n{company}",
+			'tpl_event_reminder_subject' => 'Připomínka: {event} – {date}',
+			'tpl_event_reminder_body'    => "Dobrý den, {name},\n\nrádi bychom Vám připomněli, že se blíží {event}.\n\nKdy: {date}\n{where}\n{map_url}\n\n{reminder_note}\n\n{payment_note}\n\nPodrobnosti: {event_url}\n\nPokud se nemůžete zúčastnit, dejte nám prosím vědět.\n\nTěšíme se na Vás\n{company}",
+			'tpl_event_summary_subject'  => 'Přehled účastníků na {date}',
+			'tpl_event_summary_body'     => "Dobrý den,\n\nposíláme přehled akcí a termínů na {date} s rezervacemi ({count}).",
 			'tpl_reminder_subject' => 'Připomínka splatnosti: {event}',
 			'tpl_reminder_body'    => "Dobrý den, {name},\n\npřipomínáme platbu k rezervaci akce {event} ({date}). Částka k úhradě {amount_now} je splatná do {due_now}. Platební údaje a QR kód najdete níže.\n\nPokud jste již zaplatili, považujte prosím tento e-mail za bezpředmětný.\n\nS pozdravem\n{company}",
 			'tpl_expired_subject'  => 'Rezervace vypršela: {event}',

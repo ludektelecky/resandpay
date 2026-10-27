@@ -493,6 +493,8 @@ class Resandpay_Reservations {
 			}
 		}
 		$count += self::remind_before_due( $now_ts );
+		$count += self::remind_before_event( $now_ts );
+		$count += self::send_event_summary( $now_ts );
 		Resandpay_Antibot::prune();
 		Resandpay_Mailer::prune_log();
 		return $count;
@@ -505,6 +507,129 @@ class Resandpay_Reservations {
 	 *
 	 * @return int Počet odeslaných připomínek.
 	 */
+	/**
+	 * Připomínka akce N hodin před začátkem (SWD kap. 15.1, R2). Každé aktivní rezervaci nejvýš
+	 * jednou; ne rezervacím vzniklým až v okně připomínky, ne u zrušených a externích termínů.
+	 *
+	 * @return int Počet odeslaných připomínek.
+	 */
+	public static function remind_before_event( $now_ts = null ) {
+		global $wpdb;
+		$now_ts = $now_ts ?? time();
+		$in     = "'" . implode( "','", self::active_statuses() ) . "'";
+		// Kandidáti: termíny začínající do 30 dnů (nejdelší povolená připomínka je 720 h).
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT r.* FROM ' . self::table() . " r INNER JOIN {$wpdb->postmeta} pm ON pm.post_id = r.event_id AND pm.meta_key = '_rap_start' WHERE r.status IN ({$in}) AND r.reminded_event_at IS NULL AND pm.meta_value > %s AND pm.meta_value <= %s", // phpcs:ignore WordPress.DB.PreparedSQL
+				wp_date( 'Y-m-d H:i:s', $now_ts ),
+				wp_date( 'Y-m-d H:i:s', $now_ts + 30 * DAY_IN_SECONDS )
+			),
+			ARRAY_A
+		);
+		$sent = 0;
+		$evs  = array();
+		foreach ( $rows as $r ) {
+			$eid         = (int) $r['event_id'];
+			$evs[ $eid ] = $evs[ $eid ] ?? Resandpay_Events::get( $eid );
+			$ev          = $evs[ $eid ];
+			if ( ! $ev || $ev['cancelled'] || $ev['external'] || 'publish' !== $ev['status'] || $ev['reminder_hours'] < 1 ) {
+				continue;
+			}
+			$start  = Resandpay_Events::ts( $ev['start'] );
+			$window = $start - $ev['reminder_hours'] * HOUR_IN_SECONDS;
+			if ( $start <= $now_ts || $now_ts < $window ) {
+				continue;
+			}
+			if ( Resandpay_Events::ts( $r['created_at'] ) > $window ) {
+				// Rezervace vznikla až po okamžiku připomínky – nic neposílat, jen označit.
+				$wpdb->update( self::table(), array( 'reminded_event_at' => '1970-01-01 00:00:00' ), array( 'id' => (int) $r['id'] ) );
+				continue;
+			}
+			if ( Resandpay_Mailer::send_template( $r['email'], 'event_reminder', $r ) ) {
+				$wpdb->update( self::table(), array( 'reminded_event_at' => current_time( 'mysql' ) ), array( 'id' => (int) $r['id'] ) );
+				++$sent;
+			}
+		}
+		return $sent;
+	}
+
+	/**
+	 * Přehled účastníků na zítřek pro správkyni / lektorku – jednou denně po nastaveném čase.
+	 *
+	 * @return int 1 = odesláno, 0 = nic.
+	 */
+	public static function send_event_summary( $now_ts = null ) {
+		$s = Resandpay_Settings::all();
+		if ( empty( $s['event_summary_enabled'] ) ) {
+			return 0;
+		}
+		$now_ts = $now_ts ?? time();
+		$today  = wp_date( 'Y-m-d', $now_ts );
+		$time   = preg_match( '/^([01]?\d|2[0-3]):([0-5]\d)$/', trim( (string) $s['event_summary_time'] ), $m ) ? sprintf( '%02d:%02d', $m[1], $m[2] ) : '18:00';
+		if ( wp_date( 'H:i', $now_ts ) < $time || get_option( 'resandpay_summary_last' ) === $today ) {
+			return 0;
+		}
+		update_option( 'resandpay_summary_last', $today, false );
+		$tomorrow = wp_date( 'Y-m-d', $now_ts + DAY_IN_SECONDS );
+		$rows     = array_values(
+			array_filter(
+				Resandpay_Stats::rows(
+					array(
+						'from'  => $tomorrow,
+						'to'    => $tomorrow,
+						'scope' => 'all',
+						'sort'  => 'start',
+						'dir'   => 'asc',
+					)
+				),
+				fn( $x ) => ! $x['cancelled'] && ! $x['external'] && $x['booked'] > 0
+			)
+		);
+		if ( ! $rows ) {
+			return 0;
+		}
+		$to = is_email( $s['event_summary_email'] ) ? $s['event_summary_email'] : $s['admin_email'];
+		if ( ! is_email( $to ) ) {
+			return 0;
+		}
+		$count = array_sum( wp_list_pluck( $rows, 'booked' ) );
+		$date  = wp_date( 'j. n. Y', Resandpay_Events::ts( $tomorrow . ' 12:00:00' ) );
+		$vars  = array(
+			'{date}'  => $date,
+			'{count}' => (string) $count,
+		);
+		$subj  = strtr( (string) $s['tpl_event_summary_subject'], $vars );
+		$intro = strtr( (string) $s['tpl_event_summary_body'], $vars );
+		$html  = '';
+		$text  = $intro . "\n";
+		foreach ( $rows as $x ) {
+			$ev    = Resandpay_Events::get( $x['id'] );
+			$head  = $x['title'] . ' – ' . $x['when'] . ( $x['location'] ? ' · ' . $x['location'] : '' );
+			$html .= '<h3 style="margin:18px 0 6px;font-family:Georgia,serif;font-size:17px;">' . esc_html( $head ) . '</h3>';
+			$html .= '<p style="margin:0 0 6px;font-size:13px;">' . esc_html( sprintf( /* translators: 1: rezervováno, 2: kapacita */ __( 'Rezervováno %1$d z %2$d', 'reserveandpay' ), $x['booked'], $x['capacity'] ) ) . '</p>';
+			$html .= '<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;font-size:13px;">';
+			$text .= "\n" . $head . "\n";
+			$i     = 0;
+			foreach ( self::for_event( $x['id'] ) as $r ) {
+				++$i;
+				$st    = self::status_labels()[ $r['status'] ] ?? $r['status'];
+				$left  = self::remaining( $r );
+				$pay   = $left > 0 ? sprintf( /* translators: %s: částka */ __( 'zbývá %s', 'reserveandpay' ), Resandpay_Events::format_price( $left, $r['currency'] ) ) . ( 'cash' === $r['pay_choice'] ? ' ' . __( '(na místě)', 'reserveandpay' ) : '' ) : __( 'uhrazeno', 'reserveandpay' );
+				$html .= '<tr><td style="padding:4px 8px 4px 0;border-bottom:1px solid #e6dcc8;">' . $i . '.</td><td style="padding:4px 8px;border-bottom:1px solid #e6dcc8;"><strong>' . esc_html( $r['customer_name'] ) . '</strong>' . ( $r['phone'] ? '<br>' . esc_html( $r['phone'] ) : '' ) . '</td><td style="padding:4px 8px;border-bottom:1px solid #e6dcc8;">' . esc_html( $st . ' · ' . $pay ) . '</td><td style="padding:4px 0 4px 8px;border-bottom:1px solid #e6dcc8;">' . esc_html( (string) $r['note'] ) . '</td></tr>';
+				$text .= sprintf( "%d. %s, %s – %s · %s%s\n", $i, $r['customer_name'], $r['phone'], $st, $pay, $r['note'] ? ' – ' . $r['note'] : '' );
+			}
+			$html .= '</table>';
+			if ( $ev && $x['free'] > 0 ) {
+				/* translators: %d: počet */
+				$html .= '<p style="margin:4px 0 0;font-size:12px;color:#5c5e52;">' . esc_html( sprintf( __( 'Volná místa: %d', 'reserveandpay' ), $x['free'] ) ) . '</p>';
+			}
+		}
+		$mail = Resandpay_Mailer::html_layout( $subj, Resandpay_Mailer::text_to_html( $intro ), $html );
+		$ok   = Resandpay_Mailer::send_raw( $to, $subj, $mail, $text );
+		Resandpay_Mailer::record( 'event_summary', $to, $subj, $ok, 0 );
+		return $ok ? 1 : 0;
+	}
+
 	public static function remind_before_due( $now_ts = null ) {
 		global $wpdb;
 		$days = (int) Resandpay_Settings::get( 'reminder_days' );
