@@ -7,6 +7,7 @@
 - Pozn.: FluentSMTP vložené obrázky (logo, QR) přidá do zprávy ještě jednou jako běžné přílohy – v některých programech se tak zobrazí navíc i v seznamu příloh
 - Testy: 472 kontrol + souběh; analytické zadání v4.4 (kap. 4.5)
 - Analytické zadání v4.5: založena **kniha rozvoje** (kap. 15.1) – R1 stránka **ResAndPay → Statistika** (termíny akcí a služeb za období OD–DO, výběr akce / služby, rezervováno x z n, rozpad na rezervace se jménem a volná místa); zatím neimplementováno
+- Analytické zadání v4.6 (27. 10. 2026): R1 Statistika upřesněna – export CSV, řazení sloupců, součty zaplaceno / předepsáno, dashboard i na webové stránce (`[reserveandpay_stats]`) s přihlášením a oprávněním (výchozí role Administrátor, Šéfredaktor, Spolupracovník), bez tajného odkazu
 
 ## 0.9.0 – Externí rezervační systém (25. 10. 2026)
 
