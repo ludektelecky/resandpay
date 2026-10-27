@@ -89,3 +89,29 @@ td.rap-box .rap-payfields { max-width: 520px; }
 .rap-coupon-list .rap-err { color: #a12b2b; }
 .rap-warn { color: #8a5a00; background: #fff4d6; padding: 4px 8px; }
 .rap-tag--ext { display: inline-block; background: #f3ede1; border: 1px solid #b8862e; color: #6b4b17; border-radius: 2px; padding: 0 5px; font-size: 11px; }
+/* Statistika (SWD kap. 15.1, R1) */
+.rap-stats__filter { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; margin: 12px 0 16px; }
+.rap-stats__filter label { display: flex; flex-direction: column; gap: 3px; }
+.rap-stats__export { margin-left: auto; }
+.rap-stats__summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.rap-stats__card { background: #fff; border: 1px solid #dcdcde; padding: 10px 14px; }
+.rap-stats__card span { display: block; color: #646970; font-size: 12px; }
+.rap-stats__card strong { display: block; font-size: 20px; margin-top: 2px; }
+.rap-stats__scroll { overflow-x: auto; }
+.rap-stats__table .is-num { text-align: right; white-space: nowrap; }
+.rap-stats__table thead th a { text-decoration: none; }
+.rap-stats__title small { display: block; color: #646970; }
+.rap-stats__row.is-cancelled td { color: #8c8f94; text-decoration: line-through; }
+.rap-stats__tag { display: inline-block; font-size: 11px; padding: 0 5px; border: 1px solid #b8862e; color: #6b4b17; border-radius: 2px; margin-left: 4px; }
+.rap-stats__tag--off { border-color: #8a2424; color: #8a2424; }
+.rap-stats__tog { width: 28px; }
+.rap-stats__toggle { background: none; border: 1px solid #c3c4c7; border-radius: 2px; cursor: pointer; width: 24px; height: 24px; padding: 0; }
+.rap-stats__bar { display: inline-block; vertical-align: middle; width: 40px; height: 6px; margin-right: 6px; background: linear-gradient(90deg, #8c6423 var(--rap-occ), #f0e8da var(--rap-occ)); }
+.rap-stats__detail > td { background: #f6f7f7; }
+.rap-stats__sub { width: 100%; border-collapse: collapse; background: #fff; }
+.rap-stats__sub th, .rap-stats__sub td { padding: 4px 8px; border-bottom: 1px solid #f0f0f1; text-align: left; }
+.rap-stats__sub .is-free td { color: #8c8f94; font-style: italic; }
+.rap-stats__st--paid { color: #2e6b34; }
+.rap-stats__st--overdue { color: #8a2424; }
+.rap-stats__note { color: #646970; }
+.rap-stats__table td code { white-space: nowrap; }

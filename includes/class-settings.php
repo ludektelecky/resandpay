@@ -81,6 +81,7 @@ class Resandpay_Settings {
 			'mail_from_email'     => get_option( 'admin_email' ),
 			'mail_log_days'       => 365,
 			'time_display_default'   => 'show',
+			'stats_roles'            => 'administrator,editor,contributor', // Kdo vidí statistiku (SWD kap. 15.1, R1).
 			'coupon_prefix'          => 'SLH',
 			'tpl_discount_lost_subject' => 'Změna platebního předpisu – sleva zanikla: {event}',
 			'tpl_discount_lost_body'    => "Dobrý den, {name},\n\nk rezervaci akce {event} ({date}) jsme obdrželi platbu po splatnosti, případně platba do splatnosti nedorazila celá. {discount_label} ({discount}) platila jen při úhradě ve splatnosti, a proto zanikla.\n\nNová cena: {total}\nJiž zaplaceno: {paid}\nZbývá zaplatit: {remaining}\n\nPlatební údaje a QR kód na zbývající částku najdete níže. Pokud jde o omyl, napište nám prosím.\n\nS pozdravem\n{company}",

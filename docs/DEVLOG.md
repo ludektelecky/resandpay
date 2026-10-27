@@ -1,5 +1,16 @@
 # Vývojový deník ReserveAndPay
 
+## 0.10.0 – Statistika (27. 10. 2026)
+
+- **Statistika – přehled termínů a obsazenosti** (SWD kap. 15.1, R1) v administraci (**ResAndPay → Statistika**) i na webové stránce se shortcodem `[reserveandpay_stats]`:
+  - filtr období OD–DO (výchozí od dneška na 3 měsíce) a výběr: vše / všechny akce / všechny služby / konkrétní akce / konkrétní služba
+  - tabulka: kód, název, druh (akce / služba), datum, rezervováno x z n, volno, obsazenost %, zaplaceno, předepsáno; řazení kliknutím na záhlaví; souhrnné karty a řádek Celkem
+  - rozpad každého termínu (šipka ▸): rezervace se jménem, VS a stavem platby a pod nimi volná místa bez jména
+  - export CSV – termíny (s řádkem Celkem) i rezervace (včetně volných míst), pro Excel
+  - zrušené termíny přeškrtnuté a mimo součty, externí termíny bez obsazenosti
+- **Přístup**: jen přihlášený uživatel s oprávněním podle **Nastavení → Statistika → Statistiku vidí role** (výchozí Administrátor, Šéfredaktor, Spolupracovník; správce webu vždy); nepřihlášený vidí výzvu k přihlášení, uživatel bez oprávnění žádná data. Stránka se neukládá do cache a neindexuje se, export je chráněný tokenem.
+- Testy: 487 kontrol + souběh; analytické zadání v4.7 (kap. 15.1)
+
 ## 0.9.1 – oprava odesílání e-mailů (25. 10. 2026)
 
 - **Oprava:** s pluginem FluentSMTP (SMTP spojení) e-maily s logem webu, QR kódem nebo PDF neodcházely – chyba „Nelze přistupovat k souboru: ‰PNG…“. FluentSMTP přílohy přidává znovu podle cesty k souboru a přílohu vloženou z paměti neumí odeslat.

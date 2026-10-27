@@ -28,6 +28,7 @@ class Resandpay_Admin {
 		);
 		add_submenu_page( 'reserveandpay', __( 'Rezervace', 'reserveandpay' ), __( 'Rezervace', 'reserveandpay' ), $cap, 'reserveandpay', array( 'Resandpay_Admin_Reservations', 'page_list' ) );
 		add_submenu_page( 'reserveandpay', __( 'Nová rezervace', 'reserveandpay' ), __( 'Nová rezervace', 'reserveandpay' ), $cap, 'reserveandpay-new', array( 'Resandpay_Admin_Reservations', 'page_new' ) );
+		add_submenu_page( 'reserveandpay', __( 'Statistika', 'reserveandpay' ), __( 'Statistika', 'reserveandpay' ), Resandpay_Stats::CAP, 'reserveandpay-stats', array( 'Resandpay_Stats', 'page_admin' ) );
 		add_submenu_page( 'reserveandpay', __( 'Kategorie akcí', 'reserveandpay' ), __( 'Kategorie akcí', 'reserveandpay' ), 'manage_categories', 'edit-tags.php?taxonomy=' . Resandpay_Post_Types::CATEGORY . '&post_type=' . Resandpay_Post_Types::EVENT );
 		// Detail rezervace – skrytá stránka bez položky v menu.
 		add_submenu_page( 'reserveandpay', __( 'Detail rezervace', 'reserveandpay' ), __( 'Detail rezervace', 'reserveandpay' ), $cap, 'reserveandpay-detail', array( 'Resandpay_Admin_Reservations', 'page_detail' ) );

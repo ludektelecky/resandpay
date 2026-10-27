@@ -105,6 +105,9 @@ class Resandpay_Admin_Settings {
 				'turnstile_site_key'     => array( __( 'Turnstile – Site Key', 'reserveandpay' ), $text ),
 				'turnstile_secret'       => array( __( 'Turnstile – Secret Key', 'reserveandpay' ), $text ),
 			),
+			__( 'Statistika', 'reserveandpay' )        => array(
+				'stats_roles' => array( __( 'Statistiku vidí role', 'reserveandpay' ), 'roles', __( 'Přehled termínů a obsazenosti (ResAndPay → Statistika a stránka se shortcodem [reserveandpay_stats]). Uživatelé s oprávněním vidí jména zákazníků a stav plateb – přidělujte jen těm, kdo s rezervacemi pracují.', 'reserveandpay' ) ),
+			),
 			__( 'E-maily', 'reserveandpay' )           => array(
 				'mail_from_name'        => array( __( 'Jméno odesílatele', 'reserveandpay' ), $text ),
 				'mail_from_email'       => array( __( 'E-mail odesílatele', 'reserveandpay' ), 'email' ),
@@ -159,7 +162,7 @@ class Resandpay_Admin_Settings {
 		foreach ( self::fields() as $section ) {
 			foreach ( $section as $key => $def ) {
 				$type = $def[1];
-				if ( ! array_key_exists( $key, $in ) && ! ( $from_form && 'checkbox' === $type ) ) {
+				if ( ! array_key_exists( $key, $in ) && ! ( $from_form && in_array( $type, array( 'checkbox', 'roles' ), true ) ) ) {
 					continue; // Částečná aktualizace – ponechat stávající hodnotu.
 				}
 				$val = $in[ $key ] ?? null;
@@ -194,6 +197,10 @@ class Resandpay_Admin_Settings {
 						break;
 					case 'svg':
 						$out[ $key ] = self::sanitize_svg( (string) $val );
+						break;
+					case 'roles':
+						$known       = array_keys( wp_roles()->get_names() );
+						$out[ $key ] = implode( ',', array_values( array_intersect( array_map( 'sanitize_key', (array) $val ), $known ) ) );
 						break;
 					default:
 						$out[ $key ] = sanitize_text_field( (string) $val );
@@ -245,6 +252,13 @@ class Resandpay_Admin_Settings {
 						break;
 					case 'textarea':
 						echo '<textarea id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" rows="8" class="large-text code">' . esc_textarea( $val ) . '</textarea>';
+						break;
+					case 'roles':
+						$sel = array_filter( explode( ',', (string) $val ) );
+						echo '<input type="hidden" name="' . esc_attr( $name ) . '[]" value="">';
+						foreach ( wp_roles()->get_names() as $rk => $rl ) {
+							echo '<label class="rap-inline" style="margin-right:1.2em"><input type="checkbox" name="' . esc_attr( $name ) . '[]" value="' . esc_attr( $rk ) . '" ' . checked( in_array( $rk, $sel, true ), true, false ) . '> ' . esc_html( translate_user_role( $rl ) ) . '</label> ';
+						}
 						break;
 					case 'svg':
 						echo '<div class="rap-svg-preview" style="width:60px;height:48px">' . self::sanitize_svg( (string) $val ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput -- prošlo wp_kses.
