@@ -1609,6 +1609,22 @@ rap_t( 1 === $smOk && ( 'lektorka@example.com' === ( is_array( $smM['to'] ?? '' 
 rap_t( 0 === Resandpay_Reservations::send_event_summary( $smAt + HOUR_IN_SECONDS ), 'přehled jen jednou denně' );
 Resandpay_Settings::update( array( 'reminder_days' => 1 ) );
 
+echo "== 0.11.1: kapacita u externí rezervace\n";
+$kE = rap_event( 'Externí s kapacitou', $now + 30 * $day, $now + 31 * $day, 20, array( 'rap_booking' => 'external', 'rap_ext_url' => 'https://ext.example.com/a', 'rap_ext_show_capacity' => '1' ) );
+$kEv = Resandpay_Events::get( $kE );
+$kI  = Resandpay_Views::render_item( $kEv );
+rap_t( 20 === Resandpay_Events::external_capacity( $kEv ) && false !== strpos( $kI, 'Kapacita: 20 míst' ) && false === strpos( $kI, 'Volná místa' ), 'výpis: „Kapacita: 20 míst“, volná místa ne' );
+$kB = Resandpay_Frontend::render_booking( $kE, true ) . Resandpay_Frontend::render_event_page( $kE, '' ) . Resandpay_Frontend::render_details( $kE );
+rap_t( substr_count( $kB, '20 míst' ) >= 3 && false === strpos( $kB, 'volných' ), 'detail, karta i přehled detailu: kapacita bez obsazenosti' );
+rap_t( 'Kapacita: 1 místo' === Resandpay_Events::capacity_label( 1 ) && 'Kapacita: 3 místa' === Resandpay_Events::capacity_label( 3 ) && 'Kapacita: 5 míst' === Resandpay_Events::capacity_label( 5 ), 'skloňování: 1 místo, 3 místa, 5 míst' );
+$kN = rap_event( 'Externí bez kapacity', $now + 30 * $day, $now + 31 * $day, 20, array( 'rap_booking' => 'external', 'rap_ext_url' => 'https://ext.example.com/b' ) );
+rap_t( 0 === Resandpay_Events::external_capacity( Resandpay_Events::get( $kN ) ) && false === strpos( Resandpay_Views::render_item( Resandpay_Events::get( $kN ) ), 'Kapacita' ), 'bez volby se kapacita nezobrazuje' );
+$kM = rap_event( 'Externí kapacita chybí', $now + 30 * $day, $now + 31 * $day, 0, array( 'rap_booking' => 'external', 'rap_ext_url' => 'https://ext.example.com/c', 'rap_ext_show_capacity' => '1' ) );
+rap_t( in_array( 'kapacita', Resandpay_Admin_Events::missing( Resandpay_Events::get( $kM ) ), true ), 'zapnutá volba vyžaduje kapacitu' );
+$kd = wp_date( 'Y-m-d', $now + 30 * $day );
+$kR = array_values( array_filter( Resandpay_Stats::rows( array( 'from' => $kd, 'to' => $kd, 'scope' => 'all', 'sort' => 'start', 'dir' => 'asc' ) ), fn( $r ) => $r['id'] === (int) $kE ) )[0];
+rap_t( 20 === $kR['ext_capacity'] && null === $kR['occ'] && 0 === $kR['capacity'], 'statistika: kapacita externího termínu zvlášť, mimo součty a obsazenost' );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );

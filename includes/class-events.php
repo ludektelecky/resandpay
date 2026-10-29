@@ -201,6 +201,7 @@ class Resandpay_Events {
 		);
 		$tab = (string) get_post_meta( $src, '_rap_ext_new_tab', true );
 		return array(
+			'show_capacity' => '1' === (string) get_post_meta( $src, '_rap_ext_show_capacity', true ),
 			'url'     => self::https_url( $url ),
 			'label'   => trim( (string) get_post_meta( $src, '_rap_ext_label', true ) ) ?: __( 'Rezervovat', 'reserveandpay' ),
 			'new_tab' => '0' !== $tab,
@@ -242,6 +243,19 @@ class Resandpay_Events {
 		echo '<p><label for="rap_reminder_note">' . esc_html__( 'Text do připomínky (např. co si vzít s sebou)', 'reserveandpay' ) . '</label> <textarea class="widefat" rows="2" id="rap_reminder_note" name="rap_reminder_note">' . esc_textarea( (string) get_post_meta( $post_id, '_rap_reminder_note', true ) ) . '</textarea></p>';
 	}
 
+	/** Kapacita externího termínu k zobrazení (0 = nezobrazovat). */
+	public static function external_capacity( array $ev ) {
+		return ! empty( $ev['external']['show_capacity'] ) ? max( 0, (int) $ev['capacity'] ) : 0;
+	}
+
+	/** „Kapacita: 1 místo / 3 místa / 20 míst“. */
+	public static function capacity_label( $n ) {
+		$n = (int) $n;
+		/* translators: %d: počet míst */
+		$f = 1 === $n ? __( 'Kapacita: %d místo', 'reserveandpay' ) : ( $n >= 2 && $n <= 4 ? __( 'Kapacita: %d místa', 'reserveandpay' ) : __( 'Kapacita: %d míst', 'reserveandpay' ) );
+		return sprintf( $f, $n );
+	}
+
 	/** Jen adresa https:// (jinak prázdný řetězec). */
 	public static function https_url( $url ) {
 		$url = trim( (string) $url );
@@ -265,6 +279,7 @@ class Resandpay_Events {
 		update_post_meta( $post_id, '_rap_booking', 'external' === $in['rap_booking'] ? 'external' : '' );
 		update_post_meta( $post_id, '_rap_ext_label', sanitize_text_field( (string) ( $in['rap_ext_label'] ?? '' ) ) );
 		update_post_meta( $post_id, '_rap_ext_new_tab', empty( $in['rap_ext_new_tab'] ) ? '0' : '1' );
+		update_post_meta( $post_id, '_rap_ext_show_capacity', empty( $in['rap_ext_show_capacity'] ) ? '0' : '1' );
 		update_post_meta( $post_id, '_rap_ext_note', sanitize_textarea_field( (string) ( $in['rap_ext_note'] ?? '' ) ) );
 	}
 
@@ -291,6 +306,7 @@ class Resandpay_Events {
 		echo '<p><label for="rap_ext_url">' . esc_html__( 'Adresa (URL)', 'reserveandpay' ) . ' *</label> <input type="text" class="widefat" id="rap_ext_url" name="rap_ext_url" value="' . esc_attr( $url ) . '" placeholder="https://"><span class="rap-hint">' . esc_html( $h ) . '</span></p>';
 		echo '<p><label for="rap_ext_label">' . esc_html__( 'Text tlačítka', 'reserveandpay' ) . '</label> <input type="text" class="widefat" id="rap_ext_label" name="rap_ext_label" value="' . esc_attr( (string) get_post_meta( $post_id, '_rap_ext_label', true ) ) . '" placeholder="' . esc_attr__( 'Rezervovat', 'reserveandpay' ) . '"></p>';
 		echo '<p><label class="rap-inline"><input type="checkbox" name="rap_ext_new_tab" value="1"' . checked( '0' !== $tab, true, false ) . '> ' . esc_html__( 'Otevřít v novém okně', 'reserveandpay' ) . '</label></p>';
+		echo '<p><label class="rap-inline"><input type="checkbox" name="rap_ext_show_capacity" value="1"' . checked( '1' === (string) get_post_meta( $post_id, '_rap_ext_show_capacity', true ), true, false ) . '> ' . esc_html__( 'Zobrazit celkovou kapacitu', 'reserveandpay' ) . '</label> <span class="rap-hint">' . esc_html__( 'Na webu se ukáže „Kapacita: N míst“ z pole Kapacita – volná místa ne (zná je jen externí systém).', 'reserveandpay' ) . '</span></p>';
 		echo '<p><label for="rap_ext_note">' . esc_html__( 'Poznámka pro zákazníka', 'reserveandpay' ) . '</label> <textarea class="widefat" rows="2" id="rap_ext_note" name="rap_ext_note" placeholder="' . esc_attr__( 'Např. Rezervace a platba probíhá v systému XY.', 'reserveandpay' ) . '">' . esc_textarea( (string) get_post_meta( $post_id, '_rap_ext_note', true ) ) . '</textarea></p>';
 		echo '<p class="rap-hint">' . esc_html__( 'ReserveAndPay u externích termínů nevytváří rezervace, nepočítá obsazenost (volná místa se nezobrazují), neposílá e-maily ani platební údaje. Cenu a slevu na webu zobrazí – soulad s externím systémem si ohlídejte.', 'reserveandpay' ) . '</p>';
 		$active = $post_id && Resandpay_Post_Types::EVENT === get_post_type( $post_id ) ? Resandpay_Reservations::count_active( $post_id ) : 0;

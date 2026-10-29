@@ -157,6 +157,7 @@ class Resandpay_Stats {
 				'paid'       => (float) $a['paid'],
 				'currency'   => (string) $ev['currency'],
 				'external'   => $external,
+				'ext_capacity' => $external ? Resandpay_Events::external_capacity( $ev ) : 0,
 				'cancelled'  => (bool) $ev['cancelled'],
 			);
 		}
@@ -436,7 +437,7 @@ class Resandpay_Stats {
 			echo '<td>' . esc_html( $r['kind_label'] ) . '</td>';
 			echo '<td class="rap-stats__when">' . esc_html( $r['when'] ) . '</td>';
 			if ( $r['external'] ) {
-				echo '<td class="is-num" colspan="3">' . esc_html__( 'rezervace v externím systému', 'reserveandpay' ) . '</td>';
+				echo '<td class="is-num" colspan="3">' . esc_html( $r['ext_capacity'] ? sprintf( /* translators: %d: kapacita */ __( 'kapacita %d – rezervace v externím systému', 'reserveandpay' ), $r['ext_capacity'] ) : __( 'rezervace v externím systému', 'reserveandpay' ) ) . '</td>';
 			} else {
 				echo '<td class="is-num">' . esc_html( sprintf( /* translators: 1: rezervováno, 2: kapacita */ __( '%1$d z %2$d', 'reserveandpay' ), $r['booked'], $r['capacity'] ) ) . '</td>';
 				echo '<td class="is-num">' . (int) $r['free'] . '</td>';
@@ -534,7 +535,7 @@ class Resandpay_Stats {
 		}
 		$out = array( array( 'Kód', 'Název', 'Druh', 'Datum', 'Místo', 'Rezervováno', 'Kapacita', 'Volno', 'Obsazenost %', 'Zaplaceno', 'Předepsáno', 'Měna', 'Poznámka' ) );
 		foreach ( $rows as $r ) {
-			$out[] = array( $r['code'], $r['title'], $r['kind_label'], $r['when'], $r['location'], $r['external'] ? '' : $r['booked'], $r['external'] ? '' : $r['capacity'], $r['external'] ? '' : $r['free'], null === $r['occ'] ? '' : $r['occ'], self::num( $r['paid'] ), self::num( $r['prescribed'] ), $r['currency'], trim( ( $r['cancelled'] ? 'zrušeno ' : '' ) . ( $r['external'] ? 'externí' : '' ) ) );
+			$out[] = array( $r['code'], $r['title'], $r['kind_label'], $r['when'], $r['location'], $r['external'] ? '' : $r['booked'], $r['external'] ? ( $r['ext_capacity'] ?: '' ) : $r['capacity'], $r['external'] ? '' : $r['free'], null === $r['occ'] ? '' : $r['occ'], self::num( $r['paid'] ), self::num( $r['prescribed'] ), $r['currency'], trim( ( $r['cancelled'] ? 'zrušeno ' : '' ) . ( $r['external'] ? 'externí' : '' ) ) );
 		}
 		$t     = self::totals( $rows );
 		$out[] = array( 'Celkem', $t['terms'] . ' termínů', '', '', '', $t['booked'], $t['capacity'], $t['free'], null === $t['occ'] ? '' : $t['occ'], self::num( $t['paid'] ), self::num( $t['prescribed'] ), Resandpay_Settings::get( 'currency' ), $t['cancelled'] ? 'zrušené nezapočteny' : '' );

@@ -1,5 +1,10 @@
 # Vývojový deník ReserveAndPay
 
+## 0.11.1 (29. 10. 2026)
+
+- **Externí rezervace – celková kapacita:** nová volba „Zobrazit celkovou kapacitu“ u akce a služby. Na webu se ukáže „Kapacita: 20 míst“ (ve výpisu, detailu akce, rezervační kartě a „max. N osob“ ve výběru termínů služby), volná místa dál ne. Pole Kapacita je pak povinné. Statistika kapacitu externího termínu ukáže, do součtů a obsazenosti ji nezapočítá.
+- Testy: 503 kontrol + souběh; analytické zadání v4.9 (kap. 3.11)
+
 ## 0.11.0 – Připomínka akce (27. 10. 2026)
 
 - **Připomínka akce zákazníkům** (SWD kap. 15.1, R2) – e-mail N hodin před začátkem akce nebo termínu služby:

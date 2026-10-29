@@ -117,7 +117,7 @@ class Resandpay_Views {
 				<?php elseif ( 'closed' === $state ) : ?>
 					<a class="rap-button rap-button--ghost" href="<?php echo esc_url( $url ); ?>"><?php esc_html_e( 'Zobrazit detail →', 'reserveandpay' ); ?></a>
 				<?php else : ?>
-					<?php if ( ! $ev['external'] ) : ?><p class="rap-item__free"><?php echo esc_html( sprintf( /* translators: 1: volno, 2: kapacita */ __( 'Volná místa: %1$d z %2$d', 'reserveandpay' ), $free, $ev['capacity'] ) ); ?></p><?php endif; ?>
+					<?php if ( ! $ev['external'] ) : ?><p class="rap-item__free"><?php echo esc_html( sprintf( /* translators: 1: volno, 2: kapacita */ __( 'Volná místa: %1$d z %2$d', 'reserveandpay' ), $free, $ev['capacity'] ) ); ?></p><?php elseif ( Resandpay_Events::external_capacity( $ev ) ) : ?><p class="rap-item__free"><?php echo esc_html( Resandpay_Events::capacity_label( Resandpay_Events::external_capacity( $ev ) ) ); ?></p><?php endif; ?>
 					<a class="rap-button" href="<?php echo esc_url( self::book_href( $ev ) ); ?>"<?php echo self::book_attrs( $ev ); // phpcs:ignore WordPress.Security.EscapeOutput -- pevné atributy. ?>><?php echo esc_html( self::book_label( $ev, __( 'Rezervovat termín →', 'reserveandpay' ) ) ); ?></a>
 				<?php endif; ?>
 			</div>
@@ -226,6 +226,8 @@ class Resandpay_Views {
 					echo esc_html( sprintf( /* translators: %d: počet */ _n( '%d volný termín', 'Volných termínů: %d', $it['free'], 'reserveandpay' ), $it['free'] ) );
 				}
 				?></p>
+				<?php elseif ( Resandpay_Events::external_capacity( $next ) ) : ?>
+				<p class="rap-item__free"><?php echo esc_html( Resandpay_Events::capacity_label( Resandpay_Events::external_capacity( $next ) ) ); ?></p>
 				<?php endif; ?>
 				<a class="rap-button" href="<?php echo esc_url( $it['url'] ); ?>"<?php echo $it['external'] ? self::book_attrs( $next ) : ''; // phpcs:ignore WordPress.Security.EscapeOutput -- pevné atributy. ?>><?php echo esc_html( $it['external'] ? self::book_label( $next, '' ) : __( 'Vybrat termín →', 'reserveandpay' ) ); ?></a>
 			</div>
@@ -580,7 +582,8 @@ class Resandpay_Views {
 		if ( $early_offer ) {
 			echo ' · <span class="rap-early-price">' . esc_html( $early_offer['price_text'] ) . '</span> <span class="rap-early">' . esc_html( $early_offer['condition'] ) . '</span>';
 		}
-		if ( $svc['capacity'] > 1 && 'external' !== get_post_meta( $svc['id'], '_rap_booking', true ) ) {
+		$svc_ext = 'external' === get_post_meta( $svc['id'], '_rap_booking', true );
+		if ( $svc['capacity'] > 1 && ( ! $svc_ext || '1' === (string) get_post_meta( $svc['id'], '_rap_ext_show_capacity', true ) ) ) {
 			echo esc_html( ' · ' . sprintf( /* translators: %d: kapacita */ __( 'max. %d osob', 'reserveandpay' ), $svc['capacity'] ) );
 		}
 		echo '</p>';

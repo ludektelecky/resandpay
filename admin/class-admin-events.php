@@ -57,6 +57,9 @@ class Resandpay_Admin_Events {
 			if ( '' === $ev['external']['url'] ) {
 				$m[] = __( 'adresa externí rezervace', 'reserveandpay' );
 			}
+			if ( ! empty( $ev['external']['show_capacity'] ) && $ev['capacity'] < 1 ) {
+				$m[] = __( 'kapacita', 'reserveandpay' );
+			}
 		} elseif ( $ev['capacity'] < 1 ) {
 			$m[] = __( 'kapacita', 'reserveandpay' );
 		}

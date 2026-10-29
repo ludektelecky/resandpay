@@ -283,6 +283,9 @@ class Resandpay_Frontend {
 			}
 			echo '</dd>';
 		}
+		if ( ! $ev['cancelled'] && Resandpay_Events::external_capacity( $ev ) ) {
+			echo '<dt>' . esc_html__( 'Kapacita', 'reserveandpay' ) . '</dt><dd>' . esc_html( preg_replace( '/^[^:]+:\s*/u', '', Resandpay_Events::capacity_label( Resandpay_Events::external_capacity( $ev ) ) ) ) . '</dd>';
+		}
 		if ( $is_slot && ! $ev['external'] ) {
 			echo '<dt>' . esc_html__( 'Termín', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev['cancelled'] ? __( 'zrušen', 'reserveandpay' ) : ( $free > 0 ? __( 'volný', 'reserveandpay' ) : __( 'obsazený', 'reserveandpay' ) ) ) . '</dd>';
 		}
@@ -506,6 +509,8 @@ class Resandpay_Frontend {
 		if ( $ev['external'] ) {
 			if ( $ev['cancelled'] ) {
 				echo '<dt>' . esc_html__( 'Termín', 'reserveandpay' ) . '</dt><dd>' . esc_html__( 'zrušen', 'reserveandpay' ) . '</dd>';
+			} elseif ( Resandpay_Events::external_capacity( $ev ) ) {
+				echo '<dt>' . esc_html__( 'Kapacita', 'reserveandpay' ) . '</dt><dd>' . esc_html( preg_replace( '/^[^:]+:\s*/u', '', Resandpay_Events::capacity_label( Resandpay_Events::external_capacity( $ev ) ) ) ) . '</dd>';
 			}
 		} elseif ( 'slot' === $ev['type'] && $ev['capacity'] <= 1 ) {
 			echo '<dt>' . esc_html__( 'Termín', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev['cancelled'] ? __( 'zrušen', 'reserveandpay' ) : ( $free > 0 ? __( 'volný', 'reserveandpay' ) : __( 'obsazený', 'reserveandpay' ) ) ) . '</dd>';
@@ -541,7 +546,12 @@ class Resandpay_Frontend {
 		$out  = $card ? '<p class="rap-eyebrow">' . esc_html__( 'Rezervace', 'reserveandpay' ) . '</p>' : '';
 		$out .= '<h2 class="rap-booking__title">' . esc_html( $card ? __( 'Rezervovat místo', 'reserveandpay' ) : __( 'Rezervace', 'reserveandpay' ) ) . '</h2>';
 		$out .= '<dl class="rap-external__facts"><dt>' . esc_html__( 'Termín', 'reserveandpay' ) . '</dt><dd>' . esc_html( Resandpay_Views::when_line( $ev ) ) . '</dd>';
-		$out .= '<dt>' . esc_html__( 'Cena', 'reserveandpay' ) . '</dt><dd>' . self::price_html( $ev ) . '</dd></dl>';
+		$out .= '<dt>' . esc_html__( 'Cena', 'reserveandpay' ) . '</dt><dd>' . self::price_html( $ev ) . '</dd>';
+		if ( Resandpay_Events::external_capacity( $ev ) ) {
+			/* translators: %d: počet míst */
+			$out .= '<dt>' . esc_html__( 'Kapacita', 'reserveandpay' ) . '</dt><dd>' . esc_html( preg_replace( '/^[^:]+:\s*/u', '', Resandpay_Events::capacity_label( Resandpay_Events::external_capacity( $ev ) ) ) ) . '</dd>';
+		}
+		$out .= '</dl>';
 		$bookable = Resandpay_Events::check_bookable( $ev['id'] );
 		if ( is_wp_error( $bookable ) ) {
 			return $out . '<p class="rap-notice">' . esc_html( $bookable->get_error_message() ) . '</p>';
