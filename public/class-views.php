@@ -541,6 +541,19 @@ class Resandpay_Views {
 		return sprintf( $f, $n );
 	}
 
+	/** Popis služby z editoru RaP (blokový obsah) – pro [reserveandpay_slots description="yes"]. */
+	public static function service_description( $service_id ) {
+		static $depth = 0;
+		$post = get_post( (int) $service_id );
+		if ( ! $post || '' === trim( wp_strip_all_tags( (string) $post->post_content ) ) || $depth > 0 ) {
+			return ''; // Prázdný popis, nebo popis sám obsahuje výpis termínů (zacyklení).
+		}
+		++$depth;
+		$html = apply_filters( 'the_content', $post->post_content );
+		--$depth;
+		return '<div class="rap-slots__desc">' . $html . '</div>';
+	}
+
 	public static function render_slots( array $args ) {
 		$svc = Resandpay_Services::find( $args['service'] );
 		if ( ! $svc ) {
@@ -587,6 +600,9 @@ class Resandpay_Views {
 			echo esc_html( ' · ' . sprintf( /* translators: %d: kapacita */ __( 'max. %d osob', 'reserveandpay' ), $svc['capacity'] ) );
 		}
 		echo '</p>';
+		if ( in_array( strtolower( (string) ( $args['description'] ?? 'no' ) ), array( 'yes', 'ano', '1', 'true' ), true ) ) {
+			echo self::service_description( $svc['id'] ); // phpcs:ignore WordPress.Security.EscapeOutput -- obsah služby po the_content.
+		}
 		if ( $jump ) {
 			$js    = date_create_immutable( $jump['start'], $tz );
 			$when  = $wd[ (int) $js->format( 'w' ) ] . ' ' . $js->format( 'j. n. Y' ) . ( ( $jump['show_time'] ?? true ) ? ' ' . $js->format( 'G:i' ) : '' );

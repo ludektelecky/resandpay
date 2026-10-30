@@ -340,3 +340,4 @@
 	.rap-stats__filter label, .rap-stats__filter select { width: 100%; max-width: none; }
 }
 .rap-stats__table td code { white-space: nowrap; }
+.rap-slots__desc { margin: 0 0 1.5rem; }

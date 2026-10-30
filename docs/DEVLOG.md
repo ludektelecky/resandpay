@@ -1,5 +1,11 @@
 # Vývojový deník ReserveAndPay
 
+## 0.11.2 (30. 10. 2026)
+
+- `[reserveandpay_slots]` – nový parametr **`description="yes"`**: nad výběrem termínů se vypíše popis služby zadaný v editoru služby v RaP (bloky, obrázky, odkazy). Výchozí `no`. Hodí se hlavně u externí rezervace, kde zákazník detail termínu s popisem neuvidí. Ochrana proti zacyklení, pokud popis sám obsahuje výpis termínů.
+- Nápověda u služby („Stránka s volnými termíny“) parametr uvádí
+- Testy: 505 kontrol + souběh; analytické zadání v5.0
+
 ## 0.11.1 (29. 10. 2026)
 
 - **Externí rezervace – celková kapacita:** nová volba „Zobrazit celkovou kapacitu“ u akce a služby. Na webu se ukáže „Kapacita: 20 míst“ (ve výpisu, detailu akce, rezervační kartě a „max. N osob“ ve výběru termínů služby), volná místa dál ne. Pole Kapacita je pak povinné. Statistika kapacitu externího termínu ukáže, do součtů a obsazenosti ji nezapočítá.

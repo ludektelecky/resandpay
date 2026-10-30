@@ -1625,6 +1625,15 @@ $kd = wp_date( 'Y-m-d', $now + 30 * $day );
 $kR = array_values( array_filter( Resandpay_Stats::rows( array( 'from' => $kd, 'to' => $kd, 'scope' => 'all', 'sort' => 'start', 'dir' => 'asc' ) ), fn( $r ) => $r['id'] === (int) $kE ) )[0];
 rap_t( 20 === $kR['ext_capacity'] && null === $kR['occ'] && 0 === $kR['capacity'], 'statistika: kapacita externího termínu zvlášť, mimo součty a obsazenost' );
 
+echo "== 0.11.2: popis služby ve výběru termínů\n";
+$dsS = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::SERVICE, 'post_status' => 'publish', 'post_title' => 'Služba s popisem', 'post_content' => '<p>Jemná bukální masáž obličeje.</p>[reserveandpay_slots service="sluzba-s-popisem" description="yes"]' ) );
+Resandpay_Admin_Services::save_service_meta( $dsS, array( 'rap_duration' => 60, 'rap_pause' => 0, 'rap_capacity' => 1, 'rap_price' => 1000 ) );
+$_GET = array();
+$dsY = Resandpay_Frontend::shortcode_slots( array( 'service' => $dsS, 'description' => 'yes' ) );
+$dsN = Resandpay_Frontend::shortcode_slots( array( 'service' => $dsS ) );
+rap_t( false !== strpos( $dsY, 'rap-slots__desc' ) && false !== strpos( $dsY, 'Jemná bukální masáž obličeje.' ) && 1 === substr_count( $dsY, 'rap-slots__desc' ), 'description="yes": popis služby nad výběrem (bez zacyklení)' );
+rap_t( false === strpos( $dsN, 'Jemná bukální' ), 'výchozí: popis se nevypisuje' );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );

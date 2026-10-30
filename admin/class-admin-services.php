@@ -75,7 +75,7 @@ class Resandpay_Admin_Services {
 				<td><?php Resandpay_Events::booking_fields( $post->ID ); ?><p class="description"><?php esc_html_e( 'Platí pro všechny termíny služby (i již vypsané). U jednotlivého termínu lze zadat vlastní adresu.', 'reserveandpay' ); ?></p></td></tr>
 			<tr><th><label for="rap_page"><?php esc_html_e( 'Stránka s volnými termíny', 'reserveandpay' ); ?></label></th>
 				<td><?php wp_dropdown_pages( array( 'name' => 'rap_page', 'id' => 'rap_page', 'selected' => $svc['page_id'], 'show_option_none' => '— ' . __( 'nevybráno', 'reserveandpay' ) . ' —', 'option_none_value' => 0 ) ); ?>
-					<p class="description"><?php echo esc_html( sprintf( /* translators: %s: shortcode */ __( 'Na stránku vložte shortcode %s. Detail termínu na ni odkazuje.', 'reserveandpay' ), '[reserveandpay_slots service="' . ( $post->post_name ?: $post->ID ) . '"]' ) ); ?></p></td></tr>
+					<p class="description"><?php echo esc_html( sprintf( /* translators: %s: shortcode */ __( 'Na stránku vložte shortcode %s (s parametrem description="yes" se nad termíny vypíše i popis služby). Detail termínu na ni odkazuje.', 'reserveandpay' ), '[reserveandpay_slots service="' . ( $post->post_name ?: $post->ID ) . '"]' ) ); ?></p></td></tr>
 		</table>
 		<?php
 	}

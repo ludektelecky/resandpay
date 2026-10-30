@@ -430,8 +430,9 @@ class Resandpay_Frontend {
 	public static function shortcode_slots( $atts ) {
 		$a = shortcode_atts(
 			array(
-				'service' => '',
-				'days'    => 21,
+				'service'     => '',
+				'days'        => 21,
+				'description' => 'no', // yes = nad výběrem termínů vypsat popis služby z RaP.
 			),
 			$atts,
 			'reserveandpay_slots'
