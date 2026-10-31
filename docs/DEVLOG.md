@@ -7,6 +7,7 @@
 - Kniha rozvoje: **R6 – vlastní stránka služby** (zatím neimplementováno)
 - Analytické zadání v5.3: do knihy rozvoje zapsány **R7** – upozornění v parametrech služby, kdy se služba zobrazí ve výpisu, a **R8** – termíny jen pro ruční rezervaci (zatím neimplementováno)
 - Analytické zadání v5.4: do knihy rozvoje zapsána **R9** – kódy služeb a akcí (např. `SL-003`) jako preferovaný odkaz ve shortcodech a nápovědách (zatím neimplementováno)
+- Analytické zadání v5.5: do knihy rozvoje zapsána **R10** – nastavitelný počet fotek v galerii akce (dnes pevně 12) a posuvný pás náhledů (zatím neimplementováno)
 - Testy: 523 kontrol + souběh; analytické zadání v5.2
 
 ## 0.12.0 – Parametry akce, ohlášení dopředu, přístup podle role (31. 10. 2026)
