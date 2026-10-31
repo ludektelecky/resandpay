@@ -5,6 +5,7 @@
 - **Rozbalovací popis služby** ve výběru termínů: název služby je odkaz „Popis ▾“, po kliknutí se pod ním rozbalí popis z editoru služby v RaP (bez přenačtení stránky, i bez JavaScriptu). Služba bez popisu nemá klikací název.
 - Nová volba u služby **„Popis na webu“**: Nezobrazovat (výchozí) / Rozbalovací / Vždy zobrazit nad termíny. Na konkrétní stránce ji přepíše parametr `[reserveandpay_slots … description="toggle" | "yes" | "no"]`; stávající `description="yes"` funguje beze změny.
 - Kniha rozvoje: **R6 – vlastní stránka služby** (zatím neimplementováno)
+- Analytické zadání v5.3: do knihy rozvoje zapsány **R7** – upozornění v parametrech služby, kdy se služba zobrazí ve výpisu, a **R8** – termíny jen pro ruční rezervaci (zatím neimplementováno)
 - Testy: 523 kontrol + souběh; analytické zadání v5.2
 
 ## 0.12.0 – Parametry akce, ohlášení dopředu, přístup podle role (31. 10. 2026)
