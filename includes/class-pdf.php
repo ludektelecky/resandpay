@@ -156,7 +156,8 @@ class Resandpay_PDF {
 			}
 			$y_left = $pdf->GetY();
 
-			self::label( $pdf, 104, $top, __( 'Rezervace', 'reserveandpay' ) );
+			$is_mat = 'material' === ( $ev['type'] ?? '' );
+			self::label( $pdf, 104, $top, $is_mat ? __( 'Objednávka', 'reserveandpay' ) : __( 'Rezervace', 'reserveandpay' ) );
 			self::font( $pdf, 'worksansb', 10, self::C_INK );
 			$pdf->SetXY( 104, $top + 5 );
 			$pdf->MultiCell( 88, 5, $ev['title'], 0, 'L', false, 1 );
@@ -166,7 +167,8 @@ class Resandpay_PDF {
 					Resandpay_Events::format_date( $ev ),
 					trim( $ev['location'] . ( $ev['location_addr'] ? ', ' . $ev['location_addr'] : '' ), ', ' ),
 					/* translators: %s: kód akce */
-					$ev['code'] ? sprintf( __( 'Kód akce %s', 'reserveandpay' ), $ev['code'] ) : '',
+					$ev['code'] ? sprintf( $is_mat ? /* translators: %s: kód materiálu */ __( 'Kód materiálu %s', 'reserveandpay' ) : __( 'Kód akce %s', 'reserveandpay' ), $ev['code'] ) : '',
+					$is_mat ? ( $ev['kind_label'] ?? '' ) : '',
 				)
 			);
 			foreach ( $rows as $c ) {

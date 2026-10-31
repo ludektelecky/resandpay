@@ -221,7 +221,7 @@ class Resandpay_Reservations {
 	 * Další číslo řady pro VS a číslo proformy. Řada se nikdy nevrací zpět,
 	 * VS se nikdy nepoužije znovu (ani po zrušení/expiraci).
 	 */
-	private static function next_sequence() {
+	public static function next_sequence() {
 		global $wpdb;
 		if ( ! Resandpay_Lock::acquire( 'sequence' ) ) {
 			return new WP_Error( 'busy', __( 'Systém je právě vytížen, zkuste to prosím za chvíli znovu.', 'reserveandpay' ) );
@@ -468,7 +468,7 @@ class Resandpay_Reservations {
 			$start = Resandpay_Events::ts( $ev['start'] );
 			$paid  = (float) $r['amount_paid'] > 0;
 			$early = self::early_active( $r );
-			if ( ! $paid && $due < $start - 60 ) {
+			if ( ! $paid && ( 'material' === ( $r['item_type'] ?? '' ) || $due < $start - 60 ) ) {
 				if ( $early ) {
 					self::lose_discount( $r['id'], __( 'platba nedorazila do splatnosti – rezervace vypršela', 'reserveandpay' ) );
 				}
@@ -503,6 +503,7 @@ class Resandpay_Reservations {
 		$count += self::send_event_summary( $now_ts );
 		Resandpay_Antibot::prune();
 		Resandpay_Mailer::prune_log();
+		Resandpay_Materials::prune();
 		return $count;
 	}
 

@@ -360,3 +360,51 @@
 .rap-slots__more-label::after { content: " ▾"; }
 .rap-slots__more[open] .rap-slots__more-label::after { content: " ▴"; }
 .rap-slots__more[open] > .rap-slots__desc { margin-top: .75rem; padding: .75rem 1rem; border-left: 2px solid var(--rap-line); }
+
+/* ---------------------------------------------------------------------
+ * Materiály ke stažení (SWD kap. 15.1, R11)
+ * ------------------------------------------------------------------- */
+.rap-material, .rap-materials { font-family: var(--rap-font); color: var(--rap-ink); }
+.rap-material { display: flex; flex-wrap: wrap; gap: 2.5rem; align-items: flex-start; }
+.rap-material__main { flex: 999 1 360px; min-width: 0; }
+.rap-material__main > :first-child { margin-top: 0; }
+.rap-mat-box { flex: 1 1 300px; max-width: 440px; position: sticky; top: 1.5rem; }
+.rap-mat-box .rap-paybox { flex-direction: column; align-items: stretch; }
+.rap-mat-box .rap-qr { align-self: center; }
+.rap-mat-box .rap-pay { flex: 0 0 auto; }
+.rap-mat-box__price { font-family: var(--rap-font-heading); font-size: 26px; line-height: 1.2; color: var(--rap-accent); margin: 0 0 1rem; }
+.rap-mat-box__actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.rap-mat-files { list-style: none; margin: 1.25rem 0 0; padding: 0; border-top: 1px solid var(--rap-line); }
+.rap-mat-file { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; padding: .85rem 0; border-bottom: 1px solid var(--rap-line); }
+.rap-mat-file__name { flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
+.rap-mat-file__name small { display: block; font-weight: 400; color: var(--rap-ink-soft); font-size: 13px; }
+.rap-mat-file.is-locked .rap-mat-file__name { color: var(--rap-ink-soft); }
+.rap-mat-file__dl { padding: .45rem .9rem; font-size: 14px; }
+.rap-mat-player { flex: 1 1 100%; width: 100%; max-width: 100%; background: #000; }
+audio.rap-mat-player { background: transparent; }
+.rap-tag { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--rap-accent-2); border: 1px solid var(--rap-line); padding: 0 .4rem; margin-left: .3rem; vertical-align: middle; }
+.rap-materials__sep { flex-basis: 100%; height: 0; }
+.rap-mat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.75rem; }
+.rap-mat-grid--single { grid-template-columns: minmax(220px, 320px); }
+.rap-mat-card { display: flex; flex-direction: column; background: var(--rap-bg); border: 1px solid var(--rap-line); }
+.rap-mat-card__thumb { display: block; aspect-ratio: 3 / 4; overflow: hidden; background: var(--rap-bg-alt); }
+.rap-mat-card__img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rap-mat-card__ph { display: block; width: 100%; height: 100%; background: radial-gradient(circle at 50% 55%, transparent 0 18%, rgba(140, 100, 35, .18) 18.5% 19%, transparent 19.5% 30%, rgba(140, 100, 35, .14) 30.5% 31%, transparent 31.5% 43%, rgba(140, 100, 35, .1) 43.5% 44%, transparent 44.5%), linear-gradient(160deg, var(--rap-bg-alt), var(--rap-bg)); }
+.rap-mat-card__body { padding: 1rem 1.1rem 1.2rem; display: flex; flex-direction: column; flex: 1; }
+.rap-mat-card__title { font-family: var(--rap-font-heading); font-size: 20px; line-height: 1.25; margin: 0 0 .5rem; }
+.rap-mat-card__title a { color: var(--rap-ink); text-decoration: none; }
+.rap-mat-card__title a:hover { color: var(--rap-accent); }
+.rap-mat-card__excerpt { font-size: 15px; color: var(--rap-ink-soft); margin: 0 0 .75rem; }
+.rap-mat-card__foot { margin: auto 0 0; display: flex; justify-content: space-between; align-items: center; gap: .5rem; font-size: 14px; }
+.rap-mat-badge { font-weight: 600; color: var(--rap-accent); }
+.rap-mat-badge.is-ok { color: var(--rap-ok); }
+.rap-my__title { font-family: var(--rap-font-heading); margin: 2rem 0 .75rem; }
+.rap-my__item { border-top: 1px solid var(--rap-line); padding: 1rem 0; }
+.rap-my__item h3 { margin: 0 0 .25rem; font-size: 19px; }
+.rap-my__item h3 small { font-family: var(--rap-font); font-size: 13px; color: var(--rap-ink-soft); font-weight: 400; margin-left: .4rem; }
+.rap-my__orders { width: 100%; border-collapse: collapse; font-size: 14px; }
+.rap-my__orders th, .rap-my__orders td { text-align: left; padding: .5rem .5rem .5rem 0; border-bottom: 1px solid var(--rap-line); }
+@media (max-width: 860px) {
+	.rap-material { gap: 1.5rem; }
+	.rap-mat-box { position: static; max-width: none; }
+}

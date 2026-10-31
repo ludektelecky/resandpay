@@ -109,6 +109,14 @@ class Resandpay_Reservations_Table extends WP_List_Table {
 			$ev = Resandpay_Events::get( $e->ID );
 			printf( '<option value="%d" %s>%s – %s</option>', (int) $e->ID, selected( $cur, $e->ID, false ), esc_html( $e->post_title ), esc_html( Resandpay_Events::format_date_full( $ev ) ) );
 		}
+		$mats = get_posts( array( 'post_type' => Resandpay_Post_Types::MATERIAL, 'post_status' => array( 'publish', 'draft', 'private' ), 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ) );
+		if ( $mats ) {
+			echo '<optgroup label="' . esc_attr__( 'Materiály (objednávky)', 'reserveandpay' ) . '">';
+			foreach ( $mats as $m ) {
+				printf( '<option value="%d" %s>%s</option>', (int) $m->ID, selected( $cur, $m->ID, false ), esc_html( $m->post_title . ' – ' . Resandpay_Codes::get( $m->ID ) ) );
+			}
+			echo '</optgroup>';
+		}
 		echo '</select>';
 		submit_button( __( 'Filtrovat', 'reserveandpay' ), '', 'filter_action', false );
 		if ( $cur ) {

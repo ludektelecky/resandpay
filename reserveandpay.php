@@ -3,7 +3,7 @@
  * Plugin Name:       ReserveAndPay
  * Plugin URI:        https://github.com/ludektelecky/resandpay
  * Description:       Rezervace akcí a termínů s platbou převodem (QR) a kontrolou plateb z bankovních avíz.
- * Version:           0.12.1
+ * Version:           0.13.0
  * Requires at least: 6.4
  * Requires PHP:      8.0
  * Author:            INSYSTEMS
@@ -14,8 +14,8 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'RESANDPAY_VERSION', '0.12.1' );
-define( 'RESANDPAY_DB_VERSION', '10' );
+define( 'RESANDPAY_VERSION', '0.13.0' );
+define( 'RESANDPAY_DB_VERSION', '11' );
 define( 'RESANDPAY_FILE', __FILE__ );
 define( 'RESANDPAY_DIR', plugin_dir_path( __FILE__ ) );
 define( 'RESANDPAY_URL', plugin_dir_url( __FILE__ ) );
@@ -39,8 +39,10 @@ require_once RESANDPAY_DIR . 'includes/class-antibot.php';
 require_once RESANDPAY_DIR . 'includes/class-discounts.php';
 require_once RESANDPAY_DIR . 'includes/class-brand.php';
 require_once RESANDPAY_DIR . 'includes/class-stats.php';
+require_once RESANDPAY_DIR . 'includes/class-materials.php';
 require_once RESANDPAY_DIR . 'public/class-views.php';
 require_once RESANDPAY_DIR . 'public/class-frontend.php';
+require_once RESANDPAY_DIR . 'public/class-materials-views.php';
 
 if ( is_admin() ) {
 	require_once RESANDPAY_DIR . 'admin/class-admin.php';
@@ -53,6 +55,7 @@ if ( is_admin() ) {
 	require_once RESANDPAY_DIR . 'admin/class-admin-checkin.php';
 	require_once RESANDPAY_DIR . 'admin/class-admin-payments.php';
 	require_once RESANDPAY_DIR . 'admin/class-admin-coupons.php';
+	require_once RESANDPAY_DIR . 'admin/class-admin-materials.php';
 }
 
 register_activation_hook( __FILE__, array( 'Resandpay_Install', 'activate' ) );
@@ -74,6 +77,8 @@ function resandpay_init() {
 	Resandpay_PDF::init();
 	Resandpay_Payments::init();
 	Resandpay_Stats::init();
+	Resandpay_Materials::init();
+	Resandpay_Materials_Views::init();
 	add_action( 'init', array( 'Resandpay_Install', 'maybe_backfill_codes' ), 30 );
 	add_action( 'resandpay_cron_due', array( 'Resandpay_Reservations', 'process_due' ) );
 	if ( ! wp_next_scheduled( 'resandpay_cron_due' ) ) {
@@ -89,6 +94,7 @@ function resandpay_init() {
 		Resandpay_Admin_Checkin::init();
 		Resandpay_Admin_Payments::init();
 		Resandpay_Admin_Coupons::init();
+		Resandpay_Admin_Materials::init();
 	}
 }
 

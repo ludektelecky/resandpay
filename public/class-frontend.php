@@ -48,7 +48,7 @@ class Resandpay_Frontend {
 		if ( ! $ev ) {
 			return new WP_Error( 'not_found', __( 'Akce nenalezena.', 'reserveandpay' ) );
 		}
-		$due   = Resandpay_Events::compute_due( $ev, time() );
+		$due   = 'material' === $ev['type'] ? array( 'last_minute' => false, 'late' => false ) : Resandpay_Events::compute_due( $ev, time() );
 		$part1 = $cash || $due['last_minute'] || ! empty( $due['late'] ) ? 0.0 : Resandpay_Events::part1_amount( $ev );
 		return Resandpay_Discounts::compute( $ev, array( 'cash' => $cash, 'last_minute' => $due['last_minute'], 'part1' => $part1, 'coupon' => $code, 'email' => $email ) ) + array( 'currency' => $ev['currency'] );
 	}

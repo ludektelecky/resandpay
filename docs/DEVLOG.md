@@ -1,5 +1,22 @@
 # Vývojový deník ReserveAndPay
 
+## 0.13.0 – Knihovna materiálů ke stažení (31. 10. 2026)
+
+- **Materiály ke stažení** (SWD kap. 15.1, R11 – schváleno a implementováno): nový typ obsahu ResAndPay → **Materiály** (adresa /materialy/…/, kód **MA-NNN**, blokový editor, perex, náhled 3:4, kategorie sdílené s akcemi)
+  - přístup u materiálu: **zdarma pro přihlášené / placený / jen vybrané role**; stažení vždy jen po přihlášení, kromě souborů označených jako **ukázka**
+  - **doba přístupu** u každého materiálu (dní, 0 = natrvalo; výchozí v nastavení)
+  - **zdarma pro účastnice** vybraných akcí a služeb – zaplacená rezervace (podle účtu nebo e-mailu) materiál odemkne
+  - **ruční zpřístupnění** podle e-mailu účtu (dní / natrvalo, volitelně e-mail), odebrání s důvodem
+  - **staženo z nabídky** – zmizí z katalogu, kupující stahují dál
+- **Objednávka placeného materiálu** jen pro přihlášené: stejný tok jako rezervace (VS ze společné řady, QR platba, PDF pokyn „Objednávka“, kontrola plateb z avíz, ruční přiřazení, kupóny vč. 100 %), povinný **souhlas s okamžitým poskytnutím digitálního obsahu** (text v nastavení, ukládá se čas). Expirace po splatnosti, pozdní platba objednávku obnoví. Druhá objednávka téhož materiálu nevznikne.
+- **Chráněné soubory**: nahrávání v editoru **po částech 2 MB** (obchází limit hostingu, i velká videa), složka `uploads/resandpay-protected/` s `.htaccess` (Require all denied) a náhodnými názvy; plugin sám ověřuje, že složka není z webu dostupná, a jinak varuje
+- **Stahování** přes podepsaný odkaz vázaný na uživatele s omezenou platností (výchozí 240 min), odeslání po částech s **HTTP Range** (přehrávač videa/audia na stránce, navázání stahování), **limit stažení** za 24 h (výchozí 10, přehrávání se nepočítá, upozornění správci), **log stažení**
+- Web: detail materiálu s kartou „Ke stažení“ (přihlásit se / objednat / platební údaje s QR / soubory s přehrávačem), shortcody `[reserveandpay_materials]`, `[reserveandpay_material id="MA-001"]`, `[reserveandpay_my_materials]`; stránky bez cache, „Moje materiály“ noindex
+- Administrace: Parametry, Soubory, Přístupy (objednávky, zpřístupnění, posledních 20 stažení), sloupce v seznamu materiálů; objednávky ve filtru ResAndPay → Rezervace; kupóny lze omezit na materiály; **Nastavení → Materiály ke stažení**; e-mailové šablony „Materiál – …“ (`tpl_mat_*`)
+- Databáze v11: sloupce `item_type`, `consent_digital_at` v rezervacích, tabulky `resandpay_grants` a `resandpay_downloads`
+- **Po aktualizaci uložit Nastavení → Trvalé odkazy** (nová adresa /materialy/)
+- Testy: 592 kontrol + souběh; ověřeno i skutečné nahrání 5 MB po částech a stažení přes HTTP (403 bez přihlášení / cizí odkaz, 206 Range, 429 po limitu); analytické zadání v5.6 (návrh R11) a v5.7
+
 ## 0.12.1 (31. 10. 2026)
 
 - **Rozbalovací popis služby** ve výběru termínů: název služby je odkaz „Popis ▾“, po kliknutí se pod ním rozbalí popis z editoru služby v RaP (bez přenačtení stránky, i bez JavaScriptu). Služba bez popisu nemá klikací název.
@@ -8,6 +25,7 @@
 - Analytické zadání v5.3: do knihy rozvoje zapsány **R7** – upozornění v parametrech služby, kdy se služba zobrazí ve výpisu, a **R8** – termíny jen pro ruční rezervaci (zatím neimplementováno)
 - Analytické zadání v5.4: do knihy rozvoje zapsána **R9** – kódy služeb a akcí (např. `SL-003`) jako preferovaný odkaz ve shortcodech a nápovědách (zatím neimplementováno)
 - Analytické zadání v5.5: do knihy rozvoje zapsána **R10** – nastavitelný počet fotek v galerii akce (dnes pevně 12) a posuvný pás náhledů (zatím neimplementováno)
+- Analytické zadání v5.6: do knihy rozvoje zapsána **R11 – knihovna materiálů ke stažení** – návrh ke schválení (implementováno v 0.13.0)
 - Testy: 523 kontrol + souběh; analytické zadání v5.2
 
 ## 0.12.0 – Parametry akce, ohlášení dopředu, přístup podle role (31. 10. 2026)

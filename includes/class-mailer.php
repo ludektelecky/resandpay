@@ -155,6 +155,9 @@ class Resandpay_Mailer {
 			'{map_url}'          => ! empty( $ev['location_map'] ) ? __( 'Mapa:', 'reserveandpay' ) . ' ' . $ev['location_map'] : '',
 			'{reminder_note}'    => (string) ( $ev['reminder_note'] ?? '' ),
 			'{payment_note}'     => self::payment_note( $r ),
+			'{material_url}'     => 'material' === ( $r['item_type'] ?? '' ) && get_permalink( $r['event_id'] ) ? get_permalink( $r['event_id'] ) : '',
+			'{my_materials_url}' => Resandpay_Materials::my_url(),
+			'{access_until}'     => 'material' === ( $r['item_type'] ?? '' ) ? Resandpay_Materials::order_until_text( $r ) : '',
 			'{event_url}'        => ! empty( $r['event_id'] ) && get_permalink( $r['event_id'] ) ? get_permalink( $r['event_id'] ) : home_url( '/' ),
 			'{split_note}'       => Resandpay_Reservations::is_split( $r ) ? sprintf( /* translators: 1: 1. část, 2: datum, 3: doplatek, 4: datum */ __( "\nPlatba je rozdělená: 1. část %1\$s do %2\$s, doplatek %3\$s do %4\$s. Zaplacením 1. části je Vaše místo potvrzené. Můžete také zaplatit vše najednou do splatnosti 1. části – oba QR kódy najdete níže.\n", 'reserveandpay' ), Resandpay_Events::format_price( $r['part1_amount'], $r['currency'] ), wp_date( 'j. n. Y', Resandpay_Events::ts( $r['part1_due_at'] ) ), Resandpay_Events::format_price( (float) $r['amount'] - (float) $r['part1_amount'], $r['currency'] ), wp_date( 'j. n. Y', Resandpay_Events::ts( $r['due_at'] ) ) ) : '',
 		);
@@ -198,8 +201,9 @@ class Resandpay_Mailer {
 	 */
 	public static function build( $key, array $r ) {
 		$s       = Resandpay_Settings::all();
-		$subject = self::render( $s[ 'tpl_' . $key . '_subject' ] ?? '', $r, $key );
-		$body    = self::render( $s[ 'tpl_' . $key . '_body' ] ?? '', $r, $key );
+		$tkey    = self::template_key( $key, $r );
+		$subject = self::render( $s[ 'tpl_' . $tkey . '_subject' ] ?? '', $r, $key );
+		$body    = self::render( $s[ 'tpl_' . $tkey . '_body' ] ?? '', $r, $key );
 		$parts   = array(
 			'subject'  => $subject,
 			'text'     => $body,
@@ -246,6 +250,17 @@ class Resandpay_Mailer {
 		$parts['html']    = self::html_layout( $subject, self::text_to_html( $body ), $box );
 		self::$last_parts = $parts;
 		return $parts;
+	}
+
+	/**
+	 * Šablona e-mailu: objednávky materiálů (SWD kap. 15.1, R11) mají vlastní texty mat_* –
+	 * pokud pro daný e-mail existují, jinak se použije obecná šablona.
+	 */
+	public static function template_key( $key, array $r ) {
+		if ( 'material' === ( $r['item_type'] ?? '' ) && array_key_exists( 'tpl_mat_' . $key . '_subject', Resandpay_Settings::defaults() ) ) {
+			return 'mat_' . $key;
+		}
+		return $key;
 	}
 
 	/** Řádky platebních údajů (stejné v HTML i textové verzi). */
@@ -467,6 +482,7 @@ class Resandpay_Mailer {
 			'free'          => __( 'Rezervace zdarma potvrzena', 'reserveandpay' ),
 			'event_reminder' => __( 'Připomínka akce', 'reserveandpay' ),
 			'event_summary'  => __( 'Přehled účastníků (správce)', 'reserveandpay' ),
+			'mat_grant'      => __( 'Materiál zpřístupněn', 'reserveandpay' ),
 		);
 	}
 
