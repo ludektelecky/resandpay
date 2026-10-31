@@ -436,7 +436,7 @@ class Resandpay_Frontend {
 			array(
 				'service'     => '',
 				'days'        => 21,
-				'description' => 'no', // yes = nad výběrem termínů vypsat popis služby z RaP.
+				'description' => '', // yes = vždy zobrazit, toggle = rozbalovací, no = nezobrazovat; prázdné = volba u služby.
 			),
 			$atts,
 			'reserveandpay_slots'

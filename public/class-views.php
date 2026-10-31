@@ -560,7 +560,33 @@ class Resandpay_Views {
 		return sprintf( $f, $n );
 	}
 
-	/** Popis služby z editoru RaP (blokový obsah) – pro [reserveandpay_slots description="yes"]. */
+	/**
+	 * Jak zobrazit popis služby ve výběru termínů: parametr shortcodu (yes / toggle / no) má přednost,
+	 * jinak volba „Popis na webu“ u služby. Výsledek: none | toggle | open.
+	 */
+	public static function description_mode( $service_id, $param = '' ) {
+		$p = strtolower( trim( (string) $param ) );
+		$map = array(
+			'yes'    => 'open',
+			'ano'    => 'open',
+			'1'      => 'open',
+			'true'   => 'open',
+			'open'   => 'open',
+			'toggle' => 'toggle',
+			'no'     => 'none',
+			'ne'     => 'none',
+			'0'      => 'none',
+			'false'  => 'none',
+			'none'   => 'none',
+		);
+		if ( isset( $map[ $p ] ) ) {
+			return $map[ $p ];
+		}
+		$m = (string) get_post_meta( (int) $service_id, '_rap_desc_mode', true );
+		return in_array( $m, array( 'toggle', 'open' ), true ) ? $m : 'none';
+	}
+
+	/** Popis služby z editoru RaP (blokový obsah) – pro [reserveandpay_slots description="…"]. */
 	public static function service_description( $service_id ) {
 		static $depth = 0;
 		$post = get_post( (int) $service_id );
@@ -608,7 +634,15 @@ class Resandpay_Views {
 		$base = remove_query_arg( array( 'rap_from' ) );
 		ob_start();
 		echo '<div class="rap-program-view rap-slots" id="rap-slots">';
-		echo '<p class="rap-slots__info"><span class="rap-eyebrow">' . esc_html( $svc['title'] ) . '</span> ';
+		$dmode = self::description_mode( $svc['id'], $args['description'] ?? '' );
+		$desc  = 'none' === $dmode ? '' : self::service_description( $svc['id'] );
+		$tog   = 'toggle' === $dmode && '' !== $desc;
+		if ( $tog ) {
+			// Rozbalovací popis: název služby je ovládací prvek, popis se rozbalí pod ním (bez JavaScriptu).
+			echo '<details class="rap-slots__more"><summary class="rap-slots__info"><span class="rap-eyebrow rap-slots__name">' . esc_html( $svc['title'] ) . '</span> <span class="rap-slots__more-label">' . esc_html__( 'Popis', 'reserveandpay' ) . '</span> ';
+		} else {
+			echo '<p class="rap-slots__info"><span class="rap-eyebrow">' . esc_html( $svc['title'] ) . '</span> ';
+		}
 		echo esc_html( sprintf( /* translators: 1: délka, 2: cena */ __( '%1$d min · %2$s', 'reserveandpay' ), $svc['duration'], Resandpay_Events::format_price( $svc['price'], $svc['currency'] ) ) );
 		$early_offer = Resandpay_Discounts::early_offer( $svc );
 		if ( $early_offer ) {
@@ -618,9 +652,13 @@ class Resandpay_Views {
 		if ( $svc['capacity'] > 1 && ( ! $svc_ext || '1' === (string) get_post_meta( $svc['id'], '_rap_ext_show_capacity', true ) ) ) {
 			echo esc_html( ' · ' . sprintf( /* translators: %d: kapacita */ __( 'max. %d osob', 'reserveandpay' ), $svc['capacity'] ) );
 		}
-		echo '</p>';
-		if ( in_array( strtolower( (string) ( $args['description'] ?? 'no' ) ), array( 'yes', 'ano', '1', 'true' ), true ) ) {
-			echo self::service_description( $svc['id'] ); // phpcs:ignore WordPress.Security.EscapeOutput -- obsah služby po the_content.
+		if ( $tog ) {
+			echo '</summary>' . $desc . '</details>'; // phpcs:ignore WordPress.Security.EscapeOutput -- obsah služby po the_content.
+		} else {
+			echo '</p>';
+			if ( 'open' === $dmode ) {
+				echo $desc; // phpcs:ignore WordPress.Security.EscapeOutput -- obsah služby po the_content.
+			}
 		}
 		$sgate = $slots ? Resandpay_Events::gate( $slots[0] ) : true; // Přístup a zahájení platí pro celou službu.
 		if ( is_wp_error( $sgate ) ) {

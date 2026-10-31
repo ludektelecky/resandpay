@@ -1688,6 +1688,17 @@ wp_delete_user( $gU1 );
 wp_delete_user( $gU2 );
 Resandpay_Settings::update( array( 'priority_roles' => '' ) );
 
+echo "== 0.12.1: rozbalovací popis služby\n";
+update_post_meta( $dsS, '_rap_desc_mode', 'toggle' );
+$tgA = Resandpay_Frontend::shortcode_slots( array( 'service' => $dsS ) );
+rap_t( false !== strpos( $tgA, '<details class="rap-slots__more">' ) && false !== strpos( $tgA, 'rap-slots__name' ) && false !== strpos( $tgA, 'Jemná bukální masáž obličeje.' ), 'volba u služby „Rozbalovací“: název je ovládací prvek, popis pod ním' );
+rap_t( false === strpos( Resandpay_Frontend::shortcode_slots( array( 'service' => $dsS, 'description' => 'no' ) ), 'Jemná bukální' ), 'description="no" přepíše volbu u služby' );
+$tgO = Resandpay_Frontend::shortcode_slots( array( 'service' => $dsS, 'description' => 'yes' ) );
+rap_t( false === strpos( $tgO, '<details' ) && false !== strpos( $tgO, 'Jemná bukální' ), 'description="yes": popis vždy rozbalený' );
+$tgE = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::SERVICE, 'post_status' => 'publish', 'post_title' => 'Bez popisu' ) );
+Resandpay_Admin_Services::save_service_meta( $tgE, array( 'rap_duration' => 60, 'rap_pause' => 0, 'rap_capacity' => 1, 'rap_price' => 100, 'rap_desc_mode' => 'toggle' ) );
+rap_t( false === strpos( Resandpay_Frontend::shortcode_slots( array( 'service' => $tgE ) ), '<details' ), 'služba bez popisu: název není klikací' );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );

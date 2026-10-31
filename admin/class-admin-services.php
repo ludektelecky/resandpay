@@ -69,6 +69,14 @@ class Resandpay_Admin_Services {
 				<td><?php Resandpay_Discounts::early_fields( $post->ID ); ?><p class="description"><?php esc_html_e( 'Platí pro všechny termíny služby (i již vypsané).', 'reserveandpay' ); ?></p></td></tr>
 			<tr><th><?php esc_html_e( 'Zobrazení', 'reserveandpay' ); ?></th>
 				<td><?php Resandpay_Events::time_display_field( get_post_meta( $post->ID, '_rap_time_display', true ), __( 'Platí pro všechny termíny služby (i již vypsané), pokud termín nemá vlastní volbu. Jen datum: na webu, v e-mailech a na platebním pokynu bez času; ve výběru volných termínů se pak u tlačítek místo času ukáže „Rezervovat“ – hodí se jen pro jeden termín denně.', 'reserveandpay' ) ); ?></td></tr>
+			<tr><th><label for="rap_desc_mode"><?php esc_html_e( 'Popis na webu', 'reserveandpay' ); ?></label></th>
+				<td><?php $dm = (string) get_post_meta( $post->ID, '_rap_desc_mode', true ); ?>
+					<select id="rap_desc_mode" name="rap_desc_mode">
+						<option value=""><?php esc_html_e( 'Nezobrazovat', 'reserveandpay' ); ?></option>
+						<option value="toggle" <?php selected( $dm, 'toggle' ); ?>><?php esc_html_e( 'Rozbalovací – název služby je odkaz na popis', 'reserveandpay' ); ?></option>
+						<option value="open" <?php selected( $dm, 'open' ); ?>><?php esc_html_e( 'Vždy zobrazit nad termíny', 'reserveandpay' ); ?></option>
+					</select>
+					<p class="description"><?php esc_html_e( 'Popis = text v editoru služby výše. Platí ve výběru termínů ([reserveandpay_slots]); na konkrétní stránce ho přepíše parametr description="toggle" / "yes" / "no".', 'reserveandpay' ); ?></p></td></tr>
 			<tr><th><?php esc_html_e( 'Připomínka', 'reserveandpay' ); ?></th>
 				<td><?php Resandpay_Events::reminder_fields( $post->ID ); ?><p class="description"><?php esc_html_e( 'Platí pro všechny termíny služby, pokud termín nemá vlastní nastavení.', 'reserveandpay' ); ?></p></td></tr>
 			<tr><th><?php esc_html_e( 'Rezervace', 'reserveandpay' ); ?></th>
@@ -147,6 +155,9 @@ class Resandpay_Admin_Services {
 		Resandpay_Events::save_booking_meta( $post_id, $in );
 		Resandpay_Events::save_reminder_meta( $post_id, $in );
 		Resandpay_Events::save_access_meta( $post_id, $in );
+		if ( array_key_exists( 'rap_desc_mode', $in ) ) {
+			update_post_meta( $post_id, '_rap_desc_mode', in_array( $in['rap_desc_mode'], array( 'toggle', 'open' ), true ) ? $in['rap_desc_mode'] : '' );
+		}
 	}
 
 	public static function columns( $cols ) {

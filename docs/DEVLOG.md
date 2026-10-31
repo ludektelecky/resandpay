@@ -1,5 +1,12 @@
 # Vývojový deník ReserveAndPay
 
+## 0.12.1 (31. 10. 2026)
+
+- **Rozbalovací popis služby** ve výběru termínů: název služby je odkaz „Popis ▾“, po kliknutí se pod ním rozbalí popis z editoru služby v RaP (bez přenačtení stránky, i bez JavaScriptu). Služba bez popisu nemá klikací název.
+- Nová volba u služby **„Popis na webu“**: Nezobrazovat (výchozí) / Rozbalovací / Vždy zobrazit nad termíny. Na konkrétní stránce ji přepíše parametr `[reserveandpay_slots … description="toggle" | "yes" | "no"]`; stávající `description="yes"` funguje beze změny.
+- Kniha rozvoje: **R6 – vlastní stránka služby** (zatím neimplementováno)
+- Testy: 523 kontrol + souběh; analytické zadání v5.2
+
 ## 0.12.0 – Parametry akce, ohlášení dopředu, přístup podle role (31. 10. 2026)
 
 - **Rámeček „Parametry akce“** (R3): nastavení akce v hlavní části editoru jako tabulka po vzoru služby – Termín, Místo a kapacita, Cena a platba, Sleva, Rezervace, Připomínka; nic schovaného pod „Další nastavení“. Pravý panel: tlačítko „Parametry akce ↓“, kód, chybějící údaje, zahájení a omezení rezervací, obsazenost. U termínu služby označeno, co se přebírá ze služby.

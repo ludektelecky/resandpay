@@ -349,3 +349,14 @@
 .rap-access-tag { display: inline-block; font-size: 12px; letter-spacing: .04em; padding: .05rem .5rem; border: 1px solid var(--rap-accent-2); color: var(--rap-accent-2); border-radius: var(--rap-radius); }
 .rap-slots__gate { margin: -0.5rem 0 1.25rem; color: var(--rap-accent-2); font-weight: 600; }
 .rap-chip.rap-slot.is-disabled { opacity: .5; cursor: not-allowed; pointer-events: none; }
+/* Rozbalovací popis služby (0.12.1) */
+.rap-slots__more { margin: 0 0 1.25rem; }
+.rap-slots__more > summary { list-style: none; cursor: pointer; }
+.rap-slots__more > summary::-webkit-details-marker { display: none; }
+.rap-slots__more > summary.rap-slots__info { margin: 0; }
+.rap-slots__name { text-decoration: underline; text-decoration-color: var(--rap-line); text-underline-offset: .25em; }
+.rap-slots__more > summary:hover .rap-slots__name, .rap-slots__more > summary:focus-visible .rap-slots__name { text-decoration-color: currentColor; }
+.rap-slots__more-label { font-size: 13px; color: var(--rap-accent); white-space: nowrap; margin-right: .35rem; }
+.rap-slots__more-label::after { content: " ▾"; }
+.rap-slots__more[open] .rap-slots__more-label::after { content: " ▴"; }
+.rap-slots__more[open] > .rap-slots__desc { margin-top: .75rem; padding: .75rem 1rem; border-left: 2px solid var(--rap-line); }
