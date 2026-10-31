@@ -85,6 +85,12 @@ class Resandpay_Settings {
 			'mail_from_email'     => get_option( 'admin_email' ),
 			'mail_log_days'       => 365,
 			'time_display_default'   => 'show',
+			'booking_access'         => 'all', // Kdo může rezervovat (SWD kap. 15.1, R5): all | logged | roles.
+			'booking_access_roles'   => '',
+			'priority_roles'         => '',
+			'access_text'            => 'Rezervace na tuto akci je jen pro členy. Přihlaste se, prosím.',
+			'access_tag'             => 'jen pro členy',
+			'priority_text'          => 'pro členy od %s',
 			'stats_roles'            => 'administrator,editor,contributor', // Kdo vidí statistiku (SWD kap. 15.1, R1).
 			'coupon_prefix'          => 'SLH',
 			'tpl_discount_lost_subject' => 'Změna platebního předpisu – sleva zanikla: {event}',

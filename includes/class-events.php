@@ -141,7 +141,7 @@ class Resandpay_Events {
 			return ( '' === $v || null === $v ) ? $default : $v;
 		};
 		$location_id = (int) $m( 'location', 0 );
-		return array(
+		$ev = array(
 			'id'            => (int) $event_id,
 			'code'          => Resandpay_Codes::get( $event_id ),
 			'title'         => html_entity_decode( get_the_title( $event_id ), ENT_QUOTES, 'UTF-8' ),
@@ -163,7 +163,8 @@ class Resandpay_Events {
 			'time_display'  => $m( 'time_display', '' ),
 			'show_time'     => self::resolve_show_time( $m( 'time_display', '' ), (int) $m( 'service', 0 ) ),
 			'cancelled'     => (bool) $m( 'cancelled', 0 ),
-			'members_only'  => (bool) $m( 'members_only', 0 ),
+			'members_only'  => false, // Doplní se níže podle přístupu (zpětná kompatibilita).
+			'access'        => self::resolve_access( $event_id, (int) $m( 'service', 0 ) ),
 			'program'       => $m( 'program' ),
 			'gallery'       => self::parse_gallery( $m( 'gallery' ) ),
 			'location_id'   => $location_id,
@@ -175,6 +176,8 @@ class Resandpay_Events {
 			'reminder_note'  => trim( (string) $m( 'reminder_note', '' ) ) ?: ( (int) $m( 'service', 0 ) ? trim( (string) get_post_meta( (int) $m( 'service', 0 ), '_rap_reminder_note', true ) ) : '' ),
 			'external'      => self::external( $event_id, (int) $m( 'service', 0 ), (string) $m( 'start' ) ),
 		);
+		$ev['members_only'] = 'all' !== $ev['access']['mode'];
+		return $ev;
 	}
 
 	/**
@@ -241,6 +244,152 @@ class Resandpay_Events {
 		$def = $inherit_label ?: sprintf( /* translators: %d: hodin */ __( 'z nastavení (%d h)', 'reserveandpay' ), (int) Resandpay_Settings::get( 'event_reminder_hours' ) );
 		echo '<p><label for="rap_reminder_hours">' . esc_html__( 'Připomínka akce zákazníkům (hodin před začátkem)', 'reserveandpay' ) . '</label> <input type="number" min="0" max="720" step="1" id="rap_reminder_hours" name="rap_reminder_hours" value="' . esc_attr( $h ) . '" placeholder="' . esc_attr( $def ) . '" style="width:8em"> <span class="rap-hint">' . esc_html( sprintf( /* translators: %s: výchozí */ __( 'Prázdné = %s, 0 = nepřipomínat.', 'reserveandpay' ), $def ) ) . '</span></p>';
 		echo '<p><label for="rap_reminder_note">' . esc_html__( 'Text do připomínky (např. co si vzít s sebou)', 'reserveandpay' ) . '</label> <textarea class="widefat" rows="2" id="rap_reminder_note" name="rap_reminder_note">' . esc_textarea( (string) get_post_meta( $post_id, '_rap_reminder_note', true ) ) . '</textarea></p>';
+	}
+
+	/**
+	 * Přístup k rezervaci (SWD kap. 15.1, R4–R5): kdo a od kdy může rezervovat.
+	 * Termín služby přebírá nastavení ze služby; prázdná volba = výchozí z nastavení.
+	 *
+	 * @return array mode (all|logged|roles), roles (pole rolí), open_at, priority_at (Y-m-d H:i:s nebo '').
+	 */
+	public static function resolve_access( $event_id, $service_id = 0 ) {
+		$src  = $service_id ? $service_id : $event_id;
+		$mode = (string) get_post_meta( $src, '_rap_access', true );
+		if ( '' === $mode && ! $service_id && get_post_meta( $event_id, '_rap_members_only', true ) ) {
+			$mode = 'logged'; // Dřívější volba „Jen pro přihlášené uživatele“.
+		}
+		$roles = array_filter( explode( ',', (string) get_post_meta( $src, '_rap_access_roles', true ) ) );
+		if ( ! in_array( $mode, array( 'all', 'logged', 'roles' ), true ) ) {
+			$mode  = (string) Resandpay_Settings::get( 'booking_access' );
+			$roles = array_filter( explode( ',', (string) Resandpay_Settings::get( 'booking_access_roles' ) ) );
+		}
+		if ( ! in_array( $mode, array( 'all', 'logged', 'roles' ), true ) ) {
+			$mode = 'all';
+		}
+		$dt = function ( $k ) use ( $src ) {
+			$v = (string) get_post_meta( $src, $k, true );
+			return preg_match( '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?$/', $v ) ? $v : '';
+		};
+		return array(
+			'mode'        => $mode,
+			'roles'       => array_values( $roles ),
+			'open_at'     => $dt( '_rap_open_at' ),
+			'priority_at' => $dt( '_rap_priority_at' ),
+		);
+	}
+
+	/** Role uživatele (prázdné pole pro nepřihlášeného). */
+	private static function user_roles( $user_id ) {
+		$u = $user_id ? get_userdata( $user_id ) : null;
+		return $u ? (array) $u->roles : array();
+	}
+
+	/**
+	 * Smí uživatel termín rezervovat teď (přístup podle role a zahájení rezervací)?
+	 * Kapacitu, uzávěrku apod. řeší check_bookable() / is_open().
+	 *
+	 * @return true|WP_Error not_open (data: open_at, priority_at), login, role.
+	 */
+	public static function gate( array $ev, $user_id = null, $now = null ) {
+		$a       = $ev['access'] ?? array( 'mode' => 'all', 'roles' => array(), 'open_at' => '', 'priority_at' => '' );
+		$user_id = null === $user_id ? get_current_user_id() : (int) $user_id;
+		$now     = $now ?? time();
+		$roles   = self::user_roles( $user_id );
+		$s       = Resandpay_Settings::all();
+		// Nejdřív zahájení rezervací (informace „Rezervace od …“ platí pro všechny), pak přístup podle role.
+		if ( '' !== $a['open_at'] && $now < self::ts( $a['open_at'] ) ) {
+			$prio = array_filter( explode( ',', (string) $s['priority_roles'] ) );
+			$is_p = $user_id && array_intersect( $roles, $prio );
+			if ( ! ( '' !== $a['priority_at'] && $now >= self::ts( $a['priority_at'] ) && $is_p ) ) {
+				return new WP_Error( 'not_open', self::opens_text( $a, $is_p ? array( 1 ) : array() ), $a );
+			}
+		}
+		if ( 'all' !== $a['mode'] && ! $user_id ) {
+			return new WP_Error( 'login', $s['access_text'] );
+		}
+		if ( 'roles' === $a['mode'] && ! array_intersect( $roles, $a['roles'] ) ) {
+			return new WP_Error( 'role', $s['access_text'] );
+		}
+		return true;
+	}
+
+	/** „Rezervace od 1. 12. 2026 v 10:00“ (+ přednostní termín pro členy). */
+	public static function opens_text( array $a, $is_priority_user = array() ) {
+		$f   = fn( $v ) => wp_date( 'j. n. Y', self::ts( $v ) ) . ' ' . __( 'v', 'reserveandpay' ) . ' ' . wp_date( 'G:i', self::ts( $v ) );
+		/* translators: %s: datum a čas */
+		$out = sprintf( __( 'Rezervace od %s', 'reserveandpay' ), $f( $a['open_at'] ) );
+		if ( '' !== $a['priority_at'] && self::ts( $a['priority_at'] ) < self::ts( $a['open_at'] ) && time() < self::ts( $a['priority_at'] ) ) {
+			$out .= ' · ' . sprintf( (string) Resandpay_Settings::get( 'priority_text' ), $f( $a['priority_at'] ) );
+		} elseif ( '' !== $a['priority_at'] && $is_priority_user && time() < self::ts( $a['priority_at'] ) ) {
+			$out .= ' · ' . sprintf( (string) Resandpay_Settings::get( 'priority_text' ), $f( $a['priority_at'] ) );
+		}
+		return $out;
+	}
+
+	/** Lze termín teď rezervovat tímto uživatelem (otevřený, volno / adresa, přístup a zahájení)? */
+	public static function can_book_now( array $ev ) {
+		return self::is_open( $ev ) && true === self::gate( $ev );
+	}
+
+	/** Uloží přístup a zahájení rezervací (akce bez služby nebo služba). */
+	public static function save_access_meta( $post_id, array $in ) {
+		if ( ! array_key_exists( 'rap_access', $in ) ) {
+			if ( ! empty( $in['rap_members_only'] ) ) {
+				update_post_meta( $post_id, '_rap_access', 'logged' ); // Starší formulář / generátor.
+			}
+			return;
+		}
+		$mode = in_array( $in['rap_access'], array( 'all', 'logged', 'roles' ), true ) ? $in['rap_access'] : '';
+		update_post_meta( $post_id, '_rap_access', $mode );
+		$known = array_keys( wp_roles()->get_names() );
+		update_post_meta( $post_id, '_rap_access_roles', implode( ',', array_values( array_intersect( array_map( 'sanitize_key', (array) ( $in['rap_access_roles'] ?? array() ) ), $known ) ) ) );
+		foreach ( array( 'rap_open_at' => '_rap_open_at', 'rap_priority_at' => '_rap_priority_at' ) as $k => $meta ) {
+			$v  = trim( (string) ( $in[ $k ] ?? '' ) );
+			$dt = '' === $v ? false : date_create_immutable( str_replace( 'T', ' ', $v ), wp_timezone() );
+			update_post_meta( $post_id, $meta, $dt ? $dt->format( 'Y-m-d H:i:00' ) : '' );
+		}
+		update_post_meta( $post_id, '_rap_members_only', 0 );
+	}
+
+	/** Pole „Kdo a od kdy může rezervovat“ do editoru akce / služby. */
+	public static function access_fields( $post_id ) {
+		$s     = Resandpay_Settings::all();
+		$mode  = (string) get_post_meta( $post_id, '_rap_access', true );
+		if ( '' === $mode && get_post_meta( $post_id, '_rap_members_only', true ) ) {
+			$mode = 'logged';
+		}
+		$roles = array_filter( explode( ',', (string) get_post_meta( $post_id, '_rap_access_roles', true ) ) );
+		$names = wp_roles()->get_names();
+		$labels = self::access_labels();
+		$defl  = $labels[ $s['booking_access'] ] ?? $labels['all'];
+		if ( 'roles' === $s['booking_access'] ) {
+			$defl .= ': ' . implode( ', ', array_map( fn( $r ) => isset( $names[ $r ] ) ? translate_user_role( $names[ $r ] ) : $r, array_filter( explode( ',', (string) $s['booking_access_roles'] ) ) ) );
+		}
+		$in = fn( $k ) => ( $v = (string) get_post_meta( $post_id, $k, true ) ) ? str_replace( ' ', 'T', substr( $v, 0, 16 ) ) : '';
+		echo '<div class="rap-access">';
+		echo '<p><label for="rap_access">' . esc_html__( 'Kdo může rezervovat', 'reserveandpay' ) . '</label> <select id="rap_access" name="rap_access">';
+		/* translators: %s: výchozí volba */
+		echo '<option value="">' . esc_html( sprintf( __( 'Výchozí z nastavení (%s)', 'reserveandpay' ), $defl ) ) . '</option>';
+		foreach ( $labels as $k => $l ) {
+			echo '<option value="' . esc_attr( $k ) . '" ' . selected( $mode, $k, false ) . '>' . esc_html( $l ) . '</option>';
+		}
+		echo '</select></p><p class="rap-access__roles"' . ( 'roles' === $mode ? '' : ' hidden' ) . '>';
+		foreach ( $names as $rk => $rl ) {
+			echo '<label class="rap-inline" style="margin-right:1em"><input type="checkbox" name="rap_access_roles[]" value="' . esc_attr( $rk ) . '" ' . checked( in_array( $rk, $roles, true ), true, false ) . '> ' . esc_html( translate_user_role( $rl ) ) . '</label> ';
+		}
+		echo '</p>';
+		echo '<p><label for="rap_open_at">' . esc_html__( 'Zahájení rezervací (od kdy)', 'reserveandpay' ) . '</label> <input type="datetime-local" id="rap_open_at" name="rap_open_at" value="' . esc_attr( $in( '_rap_open_at' ) ) . '"> <span class="rap-hint">' . esc_html__( 'Prázdné = rezervovat lze hned. Do té doby je termín na webu vidět s textem „Rezervace od …“ a rezervace se otevře sama.', 'reserveandpay' ) . '</span></p>';
+		echo '<p><label for="rap_priority_at">' . esc_html__( 'Přednostní rezervace od', 'reserveandpay' ) . '</label> <input type="datetime-local" id="rap_priority_at" name="rap_priority_at" value="' . esc_attr( $in( '_rap_priority_at' ) ) . '"> <span class="rap-hint">' . esc_html__( 'Nepovinné, dřívější než zahájení. Rezervovat mohou dříve uživatelé s rolemi z Nastavení → Rezervace a platby → Přednostní rezervace.', 'reserveandpay' ) . '</span></p>';
+		echo '</div>';
+		echo "<script>(function(){var s=document.getElementById('rap_access');if(!s)return;var r=s.closest('.rap-access').querySelector('.rap-access__roles');s.addEventListener('change',function(){r.hidden=s.value!=='roles';});})();</script>";
+	}
+
+	public static function access_labels() {
+		return array(
+			'all'    => __( 'Všichni', 'reserveandpay' ),
+			'logged' => __( 'Jen přihlášení', 'reserveandpay' ),
+			'roles'  => __( 'Jen vybrané role', 'reserveandpay' ),
+		);
 	}
 
 	/** Kapacita externího termínu k zobrazení (0 = nezobrazovat). */
@@ -621,7 +770,9 @@ class Resandpay_Events {
 		self::save_reminder_meta( $post_id, $in );
 		Resandpay_Discounts::save_early_meta( $post_id, $in );
 		update_post_meta( $post_id, '_rap_close_hours', max( 0, (float) str_replace( ',', '.', (string) ( $in['rap_close_hours'] ?? 0 ) ) ) );
-		update_post_meta( $post_id, '_rap_members_only', empty( $in['rap_members_only'] ) ? 0 : 1 );
+		if ( ! ( 'slot' === $type && (int) get_post_meta( $post_id, '_rap_service', true ) ) ) {
+			self::save_access_meta( $post_id, $in );
+		}
 		update_post_meta( $post_id, '_rap_cancelled', empty( $in['rap_cancelled'] ) ? 0 : 1 );
 		update_post_meta( $post_id, '_rap_program', wp_kses_post( (string) ( $in['rap_program'] ?? '' ) ) );
 		if ( array_key_exists( 'rap_gallery', $in ) ) { // Generátor termínů galerii neposílá – ponechat.

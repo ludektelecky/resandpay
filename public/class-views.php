@@ -72,6 +72,15 @@ class Resandpay_Views {
 		return ( $terms && ! is_wp_error( $terms ) ) ? $terms : array();
 	}
 
+	/** Štítek „jen pro členy“ u akce s omezeným přístupem. */
+	public static function access_tag( array $ev ) {
+		if ( 'all' === ( $ev['access']['mode'] ?? 'all' ) || $ev['cancelled'] ) {
+			return '';
+		}
+		$t = trim( (string) Resandpay_Settings::get( 'access_tag' ) );
+		return '' === $t ? '' : '<p class="rap-item__tag"><span class="rap-access-tag">' . esc_html( $t ) . '</span></p>';
+	}
+
 	/** Cíl tlačítka „Rezervovat“: rezervační formulář, nebo adresa externího systému (SWD kap. 3.11). */
 	public static function book_href( array $ev ) {
 		return $ev['external'] ? $ev['external']['url'] : get_permalink( $ev['id'] ) . '#rap-booking';
@@ -97,6 +106,8 @@ class Resandpay_Views {
 		$brow  = $cats ? implode( ' · ', $cats ) : ( Resandpay_Events::type_labels()[ $ev['type'] ] ?? '' );
 		$url   = get_permalink( $ev['id'] );
 		$state = $ev['cancelled'] ? 'cancelled' : ( $ev['external'] ? ( Resandpay_Events::is_open( $ev ) ? 'open' : 'closed' ) : ( $free < 1 ? 'full' : 'open' ) );
+		$gate  = 'open' === $state ? Resandpay_Events::gate( $ev ) : true;
+		$ext_blocked = $ev['external'] && is_wp_error( $gate ); // Externí: ven jen s přístupem.
 		ob_start();
 		?>
 		<article class="rap-item rap-item--<?php echo esc_attr( $state ); ?>">
@@ -108,17 +119,21 @@ class Resandpay_Views {
 			</div>
 			<div class="rap-item__side">
 				<p class="rap-item__price"><?php echo Resandpay_Frontend::price_html( $ev ); // phpcs:ignore WordPress.Security.EscapeOutput ?></p>
+				<?php echo self::access_tag( $ev ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř. ?>
 				<?php if ( 'cancelled' === $state ) : ?>
 					<p class="rap-item__free rap-item__free--off"><?php esc_html_e( 'Zrušeno', 'reserveandpay' ); ?></p>
 					<a class="rap-button rap-button--ghost" href="<?php echo esc_url( $url ); ?>"><?php esc_html_e( 'Zobrazit detail →', 'reserveandpay' ); ?></a>
 				<?php elseif ( 'full' === $state ) : ?>
 					<p class="rap-item__free rap-item__free--off"><?php esc_html_e( 'Obsazeno', 'reserveandpay' ); ?></p>
 					<a class="rap-button rap-button--ghost" href="<?php echo esc_url( $url ); ?>"><?php esc_html_e( 'Zobrazit detail →', 'reserveandpay' ); ?></a>
+				<?php elseif ( is_wp_error( $gate ) && 'not_open' === $gate->get_error_code() ) : ?>
+					<p class="rap-item__opens"><?php echo esc_html( $gate->get_error_message() ); ?></p>
+					<a class="rap-button rap-button--ghost" href="<?php echo esc_url( $url ); ?>"><?php esc_html_e( 'Zobrazit detail →', 'reserveandpay' ); ?></a>
 				<?php elseif ( 'closed' === $state ) : ?>
 					<a class="rap-button rap-button--ghost" href="<?php echo esc_url( $url ); ?>"><?php esc_html_e( 'Zobrazit detail →', 'reserveandpay' ); ?></a>
 				<?php else : ?>
 					<?php if ( ! $ev['external'] ) : ?><p class="rap-item__free"><?php echo esc_html( sprintf( /* translators: 1: volno, 2: kapacita */ __( 'Volná místa: %1$d z %2$d', 'reserveandpay' ), $free, $ev['capacity'] ) ); ?></p><?php elseif ( Resandpay_Events::external_capacity( $ev ) ) : ?><p class="rap-item__free"><?php echo esc_html( Resandpay_Events::capacity_label( Resandpay_Events::external_capacity( $ev ) ) ); ?></p><?php endif; ?>
-					<a class="rap-button" href="<?php echo esc_url( self::book_href( $ev ) ); ?>"<?php echo self::book_attrs( $ev ); // phpcs:ignore WordPress.Security.EscapeOutput -- pevné atributy. ?>><?php echo esc_html( self::book_label( $ev, __( 'Rezervovat termín →', 'reserveandpay' ) ) ); ?></a>
+					<a class="rap-button" href="<?php echo esc_url( $ext_blocked ? $url : self::book_href( $ev ) ); ?>"<?php echo $ext_blocked ? '' : self::book_attrs( $ev ); // phpcs:ignore WordPress.Security.EscapeOutput -- pevné atributy. ?>><?php echo esc_html( self::book_label( $ev, __( 'Rezervovat termín →', 'reserveandpay' ) ) ); ?></a>
 				<?php endif; ?>
 			</div>
 		</article>
@@ -212,6 +227,10 @@ class Resandpay_Views {
 			</div>
 			<div class="rap-item__side">
 				<p class="rap-item__price"><?php echo Resandpay_Frontend::price_html( $next ); // phpcs:ignore WordPress.Security.EscapeOutput ?></p>
+				<?php echo self::access_tag( $next ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř. ?>
+				<?php $sgate = Resandpay_Events::gate( $next ); if ( is_wp_error( $sgate ) && 'not_open' === $sgate->get_error_code() ) : ?>
+				<p class="rap-item__opens"><?php echo esc_html( $sgate->get_error_message() ); ?></p>
+				<?php endif; ?>
 				<?php if ( ! $next['external'] ) : ?>
 				<p class="rap-item__free"><?php
 				if ( $next['capacity'] > 1 ) {
@@ -229,7 +248,7 @@ class Resandpay_Views {
 				<?php elseif ( Resandpay_Events::external_capacity( $next ) ) : ?>
 				<p class="rap-item__free"><?php echo esc_html( Resandpay_Events::capacity_label( Resandpay_Events::external_capacity( $next ) ) ); ?></p>
 				<?php endif; ?>
-				<a class="rap-button" href="<?php echo esc_url( $it['url'] ); ?>"<?php echo $it['external'] ? self::book_attrs( $next ) : ''; // phpcs:ignore WordPress.Security.EscapeOutput -- pevné atributy. ?>><?php echo esc_html( $it['external'] ? self::book_label( $next, '' ) : __( 'Vybrat termín →', 'reserveandpay' ) ); ?></a>
+				<?php $sext = $it['external'] && true === $sgate; ?><a class="rap-button" href="<?php echo esc_url( $it['external'] && ! $sext ? get_permalink( $next['id'] ) : $it['url'] ); ?>"<?php echo $sext ? self::book_attrs( $next ) : ''; // phpcs:ignore WordPress.Security.EscapeOutput -- pevné atributy. ?>><?php echo esc_html( $sext ? self::book_label( $next, '' ) : __( 'Vybrat termín →', 'reserveandpay' ) ); ?></a>
 			</div>
 		</article>
 		<?php
@@ -603,6 +622,18 @@ class Resandpay_Views {
 		if ( in_array( strtolower( (string) ( $args['description'] ?? 'no' ) ), array( 'yes', 'ano', '1', 'true' ), true ) ) {
 			echo self::service_description( $svc['id'] ); // phpcs:ignore WordPress.Security.EscapeOutput -- obsah služby po the_content.
 		}
+		$sgate = $slots ? Resandpay_Events::gate( $slots[0] ) : true; // Přístup a zahájení platí pro celou službu.
+		if ( is_wp_error( $sgate ) ) {
+			$gmsg = 'not_open' === $sgate->get_error_code()
+				/* translators: %s: „Rezervace od …“ */
+				? preg_replace( '/^' . preg_quote( __( 'Rezervace od', 'reserveandpay' ), '/' ) . '/u', __( 'Rezervace termínů od', 'reserveandpay' ), $sgate->get_error_message() )
+				: $sgate->get_error_message();
+			echo '<p class="rap-slots__gate">' . esc_html( $gmsg );
+			if ( 'not_open' !== $sgate->get_error_code() && ! is_user_logged_in() ) {
+				echo ' <a href="' . esc_url( wp_login_url( get_permalink() ) ) . '">' . esc_html__( 'Přihlásit se', 'reserveandpay' ) . '</a>';
+			}
+			echo '</p>';
+		}
 		if ( $jump ) {
 			$js    = date_create_immutable( $jump['start'], $tz );
 			$when  = $wd[ (int) $js->format( 'w' ) ] . ' ' . $js->format( 'j. n. Y' ) . ( ( $jump['show_time'] ?? true ) ? ' ' . $js->format( 'G:i' ) : '' );
@@ -632,6 +663,10 @@ class Resandpay_Views {
 				if ( $ev['capacity'] > 1 && ! $ev['external'] ) {
 					$places = self::places_label( Resandpay_Events::free_places( $ev['id'] ) );
 					$label .= ', ' . $places;
+				}
+				if ( is_wp_error( $sgate ) ) {
+					echo '<span class="rap-chip rap-slot is-disabled' . ( $places ? ' rap-slot--group' : '' ) . '" aria-disabled="true">' . esc_html( $t ) . ( $places ? '<small class="rap-slot__free">' . esc_html( $places ) . '</small>' : '' ) . '</span>'; // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno.
+					continue;
 				}
 				echo '<a class="rap-chip rap-slot' . ( $places ? ' rap-slot--group' : '' ) . '" href="' . esc_url( self::book_href( $ev ) ) . '"' . self::book_attrs( $ev ) . ' aria-label="' . esc_attr( $label ) . '">' . esc_html( $t ) . ( $places ? '<small class="rap-slot__free">' . esc_html( $places ) . '</small>' : '' ) . '</a>'; // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno.
 			}

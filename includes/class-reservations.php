@@ -91,6 +91,12 @@ class Resandpay_Reservations {
 			return $check;
 		}
 		$ev = Resandpay_Events::get( $event_id );
+		if ( 'web' === $opts['source'] ) {
+			$gate = Resandpay_Events::gate( $ev, null, $opts['now'] );
+			if ( is_wp_error( $gate ) ) {
+				return $gate; // Přístup podle role / rezervace ještě nezahájeny (ruční rezervace se neomezuje).
+			}
+		}
 		if ( ! empty( $ev['external'] ) ) {
 			return new WP_Error( 'external', __( 'Rezervace na tento termín probíhá v externím rezervačním systému.', 'reserveandpay' ) );
 		}

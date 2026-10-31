@@ -1,5 +1,14 @@
 # Vývojový deník ReserveAndPay
 
+## 0.12.0 – Parametry akce, ohlášení dopředu, přístup podle role (31. 10. 2026)
+
+- **Rámeček „Parametry akce“** (R3): nastavení akce v hlavní části editoru jako tabulka po vzoru služby – Termín, Místo a kapacita, Cena a platba, Sleva, Rezervace, Připomínka; nic schovaného pod „Další nastavení“. Pravý panel: tlačítko „Parametry akce ↓“, kód, chybějící údaje, zahájení a omezení rezervací, obsazenost. U termínu služby označeno, co se přebírá ze služby.
+- **Zahájení rezervací (od kdy)** u akce a služby (R4): akce je na webu vidět s textem „Rezervace od 1. 12. 2026 v 10:00“ místo tlačítka, formulář se nezobrazí a server rezervaci odmítne; v nastavený okamžik se otevře sama. Výběr termínů služby: časy vidět, neklikatelné, „Rezervace termínů od …“. Platí i pro externí rezervaci.
+- **Přednostní rezervace od** (R4): uživatelé s rolemi z Nastavení → Rezervace a platby → „Přednostní rezervace pro role“ mohou rezervovat dříve; ostatní vidí „Rezervace od … · pro členy od …“.
+- **Kdo může rezervovat** (R5): výchozí v Nastavení (Všichni / Jen přihlášení / Jen vybrané role – role z Ultimate Member), u akce a služby lze změnit. Omezuje jen rezervaci, akce zůstává vidět; štítek „jen pro členy“ ve výpisu a text v detailu (obojí v nastavení). Dřívější „Jen pro přihlášené uživatele“ se automaticky chová jako „Jen přihlášení“.
+- Ruční rezervace v administraci se zahájením ani přístupem neomezuje.
+- Testy: 519 kontrol + souběh; analytické zadání v5.1 (kap. 15.1)
+
 ## 0.11.2 (30. 10. 2026)
 
 - `[reserveandpay_slots]` – nový parametr **`description="yes"`**: nad výběrem termínů se vypíše popis služby zadaný v editoru služby v RaP (bloky, obrázky, odkazy). Výchozí `no`. Hodí se hlavně u externí rezervace, kde zákazník detail termínu s popisem neuvidí. Ochrana proti zacyklení, pokud popis sám obsahuje výpis termínů.

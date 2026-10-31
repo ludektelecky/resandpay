@@ -341,3 +341,11 @@
 }
 .rap-stats__table td code { white-space: nowrap; }
 .rap-slots__desc { margin: 0 0 1.5rem; }
+/* Zahájení rezervací a přístup (SWD kap. 15.1, R4–R5) */
+.rap-item__opens, .rap-event__opens, .rap-details__opens { color: var(--rap-accent-2); font-weight: 600; font-size: 14px; margin: .25rem 0 .5rem; }
+.rap-event__opens { display: inline-block; padding: .55rem 0; }
+.rap-notice--opens { border-left-color: var(--rap-accent); font-weight: 600; }
+.rap-item__tag { margin: 0 0 .35rem; }
+.rap-access-tag { display: inline-block; font-size: 12px; letter-spacing: .04em; padding: .05rem .5rem; border: 1px solid var(--rap-accent-2); color: var(--rap-accent-2); border-radius: var(--rap-radius); }
+.rap-slots__gate { margin: -0.5rem 0 1.25rem; color: var(--rap-accent-2); font-weight: 600; }
+.rap-chip.rap-slot.is-disabled { opacity: .5; cursor: not-allowed; pointer-events: none; }

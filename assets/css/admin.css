@@ -115,3 +115,15 @@ td.rap-box .rap-payfields { max-width: 520px; }
 .rap-stats__st--overdue { color: #8a2424; }
 .rap-stats__note { color: #646970; }
 .rap-stats__table td code { white-space: nowrap; }
+/* Parametry akce – rámeček v hlavní části editoru (0.12.0) */
+#rap_event .rap-params th { width: 170px; padding-top: 18px; }
+#rap_event .rap-params td { padding-top: 12px; }
+#rap_event .rap-params td p { margin: 0 0 10px; }
+#rap_event .rap-params label { display: block; font-weight: 600; margin-bottom: 3px; }
+#rap_event .rap-params label.rap-inline { display: inline; font-weight: 400; }
+#rap_event .rap-params .rap-access__roles label, #rap_event .rap-params .rap-ext-fields label.rap-inline { display: inline; font-weight: 400; }
+#rap_event .rap-params__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 4px 18px; }
+#rap_event .rap-params__full { grid-column: 1 / -1; }
+#rap_event .rap-params select, #rap_event .rap-params input[type=datetime-local] { max-width: 100%; }
+#rap_event .rap-params tr + tr th, #rap_event .rap-params tr + tr td { border-top: 1px solid #f0f0f1; }
+#rap_event .rap-payfields p, #rap_event .rap-access p { margin-bottom: 10px; }
