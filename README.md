@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.17.0** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 6.3** (13. 11. 2026, vydáno k pluginu 0.17.0; kniha rozvoje kap. 15.1) – viz `docs/`.
+> **Aktuální verze pluginu: 0.17.1** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 6.4** (13. 11. 2026, vydáno k pluginu 0.17.1; kniha rozvoje kap. 15.1) – viz `docs/`.
 
 ### Název a označení
 
@@ -163,6 +163,10 @@ Po etapách E1 a E2 lze rezervace spustit s ručním potvrzováním plateb.
 2. WordPress → **Pluginy → Přidat nový → Nahrát plugin** → vybrat `.zip` → Instalovat → Aktivovat.
 3. Na vývojovém webu zapnout **testovací režim** v nastavení pluginu.
 4. Před každou instalací nové verze vytvořit zálohu webu (Duplicator).
+
+## Nastavení
+
+ResAndPay → Nastavení je rozdělené do záložek (od 0.17.1): **Provozovatel** (provozovatel, platební pokyn a QR platba) · **Rezervace** (rezervace a platby, připomínky akcí, ochrana formuláře) · **Web a vzhled** (vzhled, detail akce, odpočet) · **E-maily** (šablony e-mailů, testovací režim) · **Kontrola plateb** · **Materiály** · **Kódy a statistika**. Všechny záložky jsou jeden formulář – „Uložit nastavení“ uloží vše a vrátí se na stejnou záložku. Přímý odkaz: `admin.php?page=reserveandpay-settings&tab=platby`.
 
 ## Vzhled a CSS
 

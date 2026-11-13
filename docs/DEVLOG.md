@@ -2,6 +2,13 @@
 
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
+## 0.17.1 – Záložky v Nastavení (13. 11. 2026)
+
+- **ResAndPay → Nastavení** rozděleno do 7 záložek: **Provozovatel** · **Rezervace** · **Web a vzhled** · **E-maily** · **Kontrola plateb** · **Materiály** · **Kódy a statistika**. Přepínání bez přenačtení stránky.
+- Stále jeden formulář – tlačítko **„Uložit nastavení“** uloží všechny záložky a po uložení se vrátí na tu, kde jste byli. Když pole na skryté záložce neprojde kontrolou, záložka se sama otevře.
+- Přímé odkazy na záložku (`&tab=platby` apod.); odkaz z Plateb na nastavení kontroly plateb a z Nástrojů na ochranu formuláře vedou rovnou na správnou záložku.
+- Testy: 578 kontrol + souběh; analytické zadání v6.4
+
 ## 0.17.0 – Vzhled podle webu (13. 11. 2026)
 
 - ⚠ **Po aktualizaci:** web, který plugin používal už dřív, si ponechá dosavadní vzhled (Nastavení → Vzhled = „Vlastní barvy a písma“ s paletou grafického manuálu „s lehkou hlavou“, logo, motto a texty poznámky). **Na jiném webu než slehkouhlavou.cz** přepněte Nastavení → Vzhled → Barvy a písma na **„Ze šablony webu (automaticky)“**, Písmo v PDF na **DejaVu** a zkontrolujte Logo / Motto a text poznámky ve formuláři.

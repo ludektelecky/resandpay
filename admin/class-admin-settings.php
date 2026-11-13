@@ -326,8 +326,41 @@ class Resandpay_Admin_Settings {
 		echo '<form method="post" action="options.php">';
 		settings_fields( 'resandpay_settings_group' );
 		echo '<input type="hidden" name="' . esc_attr( Resandpay_Settings::OPTION ) . '[__form]" value="1">';
-		foreach ( self::fields() as $title => $section ) {
-			echo '<h2' . ( __( 'Kontrola plateb', 'reserveandpay' ) === $title ? ' id="rap-payments"' : '' ) . '>' . esc_html( $title ) . '</h2>';
+		$tabs    = self::tabs();
+		$current = isset( $_GET['tab'] ) && isset( $tabs[ sanitize_key( wp_unslash( $_GET['tab'] ) ) ] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : (string) array_key_first( $tabs ); // phpcs:ignore WordPress.Security.NonceVerification
+		$tab_of  = array();
+		foreach ( $tabs as $tk => $t ) {
+			foreach ( $t[1] as $sec ) {
+				$tab_of[ $sec ] = $tk;
+			}
+		}
+		echo '<nav class="nav-tab-wrapper rap-settings-tabs" aria-label="' . esc_attr__( 'Části nastavení', 'reserveandpay' ) . '">';
+		foreach ( $tabs as $tk => $t ) {
+			echo '<a href="' . esc_url( add_query_arg( 'tab', $tk, admin_url( 'admin.php?page=reserveandpay-settings' ) ) ) . '" class="nav-tab' . ( $tk === $current ? ' nav-tab-active' : '' ) . '" data-tab="' . esc_attr( $tk ) . '"' . ( $tk === $current ? ' aria-current="page"' : '' ) . '>' . esc_html( $t[0] ) . '</a>';
+		}
+		echo '</nav>';
+		// Sekce v pořadí záložek (každá záložka souvisle); sekce mimo záložky na konec do „Kódy a statistika“.
+		$all     = self::fields();
+		$ordered = array();
+		foreach ( $tabs as $tk => $t ) {
+			foreach ( $t[1] as $sec ) {
+				if ( isset( $all[ $sec ] ) ) {
+					$ordered[ $sec ] = $all[ $sec ];
+				}
+			}
+			if ( 'dalsi' === $tk ) {
+				$ordered += array_diff_key( $all, $tab_of );
+			}
+		}
+		$open = '';
+		foreach ( $ordered as $title => $section ) {
+			$tk = $tab_of[ $title ] ?? 'dalsi';
+			if ( $tk !== $open ) {
+				echo $open ? '</div>' : '';
+				echo '<div class="rap-tab-panel" data-tab="' . esc_attr( $tk ) . '"' . ( $tk === $current ? '' : ' hidden' ) . '>';
+				$open = $tk;
+			}
+			echo '<h2 id="' . esc_attr( __( 'Kontrola plateb', 'reserveandpay' ) === $title ? 'rap-payments' : 'rap-sec-' . sanitize_title( $title ) ) . '">' . esc_html( $title ) . '</h2>';
 			if ( __( 'Vzhled', 'reserveandpay' ) === $title ) {
 				echo self::style_preview(); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
 			}
@@ -407,9 +440,38 @@ class Resandpay_Admin_Settings {
 			}
 			echo '</table>';
 		}
-		submit_button();
+		echo $open ? '</div>' : '';
+		submit_button( __( 'Uložit nastavení', 'reserveandpay' ) );
 		echo '</form></div>';
 		echo self::style_script(); // phpcs:ignore WordPress.Security.EscapeOutput -- pevný skript.
+		echo self::tabs_script(); // phpcs:ignore WordPress.Security.EscapeOutput -- pevný skript.
+	}
+
+	/**
+	 * Záložky nastavení: klíč => [název, sekce]. Všechna pole zůstávají v jednom formuláři – uloží se
+	 * vše najednou, záložky jen přepínají zobrazení.
+	 */
+	public static function tabs() {
+		return array(
+			'provozovatel' => array( __( 'Provozovatel', 'reserveandpay' ), array( __( 'Provozovatel', 'reserveandpay' ), __( 'Platební pokyn a QR platba', 'reserveandpay' ) ) ),
+			'rezervace'    => array( __( 'Rezervace', 'reserveandpay' ), array( __( 'Rezervace a platby', 'reserveandpay' ), __( 'Připomínky akcí', 'reserveandpay' ), __( 'Ochrana formuláře proti robotům', 'reserveandpay' ) ) ),
+			'web'          => array( __( 'Web a vzhled', 'reserveandpay' ), array( __( 'Vzhled', 'reserveandpay' ), __( 'Detail akce', 'reserveandpay' ), __( 'Odpočet', 'reserveandpay' ) ) ),
+			'emaily'       => array( __( 'E-maily', 'reserveandpay' ), array( __( 'E-maily', 'reserveandpay' ), __( 'Testovací režim', 'reserveandpay' ) ) ),
+			'platby'       => array( __( 'Kontrola plateb', 'reserveandpay' ), array( __( 'Kontrola plateb', 'reserveandpay' ) ) ),
+			'materialy'    => array( __( 'Materiály', 'reserveandpay' ), array( __( 'Materiály ke stažení', 'reserveandpay' ) ) ),
+			'dalsi'        => array( __( 'Kódy a statistika', 'reserveandpay' ), array( __( 'Kódy akcí, služeb a termínů', 'reserveandpay' ), __( 'Statistika', 'reserveandpay' ) ) ),
+		);
+	}
+
+	/** Přepínání záložek bez přenačtení; po uložení se vrátí na stejnou záložku. */
+	private static function tabs_script() {
+		return '<script>(function(){var nav=document.querySelector(".rap-settings-tabs");if(!nav){return;}var form=nav.closest("form");'
+			. 'function show(t,push){var ok=false;nav.querySelectorAll("a").forEach(function(a){var on=a.getAttribute("data-tab")===t;a.classList.toggle("nav-tab-active",on);if(on){a.setAttribute("aria-current","page");ok=true;}else{a.removeAttribute("aria-current");}});if(!ok){return;}'
+			. 'form.querySelectorAll(".rap-tab-panel").forEach(function(p){p.hidden=p.getAttribute("data-tab")!==t;});var u=new URL(location.href);u.searchParams.set("tab",t);u.hash="";if(push){history.replaceState(null,"",u.toString());}'
+			. 'var r=form.querySelector("input[name=_wp_http_referer]");if(r){var x=new URL(r.value,location.origin);x.searchParams.set("tab",t);x.searchParams.delete("settings-updated");r.value=x.pathname+x.search;}}'
+			. 'nav.addEventListener("click",function(e){var a=e.target.closest("a[data-tab]");if(!a){return;}e.preventDefault();show(a.getAttribute("data-tab"),true);});'
+			. 'var cur=nav.querySelector(".nav-tab-active");if(location.hash){var el=document.querySelector(location.hash);var p=el&&el.closest(".rap-tab-panel");if(p){show(p.getAttribute("data-tab"),false);el.scrollIntoView();return;}}if(cur){show(cur.getAttribute("data-tab"),false);}'
+			. 'form.addEventListener("invalid",function(e){var p=e.target.closest(".rap-tab-panel");if(p&&p.hidden){show(p.getAttribute("data-tab"),true);}},true);})();</script>';
 	}
 
 	/** Náhled výsledné palety a písem (Nastavení → Vzhled). */

@@ -60,7 +60,7 @@ class Resandpay_Admin_Tools {
 		/* translators: %s: počet */
 		echo '<li>' . esc_html( sprintf( __( 'Jeden e-mail u jedné akce: %s aktivních rezervací', 'reserveandpay' ), $lim( $s['rate_email_max_event'] ) ) ) . '</li>';
 		echo '<li>' . esc_html( Resandpay_Antibot::turnstile_on() ? __( 'Cloudflare Turnstile: zapnuto', 'reserveandpay' ) : __( 'Cloudflare Turnstile: vypnuto', 'reserveandpay' ) ) . '</li></ul>';
-		echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=reserveandpay-settings' ) ) . '">' . esc_html__( 'Upravit v Nastavení → Ochrana formuláře proti robotům', 'reserveandpay' ) . '</a></p>';
+		echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=reserveandpay-settings&tab=rezervace#rap-sec-ochrana-formulare-proti-robotum' ) ) . '">' . esc_html__( 'Upravit v Nastavení → Ochrana formuláře proti robotům', 'reserveandpay' ) . '</a></p>';
 		$labels = Resandpay_Antibot::code_labels();
 		$any    = array_filter( array_intersect_key( $st, $labels ) );
 		if ( ! $any ) {

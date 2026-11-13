@@ -1804,6 +1804,20 @@ rap_t( false !== strpos( $nf, 'Vzkaz pro hostitele' ) && false === strpos( $nf, 
 update_option( Resandpay_Settings::OPTION, $stSaved, false );
 Resandpay_Style::reset();
 
+echo "== 0.17.1: záložky nastavení\n";
+$tbSec = array();
+foreach ( Resandpay_Admin_Settings::tabs() as $tb ) {
+	$tbSec = array_merge( $tbSec, $tb[1] );
+}
+rap_t( array() === array_diff( array_keys( Resandpay_Admin_Settings::fields() ), $tbSec ) && count( $tbSec ) === count( array_unique( $tbSec ) ), 'každá sekce nastavení je právě v jedné záložce' );
+ob_start();
+$_GET['tab'] = 'platby';
+Resandpay_Admin_Settings::page();
+$tbHtml = ob_get_clean();
+unset( $_GET['tab'] );
+rap_t( 7 === preg_match_all( '/<a [^>]*class="nav-tab/', $tbHtml ) && false !== strpos( $tbHtml, 'nav-tab-active" data-tab="platby"' ) && 1 === substr_count( $tbHtml, 'class="rap-tab-panel" data-tab="platby">' ), 'záložky: aktivní podle ?tab=, ostatní skryté' );
+rap_t( 1 === substr_count( $tbHtml, '<form method="post" action="options.php">' ) && false !== strpos( $tbHtml, 'name="resandpay_settings[company_name]"' ) && false !== strpos( $tbHtml, 'name="resandpay_settings[imap_host]"' ), 'jeden formulář – uloží se všechny záložky' );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );

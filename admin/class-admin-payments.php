@@ -159,7 +159,7 @@ class Resandpay_Admin_Payments {
 		echo self::form( 'run', get_submit_button( __( 'Zkontrolovat platby nyní', 'reserveandpay' ), 'primary', 'submit', false ), 'rap-inline-form' ); // phpcs:ignore WordPress.Security.EscapeOutput
 		echo self::form( 'test', get_submit_button( __( 'Otestovat připojení ke schránce', 'reserveandpay' ), 'secondary', 'submit', false ), 'rap-inline-form' ); // phpcs:ignore WordPress.Security.EscapeOutput
 		if ( current_user_can( resandpay_cap_settings() ) ) {
-			echo '<a class="button" href="' . esc_url( admin_url( 'admin.php?page=reserveandpay-settings#rap-payments' ) ) . '">' . esc_html__( 'Nastavení kontroly plateb', 'reserveandpay' ) . '</a>';
+			echo '<a class="button" href="' . esc_url( admin_url( 'admin.php?page=reserveandpay-settings&tab=platby#rap-payments' ) ) . '">' . esc_html__( 'Nastavení kontroly plateb', 'reserveandpay' ) . '</a>';
 		}
 		echo '</p></div>';
 

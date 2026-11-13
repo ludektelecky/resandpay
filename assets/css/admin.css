@@ -149,3 +149,8 @@ td.rap-box .rap-payfields { max-width: 520px; }
 .rap-swatch { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; font-size: 11px; }
 .rap-swatch i { display: block; width: 64px; height: 28px; border: 1px solid rgba(0,0,0,.15); border-radius: 2px; }
 .rap-swatch small { color: #646970; }
+
+/* Nastavení – záložky (0.17.1). */
+.rap-settings-tabs { margin: 12px 0 4px; }
+.rap-tab-panel[hidden] { display: none; }
+.rap-tab-panel > h2:first-child { margin-top: 1.4em; }
