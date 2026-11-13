@@ -16,6 +16,10 @@ Po každé nové verzi pluginu nebo dokumentace uložit soubory také do Google 
 - `Instalační balíčky/` – `reserveandpay-X.Y.Z.zip`
 Starší verze se nepřepisují.
 
+## Vydání verze (od 0.16.0)
+- Push na `main` se změněným číslem verze v `reserveandpay.php` spustí `.github/workflows/release.yml` → GitHub release `vX.Y.Z` s balíčkem a popisem z DEVLOGu; z něj se plugin aktualizuje ve WordPressu. Tagy a releasy ze session vytvářet nejde – vše dělá workflow. Číslo verze měnit jen při vydání; sekce `## X.Y.Z – …` v DEVLOGu musí existovat. Změny vyžadující zásah označit v DEVLOGu „⚠ Po aktualizaci:“.
+- Kopii balíčku pro Google Disk stáhnout z releasu (`https://github.com/ludektelecky/resandpay/releases/download/vX.Y.Z/reserveandpay-X.Y.Z.zip`).
+
 ## Verze dokumentace
 - Analytické zadání uvádí na titulní straně „Verze X.Y · datum · plugin ReserveAndPay A.B.C“ a v historii verzí sloupec „Verze pluginu“ – verze pluginu, ke které byla dokumentace vydána.
 - README uvádí aktuální verzi pluginu a verzi zadání; DEVLOG je členěn podle verzí pluginu.
