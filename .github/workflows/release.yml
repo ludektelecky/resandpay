@@ -43,7 +43,7 @@ jobs:
           exec > >(tee -a "$RUNNER_TEMP/rap.log") 2>&1
           mkdir -p build/reserveandpay
           for f in README.md admin assets includes languages lib public reserveandpay.php templates; do
-            [ -e "$f" ] && cp -r "$f" build/reserveandpay/   # prázdné složky git neukládá
+            if [ -e "$f" ]; then cp -r "$f" build/reserveandpay/; fi   # prázdné složky git neukládá
           done
           python3 -c "import shutil,sys; shutil.make_archive(sys.argv[1], 'zip', 'build', 'reserveandpay')" "reserveandpay-${VERSION}"
           python3 -c "import zipfile,sys; z=zipfile.ZipFile(sys.argv[1]); print(len(z.namelist()), 'souborů')" "reserveandpay-${VERSION}.zip"
