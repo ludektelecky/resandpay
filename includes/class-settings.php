@@ -27,10 +27,11 @@ class Resandpay_Settings {
 			'pdf_footer'          => 'Nejedná se o daňový doklad',
 			// Logo a motto pro tiskoviny pluginu (poukaz) – grafický manuál v1, kap. 01–02.
 			'logo_source'         => 'site',
-			'logo_line1'          => 's lehkou',
-			'logo_line2'          => 'hlavou',
-			'brand_motto'         => 'nádech — výdech — prostor',
-			'brand_symbol_svg'    => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 80" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="4.2"><g stroke="#8C6423"><path d="M50 62 C40 46 42 26 50 10 C58 26 60 46 50 62 Z"/><path d="M50 62 C36 56 28 42 30 24 C42 32 48 46 50 62 Z"/><path d="M50 62 C64 56 72 42 70 24 C58 32 52 46 50 62 Z"/></g><path stroke="#6B3F4B" d="M8 64 C20 56 34 56 50 64 C66 56 80 56 92 64"/></svg>',
+			// Logo z nastavení pluginu – nová instalace neutrálně (prázdné = název webu); slehkouhlavou.cz viz Resandpay_Install::LEGACY_BRAND.
+			'logo_line1'          => '',
+			'logo_line2'          => '',
+			'brand_motto'         => '',
+			'brand_symbol_svg'    => '',
 			// Rezervace.
 			'currency'            => 'CZK',
 			// Splatnost: booking = N dní od rezervace (nejpozději začátek termínu),
@@ -43,6 +44,25 @@ class Resandpay_Settings {
 			'cash_enabled'        => 0,
 			// Připomínka N dní před splatností (0 = vypnuto).
 			'reminder_days'       => 1,
+			// Vzhled (SWD kap. 15.1, R15): theme = ze šablony webu, custom = vlastní barvy a písma.
+			'style_mode'          => 'theme',
+			'color_bg'            => '',
+			'color_bg_alt'        => '',
+			'color_ink'           => '',
+			'color_ink_soft'      => '',
+			'color_accent'        => '',
+			'color_accent_hover'  => '',
+			'color_accent_2'      => '',
+			'color_gold'          => '',
+			'color_line'          => '',
+			'color_error'         => '',
+			'font_body'           => '',
+			'font_heading'        => '',
+			'pdf_font'            => 'dejavu',
+			'custom_css'          => '',
+			// Poznámka v rezervačním formuláři.
+			'note_label'          => 'Poznámka',
+			'note_hint'           => 'Např. zdravotní omezení nebo přání. Poznámku uvidí jen pořadatel.',
 			'event_reminder_hours'  => 48, // Připomínka akce zákazníkům (SWD kap. 15.1, R2); 0 = vypnuto.
 			'event_summary_enabled' => 1,
 			'event_summary_time'    => '18:00',

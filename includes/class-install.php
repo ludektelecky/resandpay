@@ -38,7 +38,51 @@ class Resandpay_Install {
 				global $wpdb;
 				$wpdb->query( "UPDATE {$wpdb->prefix}resandpay_reservations SET price_full = amount WHERE price_full = 0" );
 			}
+			if ( $from && $from < 12 ) {
+				self::keep_legacy_brand();
+			}
 			update_option( 'resandpay_codes_backfill', 1, false );
+		}
+	}
+
+	/**
+	 * Vzhled a značka webu, který plugin používal před 0.17.0 (slehkouhlavou.cz): paleta grafického
+	 * manuálu „s lehkou hlavou“ v1, písma Fraunces a Work Sans, logo, motto a texty poznámky.
+	 */
+	const LEGACY_BRAND = array(
+		'style_mode'         => 'custom',
+		'color_bg'           => '#faf6ef',
+		'color_bg_alt'       => '#f0e8da',
+		'color_ink'          => '#2e2a22',
+		'color_ink_soft'     => '#5c5e52',
+		'color_accent'       => '#8c6423',
+		'color_accent_hover' => '#2e2a22',
+		'color_accent_2'     => '#6b3f4b',
+		'color_gold'         => '#b8862e',
+		'color_line'         => '#d6c3a0',
+		'color_error'        => '#8a2e2b',
+		'font_body'          => '"Work Sans", system-ui, sans-serif',
+		'font_heading'       => 'Fraunces, Georgia, serif',
+		'pdf_font'           => 'brand',
+		'logo_line1'         => 's lehkou',
+		'logo_line2'         => 'hlavou',
+		'brand_motto'        => 'nádech — výdech — prostor',
+		'brand_symbol_svg'   => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 80" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="4.2"><g stroke="#8C6423"><path d="M50 62 C40 46 42 26 50 10 C58 26 60 46 50 62 Z"/><path d="M50 62 C36 56 28 42 30 24 C42 32 48 46 50 62 Z"/><path d="M50 62 C64 56 72 42 70 24 C58 32 52 46 50 62 Z"/></g><path stroke="#6B3F4B" d="M8 64 C20 56 34 56 50 64 C66 56 80 56 92 64"/></svg>',
+		'note_label'         => 'Poznámka pro lektorku',
+		'note_hint'          => 'Např. zdravotní omezení. Údaje vidí jen lektorka.',
+	);
+
+	/**
+	 * 0.17.0 (DB 12): nové instalace přebírají vzhled ze šablony a mají neutrální výchozí hodnoty.
+	 * Stávající web si ponechá dosavadní vzhled – co v uloženém nastavení chybí, doplní se z LEGACY_BRAND
+	 * (uložené hodnoty se nemění).
+	 */
+	public static function keep_legacy_brand() {
+		$saved = get_option( Resandpay_Settings::OPTION, array() );
+		$saved = is_array( $saved ) ? $saved : array();
+		$add   = array_diff_key( self::LEGACY_BRAND, $saved );
+		if ( $add ) {
+			Resandpay_Settings::update( $add );
 		}
 	}
 

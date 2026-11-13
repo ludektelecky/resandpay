@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.16.1** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 6.2** (13. 11. 2026, vydáno k pluginu 0.16.1; kniha rozvoje kap. 15.1) – viz `docs/`.
+> **Aktuální verze pluginu: 0.17.0** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 6.3** (13. 11. 2026, vydáno k pluginu 0.17.0; kniha rozvoje kap. 15.1) – viz `docs/`.
 
 ### Název a označení
 
@@ -163,6 +163,64 @@ Po etapách E1 a E2 lze rezervace spustit s ručním potvrzováním plateb.
 2. WordPress → **Pluginy → Přidat nový → Nahrát plugin** → vybrat `.zip` → Instalovat → Aktivovat.
 3. Na vývojovém webu zapnout **testovací režim** v nastavení pluginu.
 4. Před každou instalací nové verze vytvořit zálohu webu (Duplicator).
+
+## Vzhled a CSS
+
+Plugin přebírá vzhled webu (od 0.17.0). **Nastavení → Vzhled → Barvy a písma:**
+
+- **Ze šablony webu (automaticky)** – výchozí pro nové weby. Barvy a písma podle šablony: blokové šablony z theme.json (globální styly: pozadí, text, tlačítko, odkazy, písma), **GeneratePress** z Přizpůsobit → Barvy (globální barvy `contrast`, `contrast-2`, `base-2`, `base-3`, `accent`) a Typografie (body, nadpisy), ostatní šablony z palety editoru. Co šablona neurčí, se dopočítá (druhý podklad, linky, doplňkový text, odstíny).
+- **Vlastní barvy a písma** – 10 barev a písmo nadpisů a textu (CSS font-family; prázdné = písmo webu). slehkouhlavou.cz má po aktualizaci uloženou paletu grafického manuálu – vzhled se nezměnil.
+
+Jedna paleta platí pro **web, e-maily, platební pokyn a slevový poukaz (PDF)** i štítek verze v administraci. Nastavení ukazuje náhled použité palety. Písmo v PDF: **DejaVu Serif / DejaVu Sans** (výchozí, plná čeština) nebo **Fraunces / Work Sans** – do PDF lze vložit jen písma obsažená v pluginu. Logo ve výstupech se bere z Identity webu; bez loga se použije název značky / webu.
+
+### Úpravy CSS (pro vývojáře)
+
+1. **Nastavení → Vzhled → Vlastní CSS** – načte se za styly pluginu jen tam, kde plugin něco zobrazuje (bez FTP).
+2. Nebo Customizer → Další CSS / style.css child theme.
+3. Úplná náhrada stylů: `add_filter( 'resandpay_enqueue_styles', '__return_false' );` – frontend.css se nenačte, proměnné palety a vlastní CSS ano.
+4. Úprava palety v kódu: filtr `resandpay_style` (pole `colors`, `font_body`, `font_heading`, `source`); barvy e-mailu navíc `resandpay_mail_colors`.
+
+**CSS proměnné** (nastavuje je plugin podle palety; přepis v CSS má přednost, když je selektor silnější, např. `body { --rap-accent: … }` nebo `:root:root`):
+
+| Proměnná | Význam |
+|---|---|
+| `--rap-bg` | podklad (pole formuláře, karty) |
+| `--rap-bg-alt` | druhý podklad (rezervační karta, odpočet, rámečky) |
+| `--rap-ink` / `--rap-ink-soft` | text / doplňkový text |
+| `--rap-accent` / `--rap-accent-hover` / `--rap-accent-text` | tlačítka a odkazy / po najetí / text na tlačítku |
+| `--rap-accent-2` | druhý akcent (eyebrow, data akcí, štítky) |
+| `--rap-gold` / `--rap-gold-light` | zvýraznění (sleva, čísla odpočtu) / dekor (vlny) |
+| `--rap-line` | vlasové linky a rámečky |
+| `--rap-error` / `--rap-error-bg` | chyby formuláře |
+| `--rap-ok` | potvrzení |
+| `--rap-radius` | zaoblení rohů (výchozí 2px) |
+| `--rap-font` / `--rap-font-heading` | písmo textu / nadpisů (`inherit` = písmo webu) |
+| `--rap-max` | max. šířka detailu akce (1120px) |
+| `--rap-card-top` / `--rap-card-bottom` | přechod zástupné plochy galerie bez fotek |
+
+**Hlavní třídy** (předpona `rap-`, BEM: `rap-blok__prvek`, `rap-blok--varianta`; stabilní napříč verzemi):
+
+| Třída | Prvek |
+|---|---|
+| `.rap-button` | tlačítko (`.rap-button--block` na celou šířku) |
+| `.rap-event`, `.rap-event__cta`, `.rap-event__price` | detail akce: záhlaví, cena a tlačítko |
+| `.rap-booking`, `.rap-booking--card`, `.rap-form`, `.rap-field` | rezervační karta a formulář |
+| `.rap-list`, `.rap-item`, `.rap-item__title` | výpis akcí `[reserveandpay_program]` |
+| `.rap-calendar`, `.rap-agenda` | kalendářový pohled |
+| `.rap-slots`, `.rap-slot`, `.rap-slots__date` | volné termíny služby `[reserveandpay_slots]` |
+| `.rap-countdown`, `.rap-countdown__unit` | odpočet |
+| `.rap-faq` | časté dotazy |
+| `.rap-paybox`, `.rap-qr` | platební údaje a QR po rezervaci |
+| `.rap-eyebrow`, `.rap-notice`, `.rap-errors`, `.rap-tag`, `.rap-chip` | štítek nad nadpisem, upozornění, chyby, štítky |
+| `.rap-materials`, `.rap-mat-card`, `.rap-mat-box` | materiály ke stažení |
+
+Příklad:
+
+```css
+:root:root { --rap-radius: 8px; --rap-font-heading: inherit; }
+.rap-button { text-transform: uppercase; letter-spacing: .04em; }
+.rap-booking--card { box-shadow: 0 6px 24px rgba(0,0,0,.08); }
+```
 
 ## Aktualizace
 

@@ -58,6 +58,12 @@ class Resandpay_Admin {
 		wp_enqueue_script( 'resandpay-version' );
 		wp_add_inline_script( 'resandpay-version', $js );
 		wp_enqueue_style( 'reserveandpay-admin', RESANDPAY_URL . 'assets/css/admin.css', array(), RESANDPAY_VERSION );
+		wp_add_inline_style( 'reserveandpay-admin', self::badge_css() );
+	}
+
+	/** Štítek verze v barvách palety pluginu (Nastavení → Vzhled). */
+	public static function badge_css() {
+		return '.rap-version{background:' . Resandpay_Style::color( 'bg_alt' ) . ';color:' . Resandpay_Style::color( 'accent_2' ) . ';border-color:' . Resandpay_Style::color( 'line' ) . ';}';
 	}
 
 	public static function menu() {
@@ -94,6 +100,11 @@ class Resandpay_Admin {
 	public static function assets( $hook ) {
 		if ( self::is_our_screen( $hook ) ) {
 			wp_enqueue_style( 'reserveandpay-admin', RESANDPAY_URL . 'assets/css/admin.css', array(), RESANDPAY_VERSION );
+			wp_add_inline_style( 'reserveandpay-admin', self::badge_css() );
+			if ( false !== strpos( (string) $hook, 'reserveandpay-settings' ) ) {
+				wp_enqueue_style( 'wp-color-picker' );
+				wp_enqueue_script( 'wp-color-picker' );
+			}
 			$screen = get_current_screen();
 			if ( $screen && method_exists( $screen, 'is_block_editor' ) && $screen->is_block_editor() ) {
 				return; // Blokový editor: verze v panelu Shrnutí (block_editor_version()).

@@ -622,13 +622,13 @@ class Resandpay_Reservations {
 				$st    = self::status_labels()[ $r['status'] ] ?? $r['status'];
 				$left  = self::remaining( $r );
 				$pay   = $left > 0 ? sprintf( /* translators: %s: částka */ __( 'zbývá %s', 'reserveandpay' ), Resandpay_Events::format_price( $left, $r['currency'] ) ) . ( 'cash' === $r['pay_choice'] ? ' ' . __( '(na místě)', 'reserveandpay' ) : '' ) : __( 'uhrazeno', 'reserveandpay' );
-				$html .= '<tr><td style="padding:4px 8px 4px 0;border-bottom:1px solid #e6dcc8;">' . $i . '.</td><td style="padding:4px 8px;border-bottom:1px solid #e6dcc8;"><strong>' . esc_html( $r['customer_name'] ) . '</strong>' . ( $r['phone'] ? '<br>' . esc_html( $r['phone'] ) : '' ) . '</td><td style="padding:4px 8px;border-bottom:1px solid #e6dcc8;">' . esc_html( $st . ' · ' . $pay ) . '</td><td style="padding:4px 0 4px 8px;border-bottom:1px solid #e6dcc8;">' . esc_html( (string) $r['note'] ) . '</td></tr>';
+				$html .= '<tr><td style="padding:4px 8px 4px 0;border-bottom:1px solid ' . Resandpay_Style::mix( Resandpay_Style::color( 'line' ), Resandpay_Style::color( 'bg' ), 0.6 ) . ';">' . $i . '.</td><td style="padding:4px 8px;border-bottom:1px solid ' . Resandpay_Style::mix( Resandpay_Style::color( 'line' ), Resandpay_Style::color( 'bg' ), 0.6 ) . ';"><strong>' . esc_html( $r['customer_name'] ) . '</strong>' . ( $r['phone'] ? '<br>' . esc_html( $r['phone'] ) : '' ) . '</td><td style="padding:4px 8px;border-bottom:1px solid ' . Resandpay_Style::mix( Resandpay_Style::color( 'line' ), Resandpay_Style::color( 'bg' ), 0.6 ) . ';">' . esc_html( $st . ' · ' . $pay ) . '</td><td style="padding:4px 0 4px 8px;border-bottom:1px solid ' . Resandpay_Style::mix( Resandpay_Style::color( 'line' ), Resandpay_Style::color( 'bg' ), 0.6 ) . ';">' . esc_html( (string) $r['note'] ) . '</td></tr>';
 				$text .= sprintf( "%d. %s, %s – %s · %s%s\n", $i, $r['customer_name'], $r['phone'], $st, $pay, $r['note'] ? ' – ' . $r['note'] : '' );
 			}
 			$html .= '</table>';
 			if ( $ev && $x['free'] > 0 ) {
 				/* translators: %d: počet */
-				$html .= '<p style="margin:4px 0 0;font-size:12px;color:#5c5e52;">' . esc_html( sprintf( __( 'Volná místa: %d', 'reserveandpay' ), $x['free'] ) ) . '</p>';
+				$html .= '<p style="margin:4px 0 0;font-size:12px;color:' . Resandpay_Style::color( 'ink_soft' ) . ';">' . esc_html( sprintf( __( 'Volná místa: %d', 'reserveandpay' ), $x['free'] ) ) . '</p>';
 			}
 		}
 		$mail = Resandpay_Mailer::html_layout( $subj, Resandpay_Mailer::text_to_html( $intro ), $html );

@@ -62,6 +62,8 @@ class Resandpay_Admin_Settings {
 				'access_text'          => array( __( 'Text pro nepřihlášené / bez oprávnění', 'reserveandpay' ), 'text', __( 'Zobrazí se v detailu akce místo rezervačního formuláře.', 'reserveandpay' ) ),
 				'access_tag'           => array( __( 'Štítek ve výpisu', 'reserveandpay' ), 'text', __( 'U akcí s omezeným přístupem (např. „jen pro členy“).', 'reserveandpay' ) ),
 				'priority_text'        => array( __( 'Text přednostní rezervace', 'reserveandpay' ), 'text', __( 'Doplní se za „Rezervace od …“; %s = datum a čas (např. „pro členy od %s“).', 'reserveandpay' ) ),
+				'note_label'           => array( __( 'Poznámka ve formuláři – popisek', 'reserveandpay' ), 'text', __( 'Např. „Poznámka pro lektorku“.', 'reserveandpay' ) ),
+				'note_hint'            => array( __( 'Poznámka ve formuláři – nápověda', 'reserveandpay' ), 'text', __( 'Pod polem poznámky; prázdné = bez nápovědy.', 'reserveandpay' ) ),
 				'cash_enabled'      => array( __( 'Povolit platbu v hotovosti na místě', 'reserveandpay' ), 'checkbox', __( 'Doplňková možnost k platbě převodem (QR), která zůstává předvybraná. U akce i služby lze přepsat.', 'reserveandpay' ) ),
 				'last_minute_hours' => array( __( 'Hranice pro platbu na místě (hodin před začátkem)', 'reserveandpay' ), 'number', __( 'Rezervace vytvořená později než tato hranice dostane i možnost zaplatit na místě a po splatnosti neexpiruje. Výchozí 24 h.', 'reserveandpay' ) ),
 				'coupon_prefix'     => array( __( 'Předpona kódu slevového kupónu', 'reserveandpay' ), $text, __( 'Automatické kódy mají tvar PŘEDPONA-XXXX-XXXX-XX (např. SLH-7KQ4-M9XD-2P).', 'reserveandpay' ) ),
@@ -83,6 +85,23 @@ class Resandpay_Admin_Settings {
 				'countdown_open_date'     => array( __( 'Jen datum – zahájení prodeje', 'reserveandpay' ), 'text', __( 'Když je cíl dál než výše uvedený počet dní; %s = datum a čas.', 'reserveandpay' ) ),
 				'countdown_discount_date' => array( __( 'Jen datum – konec slevy', 'reserveandpay' ), 'text' ),
 				'countdown_close_date'    => array( __( 'Jen datum – ukončení prodeje', 'reserveandpay' ), 'text' ),
+			),
+			__( 'Vzhled', 'reserveandpay' )            => array(
+				'style_mode'         => array( __( 'Barvy a písma', 'reserveandpay' ), 'select', __( 'Platí pro web, e-maily, platební pokyn a slevový poukaz (PDF) i štítek verze v administraci. Ze šablony webu: barvy a písma podle šablony (theme.json blokových šablon, globální barvy a typografie GeneratePress, paleta editoru u ostatních); co šablona neurčí, se dopočítá. Vlastní: hodnoty níže.', 'reserveandpay' ), array( 'theme' => __( 'Ze šablony webu (automaticky)', 'reserveandpay' ), 'custom' => __( 'Vlastní barvy a písma', 'reserveandpay' ) ) ),
+				'color_bg'           => array( __( 'Podklad', 'reserveandpay' ), 'color', __( 'Prázdné pole = dopočítá se z ostatních barev.', 'reserveandpay' ) ),
+				'color_bg_alt'       => array( __( 'Druhý podklad', 'reserveandpay' ), 'color', __( 'Karty, rezervační karta, odpočet, rámečky v e-mailu a PDF.', 'reserveandpay' ) ),
+				'color_ink'          => array( __( 'Text', 'reserveandpay' ), 'color' ),
+				'color_ink_soft'     => array( __( 'Doplňkový text', 'reserveandpay' ), 'color' ),
+				'color_accent'       => array( __( 'Akcent (tlačítka, odkazy)', 'reserveandpay' ), 'color' ),
+				'color_accent_hover' => array( __( 'Akcent po najetí myší', 'reserveandpay' ), 'color' ),
+				'color_accent_2'     => array( __( 'Druhý akcent (štítky, data akcí)', 'reserveandpay' ), 'color' ),
+				'color_gold'         => array( __( 'Zvýraznění (sleva, odpočet)', 'reserveandpay' ), 'color' ),
+				'color_line'         => array( __( 'Linky', 'reserveandpay' ), 'color' ),
+				'color_error'        => array( __( 'Chyba', 'reserveandpay' ), 'color' ),
+				'font_heading'       => array( __( 'Písmo nadpisů', 'reserveandpay' ), $text, __( 'CSS font-family, např. Fraunces, Georgia, serif. Prázdné = písmo webu. Plugin písma nenačítá – načítá je šablona webu.', 'reserveandpay' ) ),
+				'font_body'          => array( __( 'Písmo textu', 'reserveandpay' ), $text, __( 'Např. "Work Sans", system-ui, sans-serif. Prázdné = písmo webu.', 'reserveandpay' ) ),
+				'pdf_font'           => array( __( 'Písmo v PDF', 'reserveandpay' ), 'select', __( 'Platební pokyn a slevový poukaz. Do PDF lze vložit jen písma obsažená v pluginu.', 'reserveandpay' ), array( 'dejavu' => __( 'DejaVu Serif / DejaVu Sans (neutrální, plná čeština)', 'reserveandpay' ), 'brand' => __( 'Fraunces / Work Sans', 'reserveandpay' ) ) ),
+				'custom_css'         => array( __( 'Vlastní CSS', 'reserveandpay' ), 'css', __( 'Načte se za styly pluginu jen na stránkách, kde plugin něco zobrazuje. Proměnné --rap-* a třídy rap-… viz README pluginu (sekce Vzhled a CSS), např. :root { --rap-radius: 8px; } .rap-button { text-transform: uppercase; }', 'reserveandpay' ) ),
 			),
 			__( 'Kontrola plateb', 'reserveandpay' ) => array(
 				'payment_mode'         => array( __( 'Režim kontroly plateb', 'reserveandpay' ), 'select', __( 'Automaticky = při volání CRONu, když uplynul interval. Ručně = jen tlačítkem v ResAndPay → Platby.', 'reserveandpay' ), array( 'auto' => __( 'Automaticky v intervalu', 'reserveandpay' ), 'manual' => __( 'Jen ručně', 'reserveandpay' ) ) ),
@@ -258,6 +277,12 @@ class Resandpay_Admin_Settings {
 					case 'svg':
 						$out[ $key ] = self::sanitize_svg( (string) $val );
 						break;
+					case 'color':
+						$out[ $key ] = Resandpay_Style::hex( (string) $val );
+						break;
+					case 'css':
+						$out[ $key ] = trim( wp_strip_all_tags( (string) $val ) );
+						break;
 					case 'roles':
 						$known       = array_keys( wp_roles()->get_names() );
 						$out[ $key ] = implode( ',', array_values( array_intersect( array_map( 'sanitize_key', (array) $val ), $known ) ) );
@@ -267,6 +292,9 @@ class Resandpay_Admin_Settings {
 				}
 			}
 		}
+		$out['font_heading'] = Resandpay_Style::clean_family( $out['font_heading'] );
+		$out['font_body']    = Resandpay_Style::clean_family( $out['font_body'] );
+		Resandpay_Style::reset();
 		$out['currency']  = strtoupper( substr( preg_replace( '/[^A-Za-z]/', '', $out['currency'] ), 0, 3 ) ) ?: 'CZK';
 		$vs_tpl = strtoupper( preg_replace( '/\s+/', '', (string) $out['vs_prefix'] ) );
 		if ( preg_replace( '/%(YYYY|YY|MM)%|\d/', '', $vs_tpl ) !== '' || strlen( Resandpay_Reservations::vs_prefix( $vs_tpl ) ) > 4 ) {
@@ -300,6 +328,9 @@ class Resandpay_Admin_Settings {
 		echo '<input type="hidden" name="' . esc_attr( Resandpay_Settings::OPTION ) . '[__form]" value="1">';
 		foreach ( self::fields() as $title => $section ) {
 			echo '<h2' . ( __( 'Kontrola plateb', 'reserveandpay' ) === $title ? ' id="rap-payments"' : '' ) . '>' . esc_html( $title ) . '</h2>';
+			if ( __( 'Vzhled', 'reserveandpay' ) === $title ) {
+				echo self::style_preview(); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
+			}
 			if ( __( 'E-maily', 'reserveandpay' ) === $title ) {
 				echo '<p class="description">' . esc_html__( 'Proměnné:', 'reserveandpay' ) . ' <code>{name} {email} {phone} {note} {event} {date} {location} {amount} {vs} {proforma} {due_date} {account} {iban} {company} {free} {reason} {last_minute_note} {pay_choice} {event_code} {event_url} {total} {paid} {remaining} {last_payment} {amount_now} {due_now} {part1} {part1_due} {final_due} {split_note} {price_full} {discount} {discount_label} {coupon} {reminder_note} {payment_note} {where} {map_url}</code></p>';
 			}
@@ -308,7 +339,8 @@ class Resandpay_Admin_Settings {
 				$name = Resandpay_Settings::OPTION . '[' . $key . ']';
 				$id   = 'rap_' . $key;
 				$val  = $s[ $key ] ?? '';
-				echo '<tr><th><label for="' . esc_attr( $id ) . '">' . esc_html( $def[0] ) . '</label></th><td>';
+				$custom_row = 0 === strpos( $key, 'color_' ) || 0 === strpos( $key, 'font_' );
+				echo '<tr' . ( $custom_row ? ' class="rap-style-custom"' : '' ) . '><th><label for="' . esc_attr( $id ) . '">' . esc_html( $def[0] ) . '</label></th><td>';
 				switch ( $def[1] ) {
 					case 'checkbox':
 						echo '<input type="checkbox" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" value="1" ' . checked( ! empty( $val ), true, false ) . '>';
@@ -322,6 +354,13 @@ class Resandpay_Admin_Settings {
 						foreach ( wp_roles()->get_names() as $rk => $rl ) {
 							echo '<label class="rap-inline" style="margin-right:1.2em"><input type="checkbox" name="' . esc_attr( $name ) . '[]" value="' . esc_attr( $rk ) . '" ' . checked( in_array( $rk, $sel, true ), true, false ) . '> ' . esc_html( translate_user_role( $rl ) ) . '</label> ';
 						}
+						break;
+					case 'color':
+						$auto = Resandpay_Style::get()['colors'][ substr( $key, 6 ) ] ?? '';
+						echo '<input type="text" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" value="' . esc_attr( $val ) . '" class="rap-color-field" data-default-color="' . esc_attr( $auto ) . '" placeholder="' . esc_attr( $auto ) . '">';
+						break;
+					case 'css':
+						echo '<textarea id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" rows="10" class="large-text code" spellcheck="false" placeholder=":root { --rap-radius: 8px; }">' . esc_textarea( $val ) . '</textarea>';
 						break;
 					case 'svg':
 						echo '<div class="rap-svg-preview" style="width:60px;height:48px">' . self::sanitize_svg( (string) $val ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput -- prošlo wp_kses.
@@ -370,5 +409,27 @@ class Resandpay_Admin_Settings {
 		}
 		submit_button();
 		echo '</form></div>';
+		echo self::style_script(); // phpcs:ignore WordPress.Security.EscapeOutput -- pevný skript.
+	}
+
+	/** Náhled výsledné palety a písem (Nastavení → Vzhled). */
+	public static function style_preview() {
+		$st     = Resandpay_Style::get();
+		$labels = array(
+			'theme.json'    => __( 'ze šablony webu (theme.json)', 'reserveandpay' ),
+			'generatepress' => __( 'ze šablony GeneratePress (Přizpůsobit → Barvy, Typografie)', 'reserveandpay' ),
+			'classic'       => __( 'ze šablony webu (paleta editoru), zbytek dopočítán', 'reserveandpay' ),
+			'custom'        => __( 'vlastní nastavení', 'reserveandpay' ),
+		);
+		$out = '<div class="rap-style-preview"><p><strong>' . esc_html__( 'Použitá paleta:', 'reserveandpay' ) . '</strong> ' . esc_html( $labels[ $st['source'] ] ?? $st['source'] ) . '</p><p class="rap-swatches">';
+		foreach ( $st['colors'] as $role => $hex ) {
+			$out .= '<span class="rap-swatch" title="' . esc_attr( $role ) . '"><i style="background:' . esc_attr( $hex ) . '"></i><code>' . esc_html( $hex ) . '</code><small>' . esc_html( $role ) . '</small></span>';
+		}
+		$out .= '</p><p>' . esc_html__( 'Písmo nadpisů:', 'reserveandpay' ) . ' <code>' . esc_html( $st['font_heading'] ?: __( 'písmo webu', 'reserveandpay' ) ) . '</code> · ' . esc_html__( 'Písmo textu:', 'reserveandpay' ) . ' <code>' . esc_html( $st['font_body'] ?: __( 'písmo webu', 'reserveandpay' ) ) . '</code></p></div>';
+		return $out;
+	}
+
+	private static function style_script() {
+		return '<script>window.addEventListener("load",function(){var $=window.jQuery;if(!$){return;}if($.fn.wpColorPicker){$(".rap-color-field").wpColorPicker();}var s=$("#rap_style_mode");function t(){$(".rap-style-custom").toggle(s.val()==="custom");}s.on("change",t);t();});</script>';
 	}
 }

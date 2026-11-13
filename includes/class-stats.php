@@ -493,7 +493,7 @@ class Resandpay_Stats {
 	}
 
 	public static function shortcode() {
-		wp_enqueue_style( 'reserveandpay' );
+		Resandpay_Style::enqueue();
 		self::no_cache();
 		if ( ! is_user_logged_in() ) {
 			return '<div class="rap-stats rap-stats--login"><p class="rap-notice">' . esc_html__( 'Přehled rezervací je jen pro přihlášené spolupracovníky.', 'reserveandpay' ) . ' <a href="' . esc_url( wp_login_url( get_permalink() ) ) . '">' . esc_html__( 'Přihlásit se', 'reserveandpay' ) . '</a></p></div>';

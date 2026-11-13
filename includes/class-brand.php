@@ -21,11 +21,16 @@ class Resandpay_Brand {
 				return $site;
 			}
 		}
+		$line1 = trim( (string) $s['logo_line1'] );
+		$line2 = trim( (string) $s['logo_line2'] );
+		if ( '' === $line1 && '' === $line2 ) { // Bez loga v nastavení: název značky / webu.
+			$line1 = trim( (string) ( $s['brand_name'] ?: get_bloginfo( 'name' ) ) );
+		}
 		return array(
 			'type'  => 'mark',
 			'svg'   => self::stroke_only( (string) $s['brand_symbol_svg'] ),
-			'line1' => trim( (string) $s['logo_line1'] ),
-			'line2' => trim( (string) $s['logo_line2'] ),
+			'line1' => $line1,
+			'line2' => $line2,
 		);
 	}
 
@@ -100,14 +105,14 @@ class Resandpay_Brand {
 				$cx += $sw + 0.4 * $h / 1.5;
 			}
 			$base = $y + $h * 0.22;
-			$pdf->SetFont( 'fraunces_md', '', $pt );
-			$pdf->SetTextColor( 46, 42, 34 );
+			$pdf->SetFont( Resandpay_Style::pdf_font( 'heading_md' ), '', $pt );
+			$pdf->SetTextColor( ...Resandpay_Style::rgb( 'ink' ) );
 			$pdf->SetXY( $cx, $base );
 			$t1 = $logo['line1'] . ' ';
 			$w1 = $pdf->GetStringWidth( $t1 );
 			$pdf->Cell( $w1, $h * 0.6, $t1, 0, 0, 'L' );
-			$pdf->SetFont( 'fraunces_i', '', $pt * 1.09 );
-			$pdf->SetTextColor( 140, 100, 35 );
+			$pdf->SetFont( Resandpay_Style::pdf_font( 'heading_italic' ), '', $pt * 1.09 );
+			$pdf->SetTextColor( ...Resandpay_Style::rgb( 'accent' ) );
 			$w2 = $pdf->GetStringWidth( $logo['line2'] );
 			$pdf->Cell( $w2 + 1, $h * 0.6, $logo['line2'], 0, 0, 'L' );
 			return $cx - $x + $w1 + $w2;
@@ -145,8 +150,8 @@ class Resandpay_Brand {
 		}
 		$logo = self::logo();
 		if ( 'mark' !== $logo['type'] ) {
-			return '<span style="font-family:Georgia,\'Times New Roman\',serif;font-size:22px;color:' . esc_attr( $colors['accent'] ) . ';">' . esc_html( $alt ) . '</span>';
+			return '<span style="font-family:' . esc_attr( Resandpay_Style::email_font( 'heading' ) ) . ';font-size:22px;color:' . esc_attr( $colors['accent'] ) . ';">' . esc_html( $alt ) . '</span>';
 		}
-		return '<span style="font-family:Fraunces,Georgia,\'Times New Roman\',serif;font-size:21px;color:' . esc_attr( $colors['ink'] ) . ';">' . esc_html( $logo['line1'] ) . '</span> <span style="font-family:Fraunces,Georgia,\'Times New Roman\',serif;font-style:italic;font-size:23px;color:' . esc_attr( $colors['accent'] ) . ';">' . esc_html( $logo['line2'] ) . '</span>';
+		return '<span style="font-family:' . esc_attr( Resandpay_Style::email_font( 'heading' ) ) . ';font-size:21px;color:' . esc_attr( $colors['ink'] ) . ';">' . esc_html( $logo['line1'] ) . '</span> <span style="font-family:' . esc_attr( Resandpay_Style::email_font( 'heading' ) ) . ';font-style:italic;font-size:23px;color:' . esc_attr( $colors['accent'] ) . ';">' . esc_html( $logo['line2'] ) . '</span>';
 	}
 }

@@ -142,3 +142,10 @@ td.rap-box .rap-payfields { max-width: 520px; }
 .rap-version { display: inline-block; margin: 0 0 0 10px; padding: 3px 9px; border: 1px solid #d6c3a0; border-radius: 2px; background: #f0e8da; color: #6b3f4b; font-size: 12px; font-weight: 600; line-height: 1.5; vertical-align: middle; position: relative; top: -3px; white-space: nowrap; }
 .wrap h1 .rap-version { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 .rap-version-info .rap-version { margin: 0; top: 0; }
+
+/* Nastavení → Vzhled: náhled palety (0.17.0). */
+.rap-style-preview { background: #fff; border: 1px solid #dcdcde; padding: 10px 14px; max-width: 980px; }
+.rap-swatches { display: flex; flex-wrap: wrap; gap: 10px 14px; }
+.rap-swatch { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; font-size: 11px; }
+.rap-swatch i { display: block; width: 64px; height: 28px; border: 1px solid rgba(0,0,0,.15); border-radius: 2px; }
+.rap-swatch small { color: #646970; }

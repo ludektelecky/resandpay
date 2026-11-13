@@ -323,7 +323,7 @@ class Resandpay_Mailer {
 		foreach ( $rows as $k => $v ) {
 			$big  = $i < 2;
 			$disc = in_array( $k, self::$discount_keys, true );
-			$out .= '<tr><td style="padding:3px 14px 3px 0;font-size:13px;color:' . ( $disc ? $c['accent'] : $c['soft'] ) . ';white-space:nowrap;">' . esc_html( $k ) . '</td><td style="padding:3px 0;' . ( $big ? 'font-family:Georgia,\'Times New Roman\',serif;font-size:20px;font-weight:bold;color:' . $c['accent'] . ';' : 'font-size:14px;color:' . ( $disc ? $c['accent'] . ';font-weight:bold' : $c['ink'] ) . ';' ) . '">' . esc_html( $v ) . '</td></tr>';
+			$out .= '<tr><td style="padding:3px 14px 3px 0;font-size:13px;color:' . ( $disc ? $c['accent'] : $c['soft'] ) . ';white-space:nowrap;">' . esc_html( $k ) . '</td><td style="padding:3px 0;' . ( $big ? 'font-family:' . esc_attr( Resandpay_Style::email_font( 'heading' ) ) . ';font-size:20px;font-weight:bold;color:' . $c['accent'] . ';' : 'font-size:14px;color:' . ( $disc ? $c['accent'] . ';font-weight:bold' : $c['ink'] ) . ';' ) . '">' . esc_html( $v ) . '</td></tr>';
 			++$i;
 		}
 		$out .= '</table></td>';
@@ -335,22 +335,25 @@ class Resandpay_Mailer {
 			/* translators: 1: celá částka, 2: splatnost */
 			$out .= '<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:14px;border-top:1px solid ' . $c['line'] . ';"><tr><td valign="middle" style="padding:12px 14px 0 0;"><img src="' . esc_attr( $qr2_src ) . '" width="110" height="110" alt="' . esc_attr__( 'QR platba – vše najednou', 'reserveandpay' ) . '" style="display:block;width:110px;height:110px;border:0;background:#fff;"></td><td valign="middle" style="padding-top:12px;font-size:13px;color:' . $c['ink'] . ';"><strong>' . esc_html__( 'Nebo zaplaťte vše najednou', 'reserveandpay' ) . '</strong><br>' . esc_html( sprintf( __( '%1$s do %2$s – stejný variabilní symbol', 'reserveandpay' ), Resandpay_Events::format_price( $r['amount'], $r['currency'] ), wp_date( 'j. n. Y', Resandpay_Events::ts( Resandpay_Reservations::due_now( $r ) ) ) ) ) . '</td></tr></table>';
 		}
-		$out .= '<p style="margin:16px 0 0;"><a href="' . esc_url( $pdf_url ) . '" style="display:inline-block;background:' . $c['accent'] . ';color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:2px;font-weight:bold;font-size:14px;">' . esc_html__( 'Stáhnout platební pokyn (PDF) →', 'reserveandpay' ) . '</a></p>';
+		$out .= '<p style="margin:16px 0 0;"><a href="' . esc_url( $pdf_url ) . '" style="display:inline-block;background:' . $c['accent'] . ';color:' . ( $c['on'] ?? '#ffffff' ) . ';text-decoration:none;padding:10px 18px;border-radius:2px;font-weight:bold;font-size:14px;">' . esc_html__( 'Stáhnout platební pokyn (PDF) →', 'reserveandpay' ) . '</a></p>';
 		return $out . '</td></tr></table>';
 	}
 
+	/** Barvy e-mailu z palety pluginu (Nastavení → Vzhled); filtr resandpay_mail_colors zůstává. */
 	private static function colors() {
+		$c = Resandpay_Style::get()['colors'];
 		return apply_filters(
 			'resandpay_mail_colors',
 			array(
-				'bg'     => '#F0E8DA',
-				'card'   => '#FAF6EF',
-				'box'    => '#F0E8DA',
-				'ink'    => '#2E2A22',
-				'soft'   => '#5C5E52',
-				'accent' => '#8C6423',
-				'plum'   => '#6B3F4B',
-				'line'   => '#D6C3A0',
+				'bg'     => $c['bg_alt'],
+				'card'   => $c['bg'],
+				'box'    => $c['bg_alt'],
+				'ink'    => $c['ink'],
+				'soft'   => $c['ink_soft'],
+				'accent' => $c['accent'],
+				'plum'   => $c['accent_2'],
+				'line'   => $c['line'],
+				'on'     => Resandpay_Style::text_on( $c['accent'], $c ),
 			)
 		);
 	}
@@ -365,7 +368,7 @@ class Resandpay_Mailer {
 			. '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:' . $c['bg'] . ';"><tr><td align="center" style="padding:24px 12px;">'
 			. '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:' . $c['card'] . ';border-top:3px solid ' . $c['accent'] . ';">'
 			. '<tr><td style="padding:26px 30px 8px;">' . Resandpay_Brand::email_header( $c ) . '</td></tr>'
-			. '<tr><td style="padding:10px 30px 8px;font-family:\'Work Sans\',Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:' . $c['ink'] . ';">' . $body_html . $box_html . '</td></tr>'
+			. '<tr><td style="padding:10px 30px 8px;font-family:' . esc_attr( Resandpay_Style::email_font() ) . ';font-size:15px;line-height:1.6;color:' . $c['ink'] . ';">' . $body_html . $box_html . '</td></tr>'
 			. '<tr><td style="padding:14px 30px 24px;border-top:1px solid ' . $c['line'] . ';font-family:Arial,Helvetica,sans-serif;font-size:12px;color:' . $c['soft'] . ';">' . esc_html( $contact ) . '</td></tr>'
 			. '</table></td></tr></table></body></html>';
 	}

@@ -120,7 +120,7 @@ class Resandpay_Frontend {
 		 * add_filter( 'resandpay_enqueue_assets', fn( $on ) => $on || is_front_page() );
 		 */
 		if ( apply_filters( 'resandpay_enqueue_assets', $on ) ) {
-			wp_enqueue_style( 'reserveandpay' );
+			Resandpay_Style::enqueue();
 		}
 	}
 
@@ -399,7 +399,7 @@ class Resandpay_Frontend {
 		$atts = shortcode_atts( array( 'id' => 0 ), $atts, 'reserveandpay_booking' );
 		$id   = Resandpay_Codes::looks_like_code( $atts['id'] ) ? Resandpay_Codes::find( $atts['id'] ) : absint( $atts['id'] );
 		$id   = $id ?: get_the_ID();
-		wp_enqueue_style( 'reserveandpay' );
+		Resandpay_Style::enqueue();
 		return self::render_details( $id ) . self::render_booking( $id );
 	}
 
@@ -420,7 +420,7 @@ class Resandpay_Frontend {
 
 	public static function shortcode_events( $atts ) {
 		$a = self::list_atts( $atts, 'reserveandpay_events' );
-		wp_enqueue_style( 'reserveandpay' );
+		Resandpay_Style::enqueue();
 		$cat = isset( $_GET['rap_cat'] ) ? sanitize_title( wp_unslash( $_GET['rap_cat'] ) ) : $a['category'];
 		$out = 'yes' === $a['filter'] ? Resandpay_Views::render_filter( $cat, remove_query_arg( array( 'rap_done', 'rap_again' ) ) ) : '';
 		$a['category'] = $cat;
@@ -429,7 +429,7 @@ class Resandpay_Frontend {
 
 	public static function shortcode_calendar( $atts ) {
 		$a = self::list_atts( $atts, 'reserveandpay_calendar' );
-		wp_enqueue_style( 'reserveandpay' );
+		Resandpay_Style::enqueue();
 		return '<div class="rap-program-view">' . Resandpay_Views::render_calendar( $a ) . '</div>';
 	}
 
@@ -444,7 +444,7 @@ class Resandpay_Frontend {
 			$atts,
 			'reserveandpay_slots'
 		);
-		wp_enqueue_style( 'reserveandpay' );
+		Resandpay_Style::enqueue();
 		return Resandpay_Views::render_slots( $a );
 	}
 
@@ -460,13 +460,13 @@ class Resandpay_Frontend {
 			$atts,
 			'reserveandpay_upcoming'
 		);
-		wp_enqueue_style( 'reserveandpay' );
+		Resandpay_Style::enqueue();
 		return Resandpay_Views::render_upcoming( $a );
 	}
 
 	public static function shortcode_program( $atts ) {
 		$a = self::list_atts( $atts, 'reserveandpay_program' );
-		wp_enqueue_style( 'reserveandpay' );
+		Resandpay_Style::enqueue();
 		return Resandpay_Views::render_program( $a );
 	}
 
@@ -701,9 +701,9 @@ class Resandpay_Frontend {
 				<p class="rap-field rap-field--half"><label for="rap_dic"><?php esc_html_e( 'DIČ', 'reserveandpay' ); ?></label>
 					<input id="rap_dic" type="text" name="rap_dic" value="<?php echo $v( 'company_dic' ); ?>"></p>
 			</div>
-			<p class="rap-field"><label for="rap_note"><?php esc_html_e( 'Poznámka pro lektorku', 'reserveandpay' ); ?></label>
+			<p class="rap-field"><label for="rap_note"><?php echo esc_html( Resandpay_Settings::get( 'note_label' ) ); ?></label>
 				<textarea id="rap_note" name="rap_note" rows="3"><?php echo esc_textarea( $values['note'] ?? '' ); ?></textarea>
-				<small><?php esc_html_e( 'Např. zdravotní omezení. Údaje vidí jen lektorka.', 'reserveandpay' ); ?></small></p>
+				<?php if ( '' !== trim( (string) Resandpay_Settings::get( 'note_hint' ) ) ) : ?><small><?php echo esc_html( Resandpay_Settings::get( 'note_hint' ) ); ?></small><?php endif; ?></p>
 			<p class="rap-check"><label><input type="checkbox" name="rap_gdpr" value="1" <?php checked( ! empty( $values['consent_gdpr'] ) ); ?> required> <?php echo wp_kses_post( sprintf( /* translators: %s: odkaz */ __( 'Souhlasím se %s *', 'reserveandpay' ), $link( $gdpr, __( 'zpracováním osobních údajů', 'reserveandpay' ) ) ) ); ?></label></p>
 			<p class="rap-check"><label><input type="checkbox" name="rap_terms" value="1" <?php checked( ! empty( $values['consent_terms'] ) ); ?> required> <?php echo wp_kses_post( sprintf( /* translators: %s: odkaz */ __( 'Souhlasím s %s *', 'reserveandpay' ), $link( $terms, __( 'obchodními a stornopodmínkami', 'reserveandpay' ) ) ) ); ?></label></p>
 			<p class="rap-check"><label><input type="checkbox" name="rap_newsletter" value="1" <?php checked( ! empty( $values['newsletter'] ) ); ?>> <?php esc_html_e( 'Chci dostávat novinky e-mailem', 'reserveandpay' ); ?></label></p>

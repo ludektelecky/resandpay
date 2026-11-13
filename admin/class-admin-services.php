@@ -428,7 +428,7 @@ class Resandpay_Admin_Services {
 		wp_nonce_field( 'resandpay_bulk_cancel' );
 		if ( $res['booked'] ) {
 			echo '<p><label><input type="checkbox" name="notify" value="1" checked> ' . esc_html__( 'Poslat zákaznicím e-mail o zrušení', 'reserveandpay' ) . '</label><br>';
-			echo '<label>' . esc_html__( 'Důvod (zobrazí se v e-mailu):', 'reserveandpay' ) . ' <input type="text" name="reason" class="regular-text" placeholder="' . esc_attr__( 'např. nemoc lektorky', 'reserveandpay' ) . '"></label></p>';
+			echo '<label>' . esc_html__( 'Důvod (zobrazí se v e-mailu):', 'reserveandpay' ) . ' <input type="text" name="reason" class="regular-text" placeholder="' . esc_attr__( 'např. onemocnění', 'reserveandpay' ) . '"></label></p>';
 		}
 		submit_button( __( 'Zrušit termíny v období', 'reserveandpay' ), 'delete', 'submit', true, array( 'onclick' => "return confirm('" . esc_js( __( 'Opravdu zrušit všechny termíny v období?', 'reserveandpay' ) ) . "')" ) );
 		echo '</form>';

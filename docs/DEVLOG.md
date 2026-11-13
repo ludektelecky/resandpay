@@ -2,6 +2,20 @@
 
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
+## 0.17.0 – Vzhled podle webu (13. 11. 2026)
+
+- ⚠ **Po aktualizaci:** web, který plugin používal už dřív, si ponechá dosavadní vzhled (Nastavení → Vzhled = „Vlastní barvy a písma“ s paletou grafického manuálu „s lehkou hlavou“, logo, motto a texty poznámky). **Na jiném webu než slehkouhlavou.cz** přepněte Nastavení → Vzhled → Barvy a písma na **„Ze šablony webu (automaticky)“**, Písmo v PDF na **DejaVu** a zkontrolujte Logo / Motto a text poznámky ve formuláři.
+- **R15 – vzhled podle webu** (Kniha rozvoje R-009, schváleno a implementováno): nová sekce **Nastavení → Vzhled**
+  - **Barvy a písma: Ze šablony webu** (výchozí pro nové weby) – theme.json blokových šablon (globální styly), GeneratePress (globální barvy a typografie), paleta editoru u ostatních šablon; chybějící odstíny se dopočítají; **Vlastní** – 10 barev (výběr barvy) a písmo nadpisů a textu
+  - náhled použité palety a písem přímo v nastavení
+  - **jedna paleta pro všechno:** web (CSS proměnné `--rap-*`), e-maily (barvy, písmo, barva textu tlačítka podle kontrastu), platební pokyn a slevový poukaz (PDF), přehled účastníků v e-mailu i štítek verze v administraci
+  - **Písmo v PDF:** DejaVu Serif / DejaVu Sans (nově v pluginu, plná čeština; výchozí pro nové weby) nebo Fraunces / Work Sans
+  - **Vlastní CSS** – načte se za styly pluginu jen tam, kde plugin něco zobrazuje
+- Pro vývojáře: filtr **`resandpay_enqueue_styles`** (vypnutí frontend.css), filtr **`resandpay_style`** (úprava palety), dokumentace proměnných `--rap-*` a hlavních tříd v README → **Vzhled a CSS**.
+- **Neutrální výchozí hodnoty** nové instalace: logo z nastavení pluginu bez textů a symbolu (bez loga webu se použije název značky / webu), prázdné motto; popisek a nápověda **poznámky ve formuláři** jsou nově v Nastavení → Rezervace a platby („Poznámka“ / „Např. zdravotní omezení nebo přání. Poznámku uvidí jen pořadatel.“). Placeholder důvodu zrušení termínu bez „lektorky“.
+- Databáze 12 (převod nastavení stávajícího webu, uložené hodnoty se nemění).
+- Testy: 575 kontrol + souběh; analytické zadání v6.3
+
 ## 0.16.1 – Verze v záhlaví administrace (13. 11. 2026)
 
 - Na každé obrazovce ReserveAndPay (Rezervace, Nová rezervace, Statistika, Nastavení, Nástroje, Platby, Kupóny, Odbavení, Generátor termínů, seznamy a editace akcí, služeb, lokací a materiálů, Kategorie akcí) je u nadpisu stránky štítek **„ReserveAndPay 0.16.1“** – vždy je vidět, která verze je nainstalovaná.

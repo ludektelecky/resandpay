@@ -183,7 +183,7 @@ class Resandpay_Countdown {
 		if ( ! $ev ) {
 			return '';
 		}
-		wp_enqueue_style( 'reserveandpay' );
+		Resandpay_Style::enqueue();
 		return self::html( $ev, 'shortcode' );
 	}
 }

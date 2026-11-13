@@ -531,7 +531,7 @@ rap_t( (bool) array_filter( Resandpay_PDF::notes( $rC, Resandpay_Events::get( $c
 echo "== E4: HTML e-maily\n";
 $qr2 = Resandpay_Reservations::create( $qe, rap_person( 91 ), array( 'notify' => false ) );
 $bp  = Resandpay_Mailer::build( 'received', $qr2 );
-rap_t( false !== strpos( $bp['html'], '<!doctype html>' ) && false !== strpos( $bp['html'], '#8C6423' ) && false !== strpos( $bp['html'], '>hlavou</span>' ), 'HTML e-mail v barvách webu se značkou' );
+rap_t( false !== strpos( $bp['html'], '<!doctype html>' ) && false !== strpos( $bp['html'], Resandpay_Style::color( 'accent' ) ) && false !== strpos( $bp['html'], esc_html( Resandpay_Brand::logo()['line1'] ?? '' ) ), 'HTML e-mail v barvách palety se značkou webu' );
 rap_t( false !== strpos( $bp['html'], 'src="cid:rap-qr"' ) && "\x89PNG" === substr( $bp['qr_png'], 0, 4 ), 'QR kód vložený do e-mailu (cid:rap-qr)' );
 rap_t( 0 === strpos( $bp['pdf'], '%PDF-' ) && 'platebni-pokyn-' . $qr2['proforma_no'] . '.pdf' === $bp['pdf_name'], 'PDF platebního pokynu jako příloha' );
 rap_t( false !== strpos( $bp['html'], esc_url( Resandpay_PDF::url( $qr2 ) ) ) && false !== strpos( $bp['text'], Resandpay_PDF::url( $qr2 ) ), 'odkaz ke stažení PDF v HTML i textové verzi' );
@@ -1445,7 +1445,7 @@ require_once RESANDPAY_DIR . 'admin/class-admin-settings.php';
 $sv = Resandpay_Admin_Settings::sanitize_svg( '<svg viewBox="0 0 10 10" onload="x()"><script>a</script><path d="M0 0 L5 5" stroke="#8C6423" onclick="y"/><image href="x"/></svg>' );
 rap_t( false !== strpos( $sv, 'viewBox="0 0 10 10"' ) && false === strpos( $sv, 'onload' ) && false === strpos( $sv, '<script' ) && false === strpos( $sv, '<image' ) && false !== strpos( $sv, '<path' ), 'symbol loga: jen bezpečné SVG prvky, viewBox zachován' );
 $dflt = Resandpay_Settings::defaults();
-rap_t( 'nádech — výdech — prostor' === $dflt['brand_motto'] && 's lehkou' === $dflt['logo_line1'] && 'hlavou' === $dflt['logo_line2'] && false !== strpos( $dflt['brand_symbol_svg'], '#8C6423' ), 'výchozí logo (lotos z vlny) a motto dle grafického manuálu' );
+rap_t( '' === $dflt['brand_motto'] && '' === $dflt['logo_line1'] && '' === $dflt['brand_symbol_svg'] && 'nádech — výdech — prostor' === Resandpay_Install::LEGACY_BRAND['brand_motto'] && false !== strpos( Resandpay_Install::LEGACY_BRAND['brand_symbol_svg'], '#8C6423' ), 'nová instalace: neutrální logo a motto; slehkouhlavou.cz: lotos a motto dle manuálu (LEGACY_BRAND)' );
 $vp1 = Resandpay_PDF::voucher( array( Resandpay_Discounts::all()[0] ) );
 rap_t( 0 === strpos( $vp1, '%PDF' ) && strlen( $vp1 ) > 8000, 'poukaz s logem, kružnicemi, dechovou linkou, mottem a webem' );
 
@@ -1757,6 +1757,52 @@ rap_t( ! Resandpay_Admin::is_our_screen() && 'WP 7.1' === Resandpay_Admin::foote
 set_current_screen( 'toplevel_page_reserveandpay' );
 rap_t( Resandpay_Admin::is_our_screen(), 'stránky ResAndPay se poznají' );
 set_current_screen( 'front' );
+
+echo "== 0.17.0: vzhled podle webu (R15)\n";
+$stSaved = get_option( Resandpay_Settings::OPTION );
+rap_t( 'theme' === Resandpay_Settings::defaults()['style_mode'] && 'dejavu' === Resandpay_Settings::defaults()['pdf_font'], 'nová instalace: barvy a písma ze šablony, PDF DejaVu' );
+// Migrace stávajícího webu: chybějící klíče z LEGACY_BRAND, uložené hodnoty zůstanou.
+update_option( Resandpay_Settings::OPTION, array( 'company_name' => 'Test', 'brand_motto' => 'Vlastní motto' ), false );
+Resandpay_Install::keep_legacy_brand();
+Resandpay_Style::reset();
+$lg = Resandpay_Settings::all();
+rap_t( 'custom' === $lg['style_mode'] && '#8c6423' === $lg['color_accent'] && 'brand' === $lg['pdf_font'] && 'Poznámka pro lektorku' === $lg['note_label'], 'aktualizace stávajícího webu: paleta a písma dle manuálu zůstanou' );
+rap_t( 'Vlastní motto' === $lg['brand_motto'] && 'Test' === $lg['company_name'], 'aktualizace nepřepíše uložené hodnoty' );
+rap_t( '#8c6423' === Resandpay_Style::color( 'accent' ) && '#5c5e52' === Resandpay_Style::color( 'ink_soft' ) && 'custom' === Resandpay_Style::get()['source'], 'vlastní paleta: přesné barvy manuálu' );
+$cv = Resandpay_Style::css_vars();
+rap_t( false !== strpos( $cv, '--rap-accent:#8c6423' ) && false !== strpos( $cv, '--rap-font-heading:Fraunces, Georgia, serif' ) && false === strpos( $cv, '--rap-gold-light' ), 'CSS proměnné z vlastní palety (odvozené odstíny ponechány)' );
+rap_t( array( 140, 100, 35 ) === Resandpay_Style::rgb( 'accent' ) && 'fraunces_sb' === Resandpay_Style::pdf_font( 'heading' ) && 'worksans' === Resandpay_Style::pdf_font( 'body' ), 'PDF: barvy z palety, písma Fraunces / Work Sans' );
+$bpL = Resandpay_Mailer::build( 'received', $qr2 );
+rap_t( false !== strpos( $bpL['html'], '#8c6423' ) && false !== strpos( $bpL['html'], 'Work Sans' ) && false === strpos( $bpL['html'], 'font-family:"' ), 'e-mail: barvy a písmo z palety (bez uvozovek rozbíjejících style)' );
+rap_t( 0 === strpos( Resandpay_PDF::render( $qr2 ), '%PDF-' ), 'PDF s vlastní paletou' );
+// Ze šablony webu (aktivní blokové šablona testovacího webu).
+Resandpay_Settings::update( array( 'style_mode' => 'theme', 'pdf_font' => 'dejavu' ) );
+Resandpay_Style::reset();
+$tt = Resandpay_Style::get();
+rap_t( wp_theme_has_theme_json() ? 'theme.json' === $tt['source'] : in_array( $tt['source'], array( 'classic', 'generatepress' ), true ), 'ze šablony: zdroj palety podle šablony (' . $tt['source'] . ')' );
+rap_t( 10 === count( array_filter( $tt['colors'], fn( $h ) => 1 === preg_match( '/^#[0-9a-f]{6}$/', $h ) ) ), 'ze šablony: všech 10 barev doplněno' );
+rap_t( false !== strpos( Resandpay_Style::css_vars(), '--rap-gold-light' ), 'ze šablony: dopočítané odstíny' );
+rap_t( 'dejavusans' === Resandpay_Style::pdf_font( 'body' ) && 'dejavuserifb' === Resandpay_Style::pdf_font( 'heading' ) && 0 === strpos( Resandpay_PDF::render( $qr2 ), '%PDF-' ), 'PDF s písmy DejaVu' );
+// GeneratePress – globální barvy a typografie.
+update_option( 'generate_settings', array( 'global_colors' => array( array( 'slug' => 'contrast', 'color' => '#222222' ), array( 'slug' => 'contrast-2', 'color' => '#575760' ), array( 'slug' => 'base-2', 'color' => '#f7f8f9' ), array( 'slug' => 'base-3', 'color' => '#ffffff' ), array( 'slug' => 'accent', 'color' => '#1e73be' ) ), 'typography' => array( array( 'selector' => 'body', 'fontFamily' => 'Work Sans' ), array( 'selector' => 'all-headings', 'fontFamily' => 'Fraunces' ) ) ) );
+$gpm = new ReflectionMethod( 'Resandpay_Style', 'from_generatepress' );
+$gp  = $gpm->invoke( null );
+$gpc = Resandpay_Style::complete( $gp['colors'] );
+rap_t( '#1e73be' === $gpc['accent'] && '#222222' === $gpc['ink'] && '#f7f8f9' === $gpc['bg_alt'] && '"Work Sans"' === $gp['font_body'] && 'Fraunces' === $gp['font_heading'], 'GeneratePress: globální barvy a písma' );
+delete_option( 'generate_settings' );
+// Pomocné funkce.
+rap_t( '#aabbcc' === Resandpay_Style::hex( '#ABC' ) && '#0a0b0c' === Resandpay_Style::hex( 'rgb(10, 11, 12)' ) && '' === Resandpay_Style::hex( 'red;}' ), 'normalizace barev' );
+rap_t( '#ffffff' === Resandpay_Style::text_on( '#111111', array( 'bg' => '#ffffff', 'ink' => '#111111' ) ) && '#111111' === Resandpay_Style::text_on( '#ffee58', array( 'bg' => '#ffffff', 'ink' => '#111111' ) ), 'text na tlačítku čitelný (bílý / tmavý)' );
+rap_t( '' === Resandpay_Style::clean_family( 'inherit' ) && 0 === preg_match( '/[;{}<>]/', Resandpay_Style::clean_family( 'Arial;}<x>' ) ), 'písmo: bezpečný font-family' );
+$san = Resandpay_Admin_Settings::sanitize( array( 'custom_css' => '.rap-button{color:red}</style><script>x</script>', 'color_accent' => 'zelená', 'color_bg' => '#FFF', 'font_body' => 'Inter; } body{' ) );
+rap_t( false === strpos( $san['custom_css'], '<' ) && false !== strpos( $san['custom_css'], '.rap-button{color:red}' ) && '' === $san['color_accent'] && '#ffffff' === $san['color_bg'] && false === strpos( $san['font_body'], ';' ), 'Nastavení → Vzhled: vlastní CSS bez značek, barvy a písma ošetřené' );
+Resandpay_Settings::update( array( 'custom_css' => '.rap-button{letter-spacing:1px}' ) );
+rap_t( '.rap-button{letter-spacing:1px}' === Resandpay_Style::custom_css(), 'vlastní CSS z nastavení' );
+Resandpay_Settings::update( array( 'note_label' => 'Vzkaz pro hostitele', 'note_hint' => '' ) );
+$nf = Resandpay_Frontend::render_booking( $qe );
+rap_t( false !== strpos( $nf, 'Vzkaz pro hostitele' ) && false === strpos( $nf, 'lektork' ), 'popisek poznámky z nastavení, bez pevného textu' );
+update_option( Resandpay_Settings::OPTION, $stSaved, false );
+Resandpay_Style::reset();
 
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 

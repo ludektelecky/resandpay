@@ -176,7 +176,7 @@ class Resandpay_FAQ {
 		if ( ! $id || ! in_array( get_post_type( $id ), array( Resandpay_Post_Types::EVENT, Resandpay_Post_Types::SERVICE ), true ) ) {
 			return '';
 		}
-		wp_enqueue_style( 'reserveandpay' );
+		Resandpay_Style::enqueue();
 		return Resandpay_Post_Types::SERVICE === get_post_type( $id ) ? self::render_service( $id ) : self::render_event( $id );
 	}
 
