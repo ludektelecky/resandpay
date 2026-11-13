@@ -1748,6 +1748,16 @@ $upHdr = get_file_data( RESANDPAY_FILE, array( 'uri' => 'Update URI' ) );
 rap_t( 'https://github.com/ludektelecky/resandpay' === $upHdr['uri'], 'hlavička Update URI – bez záměny s wordpress.org' );
 rap_t( false === apply_filters( 'auto_update_plugin', false, (object) array( 'plugin' => plugin_basename( RESANDPAY_FILE ), 'slug' => 'reserveandpay' ) ), 'plugin sám nezapíná automatické aktualizace' );
 
+echo "== 0.16.1: verze v záhlaví administrace\n";
+rap_t( 'ReserveAndPay ' . RESANDPAY_VERSION === Resandpay_Admin::version_label(), 'označení verze „ReserveAndPay X.Y.Z“' );
+set_current_screen( 'edit-' . Resandpay_Post_Types::EVENT );
+rap_t( Resandpay_Admin::is_our_screen() && 0 === strpos( Resandpay_Admin::footer_version( 'WP 7.1' ), 'ReserveAndPay ' . RESANDPAY_VERSION ), 'seznam akcí: verze v patičce' );
+set_current_screen( 'edit-post' );
+rap_t( ! Resandpay_Admin::is_our_screen() && 'WP 7.1' === Resandpay_Admin::footer_version( 'WP 7.1' ), 'cizí obrazovka: patička beze změny' );
+set_current_screen( 'toplevel_page_reserveandpay' );
+rap_t( Resandpay_Admin::is_our_screen(), 'stránky ResAndPay se poznají' );
+set_current_screen( 'front' );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );

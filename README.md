@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.16.0** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 6.1** (13. 11. 2026, vydáno k pluginu 0.16.0; kniha rozvoje kap. 15.1) – viz `docs/`.
+> **Aktuální verze pluginu: 0.16.1** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 6.2** (13. 11. 2026, vydáno k pluginu 0.16.1; kniha rozvoje kap. 15.1) – viz `docs/`.
 
 ### Název a označení
 
@@ -172,6 +172,7 @@ Od verze **0.16.0** se plugin aktualizuje z prostředí WordPressu (verze 0.16.0
 - V **Pluginech** se ukáže „Je k dispozici nová verze ReserveAndPay“, **„Zobrazit podrobnosti“** otevře popis změn a **„Aktualizovat nyní“** verzi nainstaluje. Úpravy databáze proběhnou samy.
 - **Automatické aktualizace nechte vypnuté** (výchozí stav WordPressu), dokud web nemá staging – aktualizujte ručně tlačítkem, po záloze.
 - Každá vydaná verze je určena k aktualizaci (bez testovacího kanálu).
+- Nainstalovaná verze je vidět u nadpisu každé obrazovky ReserveAndPay (štítek „ReserveAndPay X.Y.Z“), v blokovém editoru v pravém panelu a v patičce administrace.
 - Vypnutí kontroly na konkrétním webu: `define( 'RESANDPAY_DISABLE_UPDATES', true );` ve `wp-config.php`. Web musí mít povolené odchozí HTTPS na api.github.com a github.com.
 
 ### Číslování verzí

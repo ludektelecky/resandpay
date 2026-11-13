@@ -2,6 +2,14 @@
 
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
+## 0.16.1 – Verze v záhlaví administrace (13. 11. 2026)
+
+- Na každé obrazovce ReserveAndPay (Rezervace, Nová rezervace, Statistika, Nastavení, Nástroje, Platby, Kupóny, Odbavení, Generátor termínů, seznamy a editace akcí, služeb, lokací a materiálů, Kategorie akcí) je u nadpisu stránky štítek **„ReserveAndPay 0.16.1“** – vždy je vidět, která verze je nainstalovaná.
+- V blokovém editoru (akce, materiál) je štítek v pravém panelu v části se stavem a datem publikování.
+- Stejný údaj vlevo od verze WordPressu v patičce administrace na obrazovkách ReserveAndPay.
+- První verze nabízená přes **„Aktualizovat nyní“** (bez ručního nahrávání).
+- Testy: 556 kontrol + souběh; analytické zadání v6.2
+
 ## 0.16.0 – Aktualizace z prostředí WordPressu (13. 11. 2026)
 
 - ⚠ **Po aktualizaci:** tuto verzi je potřeba nahrát ručně naposledy (Pluginy → Přidat nový → Nahrát plugin → Nahradit stávající). Další verze už nabídne WordPress sám.
