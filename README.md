@@ -187,7 +187,7 @@ V `docs/DEVLOG.md` je u verze, která po aktualizaci vyžaduje zásah, na začá
 
 1. Číslo verze v hlavičce `reserveandpay.php` (Version a `RESANDPAY_VERSION`), DEVLOG, README, analytické zadání.
 2. Balíček `reserveandpay-X.Y.Z.zip` s kořenovou složkou `reserveandpay/` (bez `tests/`, `docs/`) – sestaví ho workflow, kopie se ukládá na Google Disk.
-3. Push značky `vX.Y.Z` (`git tag v0.16.0 && git push origin v0.16.0`). Workflow `.github/workflows/release.yml` ověří, že značka odpovídá verzi v `reserveandpay.php` a DEVLOGu, sestaví balíček a založí GitHub release s popisem změn z DEVLOGu. Release nesmí být „pre-release“ (ten se k aktualizaci nenabízí).
+3. Push na `main` s novým číslem verze v `reserveandpay.php`: workflow `.github/workflows/release.yml` ověří verzi a sekci v DEVLOGu, sestaví balíček a založí GitHub release `vX.Y.Z` s popisem změn z DEVLOGu (existující release nepřepisuje; ručně lze spustit přes „Run workflow“). Release nesmí být „pre-release“ (ten se k aktualizaci nenabízí).
 
 ---
 

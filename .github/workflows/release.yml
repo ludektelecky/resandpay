@@ -1,11 +1,14 @@
-# Vydání verze ReserveAndPay (SWD kap. 15.1, R14): po pushnutí značky vX.Y.Z sestaví balíček
-# reserveandpay-X.Y.Z.zip a založí GitHub release s popisem změn z docs/DEVLOG.md.
+# Vydání verze ReserveAndPay (SWD kap. 15.1, R14): když se na main objeví nové číslo verze
+# v reserveandpay.php (nebo ručně přes „Run workflow“), sestaví balíček reserveandpay-X.Y.Z.zip
+# a založí GitHub release vX.Y.Z s popisem změn z docs/DEVLOG.md. Existující release se nepřepisuje.
 # Z releasu se plugin aktualizuje v prostředí WordPressu (Plugin Update Checker).
 name: Release
 
 on:
   push:
-    tags: ['v*.*.*']
+    branches: [main]
+    paths: ['reserveandpay.php', '.github/workflows/release.yml']
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -17,16 +20,19 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Kontrola čísla verze
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="${GITHUB_REF_NAME#v}"
           HDR=$(sed -n 's/^ \* Version: *//p' reserveandpay.php | tr -d '[:space:]')
           CONST=$(sed -n "s/.*define( 'RESANDPAY_VERSION', '\([^']*\)'.*/\1/p" reserveandpay.php)
-          echo "Značka $TAG, hlavička $HDR, konstanta $CONST"
-          [ "$TAG" = "$HDR" ] && [ "$TAG" = "$CONST" ] || { echo "Verze ve značce a v reserveandpay.php nesouhlasí."; exit 1; }
-          grep -q "^## $TAG " docs/DEVLOG.md || { echo "V DEVLOGu chybí sekce ## $TAG"; exit 1; }
-          echo "VERSION=$TAG" >> "$GITHUB_ENV"
+          echo "Hlavička $HDR, konstanta $CONST"
+          [ -n "$HDR" ] && [ "$HDR" = "$CONST" ] || { echo "Version a RESANDPAY_VERSION nesouhlasí."; exit 1; }
+          if gh release view "v$HDR" >/dev/null 2>&1; then echo "Release v$HDR už existuje – nic nedělám."; echo "SKIP=1" >> "$GITHUB_ENV"; exit 0; fi
+          grep -q "^## $HDR " docs/DEVLOG.md || { echo "V DEVLOGu chybí sekce ## $HDR"; exit 1; }
+          echo "VERSION=$HDR" >> "$GITHUB_ENV"
 
       - name: Balíček
+        if: env.SKIP != '1'
         run: |
           mkdir -p build/reserveandpay
           cp -r README.md admin assets includes languages lib public reserveandpay.php templates build/reserveandpay/
@@ -34,6 +40,7 @@ jobs:
           unzip -l "reserveandpay-${VERSION}.zip" | tail -1
 
       - name: Popis změn z DEVLOGu
+        if: env.SKIP != '1'
         run: |
           awk -v v="## ${VERSION} " 'index($0, v) == 1 {f=1; next} /^## / {if (f) exit} f' docs/DEVLOG.md > notes.md
           TITLE=$(grep -m1 "^## ${VERSION} " docs/DEVLOG.md | sed 's/^## [^ ]* – //; s/ ([^)]*)$//')
@@ -41,6 +48,7 @@ jobs:
           cat notes.md
 
       - name: GitHub release
+        if: env.SKIP != '1'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" "reserveandpay-${VERSION}.zip" --title "$TITLE" --notes-file notes.md --verify-tag
+        run: gh release create "v${VERSION}" "reserveandpay-${VERSION}.zip" --target "$GITHUB_SHA" --title "$TITLE" --notes-file notes.md
