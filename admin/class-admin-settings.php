@@ -75,6 +75,15 @@ class Resandpay_Admin_Settings {
 				'time_display_default' => array( __( 'Zobrazení času akcí a termínů', 'reserveandpay' ), 'select', __( 'Výchozí volba; u každé akce a služby ji lze změnit v „Další nastavení“. Jen datum: na webu, v e-mailech a na platebním pokynu bez času. Administrace čas zobrazuje vždy.', 'reserveandpay' ), array( 'show' => __( 'Zobrazovat čas', 'reserveandpay' ), 'date' => __( 'Jen datum (bez času)', 'reserveandpay' ) ) ),
 				'detail_own_title' => array( __( 'Nadpis akce v záhlaví pluginu', 'reserveandpay' ), 'checkbox', __( 'Platí pro vzhled s galerií. Nadpis se zobrazí v záhlaví vedle fotek a titulek šablony GeneratePress se skryje. U jiné šablony vypněte, pokud se nadpis zobrazí dvakrát.', 'reserveandpay' ) ),
 			),
+			__( 'Odpočet', 'reserveandpay' )           => array(
+				'countdown_days'          => array( __( 'Odpočet nejvýš (dní předem)', 'reserveandpay' ), 'number', __( 'Odpočet se zapíná u akce (Parametry akce → Odpočet). Je-li cíl dál než tento počet dní, ukáže se místo odpočtu jen datum. Výchozí 30.', 'reserveandpay' ) ),
+				'countdown_open_text'     => array( __( 'Text – do zahájení prodeje', 'reserveandpay' ), 'text', __( 'Nad odpočtem dny · hodiny · minuty.', 'reserveandpay' ) ),
+				'countdown_discount_text' => array( __( 'Text – do konce slevy', 'reserveandpay' ), 'text' ),
+				'countdown_close_text'    => array( __( 'Text – do ukončení prodeje', 'reserveandpay' ), 'text' ),
+				'countdown_open_date'     => array( __( 'Jen datum – zahájení prodeje', 'reserveandpay' ), 'text', __( 'Když je cíl dál než výše uvedený počet dní; %s = datum a čas.', 'reserveandpay' ) ),
+				'countdown_discount_date' => array( __( 'Jen datum – konec slevy', 'reserveandpay' ), 'text' ),
+				'countdown_close_date'    => array( __( 'Jen datum – ukončení prodeje', 'reserveandpay' ), 'text' ),
+			),
 			__( 'Kontrola plateb', 'reserveandpay' ) => array(
 				'payment_mode'         => array( __( 'Režim kontroly plateb', 'reserveandpay' ), 'select', __( 'Automaticky = při volání CRONu, když uplynul interval. Ručně = jen tlačítkem v ResAndPay → Platby.', 'reserveandpay' ), array( 'auto' => __( 'Automaticky v intervalu', 'reserveandpay' ), 'manual' => __( 'Jen ručně', 'reserveandpay' ) ) ),
 				'payment_interval'     => array( __( 'Interval kontroly', 'reserveandpay' ), 'select', __( 'Nejkratší reálný interval je dán krokem CRONu na hostingu (doporučeno */15).', 'reserveandpay' ), array( '15' => '15 min', '30' => '30 min', '60' => '60 min', '120' => '2 h', '240' => '4 h', '1440' => __( '1× denně', 'reserveandpay' ) ) ),

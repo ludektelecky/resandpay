@@ -775,6 +775,7 @@ class Resandpay_Events {
 		update_post_meta( $post_id, '_rap_close_hours', max( 0, (float) str_replace( ',', '.', (string) ( $in['rap_close_hours'] ?? 0 ) ) ) );
 		if ( ! ( 'slot' === $type && (int) get_post_meta( $post_id, '_rap_service', true ) ) ) {
 			self::save_access_meta( $post_id, $in );
+			Resandpay_Countdown::save_meta( $post_id, $in );
 		}
 		update_post_meta( $post_id, '_rap_cancelled', empty( $in['rap_cancelled'] ) ? 0 : 1 );
 		Resandpay_FAQ::save( $post_id, $in );

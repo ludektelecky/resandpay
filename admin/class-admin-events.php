@@ -222,6 +222,10 @@ class Resandpay_Admin_Events {
 				</td></tr>
 			<tr><th><?php esc_html_e( 'Připomínka', 'reserveandpay' ); ?></th>
 				<td><?php Resandpay_Events::reminder_fields( $post->ID, $svc_id ? sprintf( /* translators: %d: hodin */ __( 'ze služby (%d h)', 'reserveandpay' ), Resandpay_Events::resolve_reminder_hours( '', $svc_id ) ) : '' ); ?></td></tr>
+			<?php if ( ! $svc_id ) : ?>
+			<tr><th><?php esc_html_e( 'Odpočet', 'reserveandpay' ); ?></th>
+				<td><?php Resandpay_Countdown::fields( $post->ID ); ?></td></tr>
+			<?php endif; ?>
 		</table>
 		<?php
 		$overlaps = $ev['start'] ? Resandpay_Events::overlaps( $post->ID ) : array();

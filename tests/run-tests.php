@@ -58,7 +58,7 @@ function rap_person( $n ) {
 }
 
 require_once ABSPATH . 'wp-admin/includes/template.php';
-foreach ( array( 'class-admin.php', 'class-admin-events.php', 'class-admin-settings.php', 'class-admin-services.php', 'class-admin-checkin.php', 'class-admin-payments.php' ) as $f ) {
+foreach ( array( 'class-admin.php', 'class-admin-events.php', 'class-admin-settings.php', 'class-admin-services.php', 'class-admin-shortcodes.php', 'class-admin-checkin.php', 'class-admin-payments.php' ) as $f ) {
 	require_once RESANDPAY_DIR . 'admin/' . $f;
 }
 
@@ -1698,6 +1698,47 @@ rap_t( false === strpos( $tgO, '<details' ) && false !== strpos( $tgO, 'Jemná b
 $tgE = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::SERVICE, 'post_status' => 'publish', 'post_title' => 'Bez popisu' ) );
 Resandpay_Admin_Services::save_service_meta( $tgE, array( 'rap_duration' => 60, 'rap_pause' => 0, 'rap_capacity' => 1, 'rap_price' => 100, 'rap_desc_mode' => 'toggle' ) );
 rap_t( false === strpos( Resandpay_Frontend::shortcode_slots( array( 'service' => $tgE ) ), '<details' ), 'služba bez popisu: název není klikací' );
+
+echo "== 0.15.0: odpočet u akce (R13)\n";
+$cdOpen = $now + 5 * $day;
+$cdE = rap_event( 'Akce s odpočtem', $now + 50 * $day, $now + 50 * $day + HOUR_IN_SECONDS, 10, array( 'rap_access' => '', 'rap_open_at' => wp_date( 'Y-m-d\TH:i', $cdOpen ), 'rap_priority_at' => '', 'rap_close_hours' => '24', 'rap_early_mode' => 'fixed', 'rap_early_value' => '100', 'rap_early_until' => wp_date( 'Y-m-d', $now + 12 * $day ), 'rap_early_label' => '' ) );
+rap_t( '' === Resandpay_Countdown::html( Resandpay_Events::get( $cdE ) ), 'odpočet je ve výchozím stavu vypnutý' );
+Resandpay_Countdown::save_meta( $cdE, array( 'rap_countdown_form' => '1', 'rap_countdown' => array( 'open', 'discount', 'close', 'xxx' ) ) );
+rap_t( array( 'open', 'discount', 'close' ) === Resandpay_Countdown::enabled( $cdE ), 'uloží se jen platné cíle odpočtu' );
+$cdEv = Resandpay_Events::get( $cdE );
+$cdSt = Resandpay_Countdown::steps( $cdEv );
+rap_t( array( 'open', 'discount', 'close' ) === wp_list_pluck( $cdSt, 'kind' ), 'cíle seřazené podle času: zahájení → sleva → ukončení' );
+rap_t( Resandpay_Events::ts( wp_date( 'Y-m-d', $now + 12 * $day ) . ' 23:59:59' ) === $cdSt[1]['ts'], 'konec slevy = 23:59:59 posledního dne' );
+rap_t( Resandpay_Events::ts( $cdEv['start'] ) - DAY_IN_SECONDS === $cdSt[2]['ts'], 'ukončení prodeje = začátek − uzávěrka' );
+$cdH = Resandpay_Countdown::html( $cdEv );
+rap_t( false !== strpos( $cdH, 'Prodej začíná za' ) && false !== strpos( $cdH, 'rap-countdown__unit' ) && false === strpos( $cdH, 'is-far' ), 'zobrazí se jen nejbližší cíl (zahájení prodeje) jako odpočet' );
+rap_t( 1 === substr_count( $cdH, 'rap-countdown__label' ), 'jeden odpočet' );
+rap_t( false !== strpos( $cdH, 'do ' . $cdSt[0]['date'] ), 'pod odpočtem přesné datum' );
+$cdN = Resandpay_Countdown::html( $cdEv, 'header', $cdOpen + 60 );
+rap_t( false !== strpos( $cdN, 'Sleva končí za' ), 'po zahájení prodeje přejde na konec slevy' );
+rap_t( false !== strpos( Resandpay_Countdown::html( $cdEv, 'header', $cdSt[1]['ts'] + 1 ), 'Prodej do ' . $cdSt[2]['date_far'] ), 'po konci slevy přejde na ukončení prodeje (dál než 30 dní: jen datum)' );
+rap_t( false !== strpos( Resandpay_Countdown::html( $cdEv, 'header', $cdSt[2]['ts'] - 2 * DAY_IN_SECONDS ), 'Prodej končí za' ), 'ukončení prodeje do 30 dní: odpočet' );
+rap_t( '' === Resandpay_Countdown::html( $cdEv, 'header', $cdSt[2]['ts'] + 1 ), 'po ukončení prodeje odpočet zmizí' );
+Resandpay_Settings::update( array( 'countdown_days' => 3 ) );
+$cdF = Resandpay_Countdown::html( $cdEv );
+rap_t( false !== strpos( $cdF, 'is-far' ) && false !== strpos( $cdF, 'Prodej od ' . $cdSt[0]['date_far'] ), 'dál než N dní: jen datum („Prodej od …“)' );
+rap_t( 'Prodej od ' . $cdSt[0]['date_far'] === Resandpay_Countdown::static_text( $cdSt[0], $now ), 'statický text v režimu jen datum' );
+rap_t( false === strpos( $cdSt[1]['date_far'], ':' ), 'konec slevy v režimu jen datum bez času („Sleva do 31. 1. 2027“)' );
+Resandpay_Settings::update( array( 'countdown_days' => 30 ) );
+rap_t( 'Sleva končí za 1 den 2 hodiny 5 minut' === Resandpay_Countdown::static_text( array( 'ts' => $now + DAY_IN_SECONDS + 2 * HOUR_IN_SECONDS + 5 * 60, 'label' => 'Sleva končí za', 'label_date' => '', 'date' => '', 'date_far' => '' ), $now ), 'statický text s českým skloňováním' );
+rap_t( 'Prodej končí za 5 dní 0 hodin 1 minuta' === Resandpay_Countdown::static_text( array( 'ts' => $now + 5 * DAY_IN_SECONDS + 30, 'label' => 'Prodej končí za', 'label_date' => '', 'date' => '', 'date_far' => '' ), $now ), 'minuty se zaokrouhlují nahoru' );
+$cdCode = Resandpay_Codes::get( $cdE );
+rap_t( false !== strpos( Resandpay_Countdown::shortcode( array( 'id' => $cdCode ) ), 'rap-countdown--shortcode' ), 'shortcode [reserveandpay_countdown id="kód akce"]' );
+rap_t( '' === Resandpay_Countdown::shortcode( array( 'id' => 'AK-1999-9999' ) ), 'shortcode s neznámým kódem nic nevypíše' );
+$cdHtml = Resandpay_Frontend::render_booking( $cdE, true );
+rap_t( false !== strpos( $cdHtml, 'rap-countdown--card' ), 'odpočet v rezervační kartě' );
+Resandpay_Countdown::save_meta( $cdE, array( 'rap_countdown_form' => '1', 'rap_countdown' => array( 'discount' ) ) );
+rap_t( array( 'discount' ) === wp_list_pluck( Resandpay_Countdown::steps( Resandpay_Events::get( $cdE ) ), 'kind' ), 'jen zapnuté cíle' );
+update_post_meta( $cdE, '_rap_cancelled', 1 );
+rap_t( array() === Resandpay_Countdown::steps( Resandpay_Events::get( $cdE ) ), 'zrušená akce: bez odpočtu' );
+$cdNoEarly = rap_event( 'Bez slevy', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 10, array( 'rap_countdown_form' => '1', 'rap_countdown' => array( 'discount', 'open' ) ) );
+rap_t( array() === Resandpay_Countdown::steps( Resandpay_Events::get( $cdNoEarly ) ), 'cíl bez data se nezobrazí' );
+rap_t( false !== strpos( Resandpay_Admin_Shortcodes::event_box( $cdE ), '[reserveandpay_countdown id=&quot;' . $cdCode ) || false !== strpos( Resandpay_Admin_Shortcodes::event_box( $cdE ), '[reserveandpay_countdown id="' . $cdCode ), 'nápověda: celý shortcode s kódem akce' );
 
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 

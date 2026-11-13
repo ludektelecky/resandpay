@@ -3,7 +3,7 @@
  * Plugin Name:       ReserveAndPay
  * Plugin URI:        https://github.com/ludektelecky/resandpay
  * Description:       Rezervace akcí a termínů s platbou převodem (QR) a kontrolou plateb z bankovních avíz.
- * Version:           0.14.1
+ * Version:           0.15.0
  * Requires at least: 6.4
  * Requires PHP:      8.0
  * Author:            INSYSTEMS
@@ -14,7 +14,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'RESANDPAY_VERSION', '0.14.1' );
+define( 'RESANDPAY_VERSION', '0.15.0' );
 define( 'RESANDPAY_DB_VERSION', '11' );
 define( 'RESANDPAY_FILE', __FILE__ );
 define( 'RESANDPAY_DIR', plugin_dir_path( __FILE__ ) );
@@ -41,6 +41,7 @@ require_once RESANDPAY_DIR . 'includes/class-brand.php';
 require_once RESANDPAY_DIR . 'includes/class-stats.php';
 require_once RESANDPAY_DIR . 'includes/class-materials.php';
 require_once RESANDPAY_DIR . 'includes/class-faq.php';
+require_once RESANDPAY_DIR . 'includes/class-countdown.php';
 require_once RESANDPAY_DIR . 'public/class-views.php';
 require_once RESANDPAY_DIR . 'public/class-frontend.php';
 require_once RESANDPAY_DIR . 'public/class-materials-views.php';
@@ -81,6 +82,7 @@ function resandpay_init() {
 	Resandpay_Stats::init();
 	Resandpay_Materials::init();
 	Resandpay_FAQ::init();
+	Resandpay_Countdown::init();
 	Resandpay_Materials_Views::init();
 	add_action( 'init', array( 'Resandpay_Install', 'maybe_backfill_codes' ), 30 );
 	add_action( 'resandpay_cron_due', array( 'Resandpay_Reservations', 'process_due' ) );

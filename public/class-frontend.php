@@ -301,6 +301,7 @@ class Resandpay_Frontend {
 		} elseif ( ! $ev['cancelled'] && ! $ev['external'] && $free < 1 ) {
 			echo '<span class="rap-event__full">' . esc_html__( 'Obsazeno', 'reserveandpay' ) . '</span>';
 		}
+		echo Resandpay_Countdown::html( $ev, 'header' ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
 		echo '</div>';
 		echo '</div>';
 		echo self::render_gallery( $event_id, $photos ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
@@ -565,6 +566,7 @@ class Resandpay_Frontend {
 	public static function render_external_card( array $ev, $card = false ) {
 		$out  = $card ? '<p class="rap-eyebrow">' . esc_html__( 'Rezervace', 'reserveandpay' ) . '</p>' : '';
 		$out .= '<h2 class="rap-booking__title">' . esc_html( $card ? __( 'Rezervovat místo', 'reserveandpay' ) : __( 'Rezervace', 'reserveandpay' ) ) . '</h2>';
+		$out .= Resandpay_Countdown::html( $ev, 'card' );
 		$out .= '<dl class="rap-external__facts"><dt>' . esc_html__( 'Termín', 'reserveandpay' ) . '</dt><dd>' . esc_html( Resandpay_Views::when_line( $ev ) ) . '</dd>';
 		$out .= '<dt>' . esc_html__( 'Cena', 'reserveandpay' ) . '</dt><dd>' . self::price_html( $ev ) . '</dd>';
 		if ( Resandpay_Events::external_capacity( $ev ) ) {
@@ -621,6 +623,7 @@ class Resandpay_Frontend {
 		} else {
 			echo '<h2 class="rap-booking__title">' . esc_html__( 'Rezervace', 'reserveandpay' ) . '</h2>';
 		}
+		echo Resandpay_Countdown::html( $ev, 'card' ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
 
 		$bookable = Resandpay_Events::check_bookable( $event_id );
 		if ( is_wp_error( $bookable ) ) {

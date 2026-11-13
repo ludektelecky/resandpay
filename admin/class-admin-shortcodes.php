@@ -84,6 +84,11 @@ class Resandpay_Admin_Shortcodes {
 			array( 'id' => __( 'kód akce nebo služby; bez parametru aktuální akce', 'reserveandpay' ) ),
 			__( 'Časté dotazy akce samostatně:', 'reserveandpay' )
 		);
+		$out .= self::example(
+			'[reserveandpay_countdown id="' . $code . '"]',
+			array( 'id' => __( 'kód akce; bez parametru aktuální stránka akce', 'reserveandpay' ) ),
+			__( 'Odpočet akce (zapíná se v Parametrech akce → Odpočet) – např. na úvodní stránku nebo do banneru:', 'reserveandpay' )
+		);
 		if ( 'AK-…' === $code ) {
 			$out .= '<p class="description">' . esc_html__( 'Kód akce se přidělí při prvním uložení.', 'reserveandpay' ) . '</p>';
 		}

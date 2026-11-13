@@ -431,3 +431,20 @@ audio.rap-mat-player { background: transparent; }
 .rap-event__desc .rap-faq { margin-top: 2.5rem; }
 .rap-slots .rap-faq { margin-top: 3rem; }
 @media (prefers-reduced-motion: reduce) { .rap-faq__icon { transition: none; } }
+
+/* Odpočet u akce (SWD kap. 15.1, R13): čísla Fraunces zlatá, popisky Work Sans, podklad druhý podklad. */
+.rap-countdown { background: var(--rap-bg-alt); border-radius: var(--rap-radius); padding: .75rem 1rem .7rem; margin: .75rem 0; font-family: var(--rap-font); color: var(--rap-ink); max-width: 360px; }
+.rap-countdown[hidden] { display: none; }
+.rap-countdown__label { margin: 0 0 .35rem; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--rap-accent-2); }
+.rap-countdown__units { display: flex; gap: 1.1rem; align-items: baseline; }
+.rap-countdown__units[hidden] { display: none; }
+.rap-countdown__unit { display: flex; flex-direction: column; align-items: flex-start; line-height: 1; }
+.rap-countdown__unit strong { font-family: var(--rap-font-heading); font-weight: 500; font-size: 2rem; color: var(--rap-gold); font-variant-numeric: tabular-nums; }
+.rap-countdown__unit small { font-size: 12px; color: var(--rap-ink-soft); margin-top: .3rem; }
+.rap-countdown__date { margin: .45rem 0 0; font-size: 13px; color: var(--rap-ink-soft); }
+.rap-countdown__date[hidden] { display: none; }
+.rap-countdown.is-far { padding: .55rem 1rem; }
+.rap-countdown.is-far .rap-countdown__label { margin: 0; font-family: var(--rap-font-heading); font-size: 1.05rem; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--rap-gold); }
+.rap-event__cta .rap-countdown { flex-basis: 100%; }
+.rap-booking--card .rap-countdown { max-width: none; background: var(--rap-bg); border: 1px solid var(--rap-line); }
+.rap-countdown__sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(1px,1px,1px,1px); white-space: nowrap; margin: 0; }

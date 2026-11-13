@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.14.1** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 5.9** (13. 11. 2026, vydáno k pluginu 0.14.1; kniha rozvoje kap. 15.1) – viz `docs/`.
+> **Aktuální verze pluginu: 0.15.0** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 6.0** (13. 11. 2026, vydáno k pluginu 0.15.0; kniha rozvoje kap. 15.1) – viz `docs/`.
 
 ### Název a označení
 
@@ -175,6 +175,7 @@ Po etapách E1 a E2 lze rezervace spustit s ručním potvrzováním plateb.
 | `[reserveandpay_calendar category="slug"]` | Samotný měsíční kalendář |
 | `[reserveandpay_slots service="bukalni-masaz" days="21"]` | Volné termíny služby (např. masáže) po dnech; pod nimi časté dotazy služby (`faq="no"` je skryje) |
 | `[reserveandpay_faq id="AK-2026-0001"]` | Časté dotazy akce nebo služby (kód nebo ID); na stránce akce a pod termíny služby se vkládají automaticky |
+| `[reserveandpay_countdown id="AK-2026-0001"]` | Odpočet akce (kód akce; bez id aktuální akce) – do zahájení prodeje, konce slevy nebo ukončení prodeje podle zapnutí v Parametrech akce → Odpočet; v detailu akce a rezervační kartě se vkládá automaticky |
 | `[reserveandpay_upcoming limit="3" first_service="yes" category="" more="yes"]` | Krátký přehled pro úvodní stránku: na 1. místě nejbližší služba s volným termínem, pak nadcházející akce podle data, celkem max. `limit`; zrušené a probíhající akce vynechá; `more` = odkaz „Zobrazit všechny termíny →“ |
 | `[reserveandpay_materials category="" type="" filter="yes"]` | Katalog materiálů ke stažení s filtrem druhu a tématu |
 | `[reserveandpay_material id="MA-001"]` | Karta jednoho materiálu (kód, slug nebo ID) |

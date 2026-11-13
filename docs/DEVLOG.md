@@ -1,5 +1,16 @@
 # Vývojový deník ReserveAndPay
 
+## 0.15.0 – Odpočet u akce (13. 11. 2026)
+
+- **R13 – odpočet** (Kniha rozvoje R-007, schváleno a implementováno): v Parametrech akce nový řádek **„Odpočet“** se třemi volbami – **do zahájení prodeje** (pole Zahájení rezervací), **do konce slevy** za včasnou rezervaci (23:59 posledního dne, i sleva převzatá ze služby) a **do ukončení prodeje** (začátek − uzávěrka rezervací). Výchozí stav vypnuto; u termínů služeb se řádek nezobrazuje.
+- Na webu vždy jen **nejbližší cíl**: „Prodej začíná za“ → „Sleva končí za“ → „Prodej končí za“; **dny · hodiny · minuty**, živě bez přenačtení (přepočet každých 15 s), pod tím přesné datum „do 16. 11. 2026 23:59“. Po nule přejde na další cíl nebo zmizí; po zahájení prodeje se stránka jednou obnoví a objeví se formulář.
+- Je-li cíl dál než **N dní** (Nastavení → Odpočet, výchozí 30), jen datum: „Prodej od …“, „Sleva do 31. 1. 2027“ (u slevy bez času), „Prodej do …“.
+- Kde: **detail akce** (záhlaví u ceny a tlačítka), **rezervační karta** pod nadpisem (i u externího rezervačního systému) a shortcode **`[reserveandpay_countdown id="AK-…"]`** (příklad s kódem v nápovědě řádku „Odpočet“ a v bočním panelu „Shortcody akce“). Ve výpisech ne. Zrušená a obsazená akce odpočet nemá.
+- Bez JavaScriptu statický údaj ze serveru; čtečkám obrazovky souvislá věta.
+- Vzhled dle grafického manuálu: čísla Fraunces ve zlaté #B8862E, popisky Work Sans, podklad #F0E8DA (v rezervační kartě světlý podklad s vlasovou linkou).
+- Nastavení → **Odpočet**: počet dní a všechny texty (nic natvrdo).
+- Bez změny databáze (post meta `_rap_countdown`). Testy: 547 kontrol + souběh; analytické zadání v6.0
+
 ## 0.14.1 – Nápovědy shortcodů s kódy (13. 11. 2026)
 
 - **R9 – kódy ve shortcodech:** nápovědy v administraci používají výhradně kódy služeb a akcí (např. `SL-003`, `AK-2027-0001`), ne slug – vždy **celý shortcode**, tlačítko **Kopírovat** a **tabulka parametrů**:
