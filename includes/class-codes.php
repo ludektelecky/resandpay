@@ -16,6 +16,7 @@ class Resandpay_Codes {
 	public static function init() {
 		add_action( 'save_post_' . Resandpay_Post_Types::EVENT, array( __CLASS__, 'on_save' ), 20, 2 );
 		add_action( 'save_post_' . Resandpay_Post_Types::SERVICE, array( __CLASS__, 'on_save' ), 20, 2 );
+		add_action( 'save_post_' . Resandpay_Post_Types::MATERIAL, array( __CLASS__, 'on_save' ), 20, 2 );
 	}
 
 	/** Druh kódu: event (akce) / service (služba) / slot (termín služby). */
@@ -23,6 +24,9 @@ class Resandpay_Codes {
 		$type = get_post_type( $post_id );
 		if ( Resandpay_Post_Types::SERVICE === $type ) {
 			return 'service';
+		}
+		if ( Resandpay_Post_Types::MATERIAL === $type ) {
+			return 'material';
 		}
 		if ( Resandpay_Post_Types::EVENT === $type ) {
 			return 'slot' === get_post_meta( $post_id, '_rap_type', true ) ? 'slot' : 'event';
@@ -45,7 +49,7 @@ class Resandpay_Codes {
 		$prefix = strtoupper( preg_replace( '/[^A-Za-z0-9]/', '', (string) ( $s[ 'code_prefix_' . $kind ] ?? '' ) ) );
 		$digits = max( 2, min( 8, (int) ( $s[ 'code_digits_' . $kind ] ?? 4 ) ) );
 		$num    = str_pad( (string) (int) $seq, $digits, '0', STR_PAD_LEFT );
-		return 'service' === $kind ? $prefix . '-' . $num : $prefix . '-' . (int) $year . '-' . $num;
+		return in_array( $kind, array( 'service', 'material' ), true ) ? $prefix . '-' . $num : $prefix . '-' . (int) $year . '-' . $num;
 	}
 
 	/** Uložení akce/služby: kód se přidělí, jakmile je známý typ (nejde o automatický koncept). */
@@ -87,7 +91,7 @@ class Resandpay_Codes {
 			if ( '' !== $existing ) {
 				return $existing;
 			}
-			$opt = 'resandpay_code_seq_' . $kind . ( 'service' === $kind ? '' : '_' . (int) $year );
+			$opt = 'resandpay_code_seq_' . $kind . ( in_array( $kind, array( 'service', 'material' ), true ) ? '' : '_' . (int) $year );
 			global $wpdb;
 			$seq = (int) $wpdb->get_var( $wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", $opt ) );
 			do {
@@ -111,7 +115,7 @@ class Resandpay_Codes {
 		}
 		$ids = get_posts(
 			array(
-				'post_type'      => array( Resandpay_Post_Types::EVENT, Resandpay_Post_Types::SERVICE ),
+				'post_type'      => array( Resandpay_Post_Types::EVENT, Resandpay_Post_Types::SERVICE, Resandpay_Post_Types::MATERIAL ),
 				'post_status'    => 'any',
 				'posts_per_page' => 1,
 				'fields'         => 'ids',
@@ -136,7 +140,7 @@ class Resandpay_Codes {
 	public static function backfill() {
 		$ids = get_posts(
 			array(
-				'post_type'      => array( Resandpay_Post_Types::SERVICE, Resandpay_Post_Types::EVENT ),
+				'post_type'      => array( Resandpay_Post_Types::SERVICE, Resandpay_Post_Types::EVENT, Resandpay_Post_Types::MATERIAL ),
 				'post_status'    => array( 'publish', 'draft', 'future', 'pending', 'private', 'trash' ),
 				'posts_per_page' => -1,
 				'fields'         => 'ids',

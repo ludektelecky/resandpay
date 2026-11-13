@@ -125,6 +125,8 @@ class Resandpay_Install {
 			newsletter tinyint(1) NOT NULL DEFAULT 0,
 			user_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			source varchar(20) NOT NULL DEFAULT 'web',
+			item_type varchar(20) NOT NULL DEFAULT 'event',
+			consent_digital_at datetime NULL,
 			ip_hash varchar(40) NOT NULL DEFAULT '',
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
@@ -134,7 +136,8 @@ class Resandpay_Install {
 			UNIQUE KEY token (token),
 			KEY event_status (event_id,status),
 			KEY email (email),
-			KEY status_due (status,due_at)
+			KEY status_due (status,due_at),
+			KEY item_user (item_type,user_id)
 		) {$charset};
 		CREATE TABLE {$wpdb->prefix}resandpay_payments (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -249,6 +252,34 @@ class Resandpay_Install {
 			PRIMARY KEY  (id),
 			KEY reservation_id (reservation_id),
 			KEY created_at (created_at)
+		) {$charset};
+		CREATE TABLE {$wpdb->prefix}resandpay_grants (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			material_id bigint(20) unsigned NOT NULL,
+			user_id bigint(20) unsigned NOT NULL,
+			note varchar(190) NOT NULL DEFAULT '',
+			granted_at datetime NOT NULL,
+			granted_by bigint(20) unsigned NOT NULL DEFAULT 0,
+			expires_at datetime NULL,
+			revoked_at datetime NULL,
+			revoked_by bigint(20) unsigned NOT NULL DEFAULT 0,
+			revoke_reason varchar(190) NOT NULL DEFAULT '',
+			PRIMARY KEY  (id),
+			KEY material_user (material_id,user_id),
+			KEY user_id (user_id)
+		) {$charset};
+		CREATE TABLE {$wpdb->prefix}resandpay_downloads (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			created_at datetime NOT NULL,
+			user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			material_id bigint(20) unsigned NOT NULL,
+			file_id varchar(40) NOT NULL DEFAULT '',
+			kind varchar(10) NOT NULL DEFAULT 'download',
+			result varchar(20) NOT NULL DEFAULT 'ok',
+			ip_hash varchar(40) NOT NULL DEFAULT '',
+			PRIMARY KEY  (id),
+			KEY user_file (user_id,file_id,created_at),
+			KEY material (material_id,created_at)
 		) {$charset};
 		CREATE TABLE {$locks} (
 			lock_name varchar(100) NOT NULL,

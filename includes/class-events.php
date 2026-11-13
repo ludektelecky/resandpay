@@ -133,6 +133,9 @@ class Resandpay_Events {
 	 */
 	public static function get( $event_id ) {
 		$post = get_post( $event_id );
+		if ( $post && Resandpay_Post_Types::MATERIAL === $post->post_type ) {
+			return Resandpay_Materials::as_event( $post ); // Objednávka materiálu (SWD kap. 15.1, R11) – položka bez termínu a kapacity.
+		}
 		if ( ! $post || Resandpay_Post_Types::EVENT !== $post->post_type ) {
 			return null;
 		}

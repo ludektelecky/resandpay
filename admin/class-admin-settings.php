@@ -98,6 +98,8 @@ class Resandpay_Admin_Settings {
 				'code_digits_service' => array( __( 'Počet číslic – služba', 'reserveandpay' ), 'number' ),
 				'code_prefix_slot'    => array( __( 'Předpona kódu termínu služby', 'reserveandpay' ), $text, __( 'Např. TE → TE-2026-0145. Změna předpon a číslic platí jen pro nově přidělované kódy; přidělený kód se nikdy nemění.', 'reserveandpay' ) ),
 				'code_digits_slot'    => array( __( 'Počet číslic – termín', 'reserveandpay' ), 'number' ),
+				'code_prefix_material' => array( __( 'Předpona kódu materiálu', 'reserveandpay' ), $text, __( 'Např. MA → MA-001.', 'reserveandpay' ) ),
+				'code_digits_material' => array( __( 'Počet číslic – materiál', 'reserveandpay' ), 'number' ),
 			),
 			__( 'Ochrana formuláře proti robotům', 'reserveandpay' ) => array(
 				'antibot_min_seconds'    => array( __( 'Minimální doba vyplnění formuláře (s)', 'reserveandpay' ), 'number', __( 'Robot formulář odešle okamžitě. Výchozí 3 s, 0 = nekontrolovat.', 'reserveandpay' ) ),
@@ -116,6 +118,19 @@ class Resandpay_Admin_Settings {
 				'event_summary_enabled' => array( __( 'Přehled účastníků den předem', 'reserveandpay' ), 'checkbox', __( 'Jednou denně e-mail se seznamem zítřejších akcí a termínů s rezervacemi (jméno, telefon, stav platby, poznámka).', 'reserveandpay' ) ),
 				'event_summary_time'    => array( __( 'Čas odeslání přehledu', 'reserveandpay' ), 'text', __( 'Ve formátu HH:MM (např. 18:00). Přehled odejde při první kontrole po tomto čase.', 'reserveandpay' ) ),
 				'event_summary_email'   => array( __( 'E-mail pro přehled účastníků', 'reserveandpay' ), 'email', __( 'Prázdné = e-mail pro upozornění na nové rezervace.', 'reserveandpay' ) ),
+			),
+			__( 'Materiály ke stažení', 'reserveandpay' ) => array(
+				'mat_my_page'          => array( __( 'Stránka „Moje materiály“', 'reserveandpay' ), 'page', __( 'Stránka se shortcodem [reserveandpay_my_materials] – odkaz v e-mailech a u materiálů.', 'reserveandpay' ) ),
+				'mat_register_page'    => array( __( 'Stránka s registrací', 'reserveandpay' ), 'page', __( 'Např. registrace Ultimate Member (/register). Prázdné = registrace WordPressu, je-li povolená.', 'reserveandpay' ) ),
+				'mat_kinds'            => array( __( 'Druhy materiálů', 'reserveandpay' ), 'textarea', __( 'Jeden druh na řádek ve tvaru klíč|Název, např. ebook|eBook / PDF. Klíč neměňte u druhů, které už materiály používají.', 'reserveandpay' ) ),
+				'mat_due_days'         => array( __( 'Splatnost objednávky (dní)', 'reserveandpay' ), 'number', __( 'Výchozí; u materiálu lze změnit. Nezaplacená objednávka po splatnosti vyprší, pozdní platba ji obnoví.', 'reserveandpay' ) ),
+				'mat_access_days'      => array( __( 'Výchozí doba přístupu (dní)', 'reserveandpay' ), 'number', __( '0 = natrvalo. U každého materiálu lze nastavit vlastní dobu.', 'reserveandpay' ) ),
+				'mat_download_limit'   => array( __( 'Limit stažení jednoho souboru za 24 h', 'reserveandpay' ), 'number', __( 'Na uživatele a soubor. Výchozí 10, 0 = bez limitu. Přehrávání videa / audia na webu se nepočítá.', 'reserveandpay' ) ),
+				'mat_link_minutes'     => array( __( 'Platnost odkazu ke stažení (minut)', 'reserveandpay' ), 'number', __( 'Odkaz se vytváří při zobrazení stránky a platí jen pro přihlášeného uživatele. Výchozí 240 min (stačí i na delší video).', 'reserveandpay' ) ),
+				'mat_log_days'         => array( __( 'Uchovávat záznamy o stažení (dní)', 'reserveandpay' ), 'number' ),
+				'mat_login_text'       => array( __( 'Text pro nepřihlášené', 'reserveandpay' ), 'text' ),
+				'mat_roles_text'       => array( __( 'Text u materiálu jen pro vybrané role', 'reserveandpay' ), 'text' ),
+				'mat_digital_consent'  => array( __( 'Souhlas s okamžitým poskytnutím digitálního obsahu', 'reserveandpay' ), 'textarea', __( 'Povinné zaškrtávací pole v objednávce placeného materiálu (občanský zákoník § 1837 písm. l). Znění doporučujeme ověřit s právníkem.', 'reserveandpay' ) ),
 			),
 			__( 'Statistika', 'reserveandpay' )        => array(
 				'stats_roles' => array( __( 'Statistiku vidí role', 'reserveandpay' ), 'roles', __( 'Přehled termínů a obsazenosti (ResAndPay → Statistika a stránka se shortcodem [reserveandpay_stats]). Uživatelé s oprávněním vidí jména zákazníků a stav plateb – přidělujte jen těm, kdo s rezervacemi pracují.', 'reserveandpay' ) ),
@@ -153,6 +168,26 @@ class Resandpay_Admin_Settings {
 				'tpl_cancelled_body'    => array( __( 'Zrušení – text', 'reserveandpay' ), 'textarea' ),
 				'tpl_admin_subject'     => array( __( 'Upozornění pro správce – předmět', 'reserveandpay' ), $text ),
 				'tpl_admin_body'        => array( __( 'Upozornění pro správce – text', 'reserveandpay' ), 'textarea' ),
+				'tpl_mat_received_subject'  => array( __( 'Materiál – objednávka přijata – předmět', 'reserveandpay' ), $text ),
+				'tpl_mat_received_body'     => array( __( 'Materiál – objednávka přijata – text', 'reserveandpay' ), 'textarea', __( 'E-maily k objednávkám materiálů. Navíc proměnné {material_url} (stránka materiálu), {my_materials_url} (Moje materiály) a {access_until} (do kdy platí přístup).', 'reserveandpay' ) ),
+				'tpl_mat_free_subject'      => array( __( 'Materiál – zdarma s kupónem – předmět', 'reserveandpay' ), $text ),
+				'tpl_mat_free_body'         => array( __( 'Materiál – zdarma s kupónem – text', 'reserveandpay' ), 'textarea' ),
+				'tpl_mat_paid_subject'      => array( __( 'Materiál – platba přijata – předmět', 'reserveandpay' ), $text ),
+				'tpl_mat_paid_body'         => array( __( 'Materiál – platba přijata – text', 'reserveandpay' ), 'textarea' ),
+				'tpl_mat_reminder_subject'  => array( __( 'Materiál – připomínka splatnosti – předmět', 'reserveandpay' ), $text ),
+				'tpl_mat_reminder_body'     => array( __( 'Materiál – připomínka splatnosti – text', 'reserveandpay' ), 'textarea' ),
+				'tpl_mat_partial_subject'   => array( __( 'Materiál – neúplná platba – předmět', 'reserveandpay' ), $text ),
+				'tpl_mat_partial_body'      => array( __( 'Materiál – neúplná platba – text', 'reserveandpay' ), 'textarea' ),
+				'tpl_mat_overdue_subject'   => array( __( 'Materiál – doplatek po splatnosti – předmět', 'reserveandpay' ), $text ),
+				'tpl_mat_overdue_body'      => array( __( 'Materiál – doplatek po splatnosti – text', 'reserveandpay' ), 'textarea' ),
+				'tpl_mat_expired_subject'   => array( __( 'Materiál – objednávka vypršela – předmět', 'reserveandpay' ), $text ),
+				'tpl_mat_expired_body'      => array( __( 'Materiál – objednávka vypršela – text', 'reserveandpay' ), 'textarea' ),
+				'tpl_mat_cancelled_subject' => array( __( 'Materiál – zrušení objednávky – předmět', 'reserveandpay' ), $text ),
+				'tpl_mat_cancelled_body'    => array( __( 'Materiál – zrušení objednávky – text', 'reserveandpay' ), 'textarea' ),
+				'tpl_mat_admin_subject'     => array( __( 'Materiál – nová objednávka (správce) – předmět', 'reserveandpay' ), $text ),
+				'tpl_mat_admin_body'        => array( __( 'Materiál – nová objednávka (správce) – text', 'reserveandpay' ), 'textarea' ),
+				'tpl_mat_grant_subject'     => array( __( 'Materiál – ručně zpřístupněn – předmět', 'reserveandpay' ), $text ),
+				'tpl_mat_grant_body'        => array( __( 'Materiál – ručně zpřístupněn – text', 'reserveandpay' ), 'textarea', __( 'Posílá se, když správce zpřístupní materiál uživateli a zaškrtne „Poslat e-mail“.', 'reserveandpay' ) ),
 			),
 			__( 'Testovací režim', 'reserveandpay' )   => array(
 				'test_mode'  => array( __( 'Zapnout testovací režim', 'reserveandpay' ), 'checkbox', __( 'Všechny e-maily pluginu se pošlou jen na testovací adresu. Na vývojovém webu nechte zapnuté.', 'reserveandpay' ) ),
@@ -237,7 +272,10 @@ class Resandpay_Admin_Settings {
 		$out['payment_batch']    = max( 1, min( 500, (int) $out['payment_batch'] ) );
 		$out['payment_interval'] = max( 15, (int) $out['payment_interval'] );
 		$out['bank_sender']      = sanitize_email( $out['bank_sender'] ) ?: 'info@rb.cz';
-		foreach ( array( 'event' => 'AK', 'service' => 'SL', 'slot' => 'TE' ) as $k => $def ) {
+		$out['mat_link_minutes'] = max( 5, min( 1440, (int) $out['mat_link_minutes'] ) );
+		$out['mat_due_days']     = max( 0, min( 90, (int) $out['mat_due_days'] ) );
+		$out['mat_access_days']  = max( 0, (int) $out['mat_access_days'] );
+		foreach ( array( 'event' => 'AK', 'service' => 'SL', 'slot' => 'TE', 'material' => 'MA' ) as $k => $def ) {
 			$out[ 'code_prefix_' . $k ] = substr( strtoupper( preg_replace( '/[^A-Za-z]/', '', (string) $out[ 'code_prefix_' . $k ] ) ), 0, 6 ) ?: $def;
 			$out[ 'code_digits_' . $k ] = max( 2, min( 8, (int) $out[ 'code_digits_' . $k ] ) );
 		}

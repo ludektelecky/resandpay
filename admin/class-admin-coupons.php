@@ -276,10 +276,18 @@ class Resandpay_Admin_Coupons {
 		echo '<tr><th>' . esc_html__( 'Platnost', 'reserveandpay' ) . '</th><td>' . esc_html__( 'od', 'reserveandpay' ) . ' <input type="date" name="valid_from" value="' . esc_attr( (string) $v( 'valid_from' ) ) . '"> ' . esc_html__( 'do', 'reserveandpay' ) . ' <input type="date" name="valid_to" value="' . esc_attr( (string) $v( 'valid_to' ) ) . '"> <span class="description">' . esc_html__( 'Podle data rezervace; prázdné = bez omezení.', 'reserveandpay' ) . '</span></td></tr>';
 		echo '<tr><th>' . esc_html__( 'Na co platí', 'reserveandpay' ) . '</th><td><p><label><input type="checkbox" name="scope_all" value="1" ' . checked( $c ? $c['scope_all'] : 1, 1, false ) . '> ' . esc_html__( 'Všechny akce a služby', 'reserveandpay' ) . '</label></p>';
 		echo '<p class="description">' . esc_html__( 'Nebo odškrtněte a vyberte (lze kombinovat, výběr více položek s Ctrl / Cmd):', 'reserveandpay' ) . '</p><div class="rap-coupon-scope">';
-		echo '<label>' . esc_html__( 'Akce', 'reserveandpay' ) . '<select name="scope_events[]" multiple size="8">';
+		echo '<label>' . esc_html__( 'Akce a materiály', 'reserveandpay' ) . '<select name="scope_events[]" multiple size="8">';
 		foreach ( $events as $e ) {
 			$ev = Resandpay_Events::get( $e->ID );
 			echo '<option value="' . (int) $e->ID . '" ' . selected( $c && in_array( $e->ID, $c['scope_events'], true ), true, false ) . '>' . esc_html( $e->post_title . ( $ev ? ' – ' . Resandpay_Events::format_date_full( $ev ) : '' ) ) . '</option>';
+		}
+		$mats = get_posts( array( 'post_type' => Resandpay_Post_Types::MATERIAL, 'post_status' => array( 'publish', 'draft', 'private' ), 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ) );
+		if ( $mats ) {
+			echo '<optgroup label="' . esc_attr__( 'Materiály ke stažení', 'reserveandpay' ) . '">';
+			foreach ( $mats as $m ) {
+				echo '<option value="' . (int) $m->ID . '" ' . selected( $c && in_array( $m->ID, $c['scope_events'], true ), true, false ) . '>' . esc_html( $m->post_title . ' (' . Resandpay_Codes::get( $m->ID ) . ')' ) . '</option>';
+			}
+			echo '</optgroup>';
 		}
 		echo '</select></label><label>' . esc_html__( 'Služby (všechny termíny)', 'reserveandpay' ) . '<select name="scope_services[]" multiple size="8">';
 		foreach ( $svcs as $sv ) {

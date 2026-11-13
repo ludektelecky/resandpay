@@ -10,6 +10,7 @@ class Resandpay_Post_Types {
 	const LOCATION = 'resandpay_location';
 	const CATEGORY = 'resandpay_category';
 	const SERVICE  = 'resandpay_service';
+	const MATERIAL = 'resandpay_material';
 
 	public static function init() {
 		add_action( 'init', array( __CLASS__, 'register' ) );
@@ -80,9 +81,35 @@ class Resandpay_Post_Types {
 			)
 		);
 
+		register_post_type(
+			self::MATERIAL,
+			array(
+				'labels'       => array(
+					'name'               => __( 'Materiály', 'reserveandpay' ),
+					'singular_name'      => __( 'Materiál', 'reserveandpay' ),
+					'add_new'            => __( 'Přidat materiál', 'reserveandpay' ),
+					'add_new_item'       => __( 'Přidat materiál', 'reserveandpay' ),
+					'edit_item'          => __( 'Upravit materiál', 'reserveandpay' ),
+					'new_item'           => __( 'Nový materiál', 'reserveandpay' ),
+					'view_item'          => __( 'Zobrazit materiál', 'reserveandpay' ),
+					'search_items'       => __( 'Hledat materiály', 'reserveandpay' ),
+					'not_found'          => __( 'Žádné materiály', 'reserveandpay' ),
+					'not_found_in_trash' => __( 'V koši nejsou žádné materiály', 'reserveandpay' ),
+					'all_items'          => __( 'Materiály', 'reserveandpay' ),
+				),
+				'public'       => true,
+				'has_archive'  => false,
+				'rewrite'      => array( 'slug' => apply_filters( 'resandpay_material_slug', 'materialy' ) ),
+				'menu_icon'    => 'dashicons-download',
+				'supports'     => array( 'title', 'editor', 'thumbnail', 'excerpt' ),
+				'show_in_rest' => true,
+				'show_in_menu' => 'reserveandpay',
+			)
+		);
+
 		register_taxonomy(
 			self::CATEGORY,
-			array( self::EVENT, self::SERVICE ),
+			array( self::EVENT, self::SERVICE, self::MATERIAL ),
 			array(
 				'labels'            => array(
 					'name'          => __( 'Kategorie akcí', 'reserveandpay' ),

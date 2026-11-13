@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.12.1** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 5.5** (31. 10. 2026, vydáno k pluginu 0.12.1; kniha rozvoje kap. 15.1) – viz `docs/`.
+> **Aktuální verze pluginu: 0.13.0** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 5.7** (31. 10. 2026, vydáno k pluginu 0.13.0; kniha rozvoje kap. 15.1) – viz `docs/`.
 
 ### Název a označení
 
@@ -49,6 +49,13 @@ Technické identifikátory se nemění (slug a textdomain `reserveandpay`, před
 - Expirace neuhrazených rezervací (e-mail zákazníkovi, uvolnění místa); pozdní platba rezervaci obnoví, je-li volno
 - Připomínka N dní před splatností (nastavitelné, 0 = vypnuto)
 - Platba ve dvou částech – **1. část** (pevná částka nebo procento, u akce i služby) a **doplatek**; QR na 1. část i „zaplatit vše najednou“; menší platba se zapíše a zákazník dostane upozornění se zbývající částkou
+
+### Materiály ke stažení
+- eBooky, videa, audio a další materiály (typ obsahu Materiál, kód MA-NNN) – stažení jen po přihlášení, ukázky i bez přihlášení
+- Přístup zdarma pro přihlášené / placený / jen vybrané role; doba přístupu u každého materiálu; zdarma pro účastnice navázaných akcí a služeb; ruční zpřístupnění
+- Objednávka placeného materiálu stejným platebním tokem jako rezervace (VS, QR, kontrola plateb, kupóny) se souhlasem s okamžitým poskytnutím digitálního obsahu
+- Chráněná složka mimo Knihovnu médií, nahrávání po částech (i velká videa), podepsané časově omezené odkazy, HTTP Range, limit a log stažení
+- Katalog, detail s přehrávačem videa a audia, stránka „Moje materiály“
 
 ### Napojení
 - **Ultimate Member** – po zaplacení založení účtu / přidání role
@@ -129,6 +136,7 @@ resandpay/
 | E6a | Expirace, připomínky, platba ve dvou částech (1. část a doplatek), pozdní rezervace | ✅ 0.6.0–0.6.1 (testuje se) |
 | – | Krátký přehled nadcházejících na úvodní stránce (`[reserveandpay_upcoming]`) | ✅ 0.6.2 |
 | – | Stránka akce s galerií a rezervační kartou | ✅ 0.7.0 |
+| R11 | Knihovna materiálů ke stažení (zdarma i placené) | ✅ 0.13.0 |
 | E6b | Ultimate Member, MailerLite | ⏳ po spuštění |
 | E7 | Testování dle akceptačních kritérií a nasazení | ⏳ |
 | F2 | Fáze 2 – zobecnění pluginu | ⏳ |
@@ -165,6 +173,9 @@ Po etapách E1 a E2 lze rezervace spustit s ručním potvrzováním plateb.
 | `[reserveandpay_calendar category="slug"]` | Samotný měsíční kalendář |
 | `[reserveandpay_slots service="bukalni-masaz" days="21"]` | Volné termíny služby (např. masáže) po dnech |
 | `[reserveandpay_upcoming limit="3" first_service="yes" category="" more="yes"]` | Krátký přehled pro úvodní stránku: na 1. místě nejbližší služba s volným termínem, pak nadcházející akce podle data, celkem max. `limit`; zrušené a probíhající akce vynechá; `more` = odkaz „Zobrazit všechny termíny →“ |
+| `[reserveandpay_materials category="" type="" filter="yes"]` | Katalog materiálů ke stažení s filtrem druhu a tématu |
+| `[reserveandpay_material id="MA-001"]` | Karta jednoho materiálu (kód, slug nebo ID) |
+| `[reserveandpay_my_materials]` | Moje materiály – dostupné materiály, čekající platby, historie objednávek |
 | `[reserveandpay_booking id="123"]` | Detail a rezervační formulář akce (na stránce akce se vkládá automaticky) |
 
 Šablona webu může výpis vložit i bez shortcodu v obsahu stránky (`do_shortcode()` nebo data z `Resandpay_Views::upcoming_feed()`); styly pluginu na takové stránce zapne filtr `resandpay_enqueue_assets`, např. `add_filter( 'resandpay_enqueue_assets', fn( $on ) => $on || is_front_page() );`.
