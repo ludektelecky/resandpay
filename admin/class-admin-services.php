@@ -77,14 +77,16 @@ class Resandpay_Admin_Services {
 						<option value="toggle" <?php selected( $dm, 'toggle' ); ?>><?php esc_html_e( 'Rozbalovací – název služby je odkaz na popis', 'reserveandpay' ); ?></option>
 						<option value="open" <?php selected( $dm, 'open' ); ?>><?php esc_html_e( 'Vždy zobrazit nad termíny', 'reserveandpay' ); ?></option>
 					</select>
-					<p class="description"><?php esc_html_e( 'Popis = text v editoru služby výše. Platí ve výběru termínů ([reserveandpay_slots]); na konkrétní stránce ho přepíše parametr description="toggle" / "yes" / "no".', 'reserveandpay' ); ?></p></td></tr>
+					<p class="description"><?php echo esc_html( sprintf( /* translators: %s: shortcode s kódem služby */ __( 'Popis = text v editoru služby výše. Platí ve výběru termínů; na konkrétní stránce ho přepíše parametr description, např. %s (viz řádek Shortcody).', 'reserveandpay' ), '[reserveandpay_slots service="' . Resandpay_Admin_Shortcodes::code_or_placeholder( $post->ID, 'SL-…' ) . '" description="toggle"]' ) ); ?></p></td></tr>
 			<tr><th><?php esc_html_e( 'Připomínka', 'reserveandpay' ); ?></th>
 				<td><?php Resandpay_Events::reminder_fields( $post->ID ); ?><p class="description"><?php esc_html_e( 'Platí pro všechny termíny služby, pokud termín nemá vlastní nastavení.', 'reserveandpay' ); ?></p></td></tr>
 			<tr><th><?php esc_html_e( 'Rezervace', 'reserveandpay' ); ?></th>
 				<td><?php Resandpay_Events::access_fields( $post->ID ); ?><?php Resandpay_Events::booking_fields( $post->ID ); ?><p class="description"><?php esc_html_e( 'Platí pro všechny termíny služby (i již vypsané). U jednotlivého termínu lze zadat vlastní adresu.', 'reserveandpay' ); ?></p></td></tr>
 			<tr><th><label for="rap_page"><?php esc_html_e( 'Stránka s volnými termíny', 'reserveandpay' ); ?></label></th>
 				<td><?php wp_dropdown_pages( array( 'name' => 'rap_page', 'id' => 'rap_page', 'selected' => $svc['page_id'], 'show_option_none' => '— ' . __( 'nevybráno', 'reserveandpay' ) . ' —', 'option_none_value' => 0 ) ); ?>
-					<p class="description"><?php echo esc_html( sprintf( /* translators: %s: shortcode */ __( 'Na stránku vložte shortcode %s (s parametrem description="yes" se nad termíny vypíše i popis služby). Detail termínu na ni odkazuje.', 'reserveandpay' ), '[reserveandpay_slots service="' . ( $post->post_name ?: $post->ID ) . '"]' ) ); ?></p></td></tr>
+					<p class="description"><?php esc_html_e( 'Stránka, na které je výběr termínů této služby (shortcode níže). Vede na ni tlačítko „Vybrat termín →“ na kartě služby a odkaz „← Jiný termín“ v detailu termínu.', 'reserveandpay' ); ?></p></td></tr>
+			<tr><th><?php esc_html_e( 'Shortcody', 'reserveandpay' ); ?></th>
+				<td><?php echo Resandpay_Admin_Shortcodes::service_box( $post->ID ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř. ?></td></tr>
 		</table>
 		<?php
 	}

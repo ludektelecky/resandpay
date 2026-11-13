@@ -1,5 +1,15 @@
 # Vývojový deník ReserveAndPay
 
+## 0.14.1 – Nápovědy shortcodů s kódy (13. 11. 2026)
+
+- **R9 – kódy ve shortcodech:** nápovědy v administraci používají výhradně kódy služeb a akcí (např. `SL-003`, `AK-2027-0001`), ne slug – vždy **celý shortcode**, tlačítko **Kopírovat** a **tabulka parametrů**:
+  - editor služby, nový řádek **„Shortcody“**: `[reserveandpay_slots service="SL-…" days="21" description="toggle" faq="yes"]` (service, days, description, faq) a `[reserveandpay_faq id="SL-…"]`; nápověda u „Popis na webu“ s příkladem s kódem; u „Stránka s volnými termíny“ vysvětlení, k čemu slouží
+  - editor akce, pravý panel → **„Shortcody akce“**: `[reserveandpay_booking id="AK-…"]` a `[reserveandpay_faq id="AK-…"]`
+  - Nastavení → Stránka s přehledem akcí: celý `[reserveandpay_program …]` s parametry (limit, category, view, filter, services, include_slots)
+  - neuložená položka: zástupný kód „SL-…“ / „AK-…“ s poznámkou, že se kód přidělí při uložení
+- Kniha rozvoje: **R13 – odpočet** do zahájení prodeje, konce prodeje a konce slevy u akce (Google dokument „Rozvoj slehkouhlavou.cz“ jako R-007; zatím neimplementováno)
+- Testy: 523 kontrol + souběh; analytické zadání v5.9
+
 ## 0.14.0 – Časté dotazy (FAQ) u akcí a služeb (13. 11. 2026)
 
 - **Časté dotazy (R12)**: nový rámeček **„Časté dotazy“** v editaci akce i služby – opakovač otázka + odpověď (přidat, odebrat, posunout ↑↓; max. 30). Řádek bez otázky nebo odpovědi se neuloží. V odpovědi lze HTML (odkaz, tučné, odrážky).

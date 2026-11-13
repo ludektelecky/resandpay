@@ -89,6 +89,9 @@ class Resandpay_Admin_Events {
 		if ( 'all' !== $a['mode'] ) {
 			echo '<p>' . esc_html( Resandpay_Events::access_labels()[ $a['mode'] ] . ( 'roles' === $a['mode'] && $a['roles'] ? ': ' . implode( ', ', $a['roles'] ) : '' ) ) . '</p>';
 		}
+		if ( ! $ev['service_id'] ) {
+			echo '<details class="rap-sc-details"><summary>' . esc_html__( 'Shortcody akce', 'reserveandpay' ) . '</summary>' . Resandpay_Admin_Shortcodes::event_box( $post->ID ) . '</details>'; // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
+		}
 	}
 
 	/**

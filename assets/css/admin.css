@@ -127,3 +127,13 @@ td.rap-box .rap-payfields { max-width: 520px; }
 #rap_event .rap-params select, #rap_event .rap-params input[type=datetime-local] { max-width: 100%; }
 #rap_event .rap-params tr + tr th, #rap_event .rap-params tr + tr td { border-top: 1px solid #f0f0f1; }
 #rap_event .rap-payfields p, #rap_event .rap-access p { margin-bottom: 10px; }
+/* Nápověda ke shortcodům (R9) */
+.rap-sc { margin: 0 0 14px; }
+.rap-sc__intro { margin: 0 0 4px; font-weight: 600; }
+.rap-sc__line { margin: 0 0 6px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.rap-sc__line code { user-select: all; white-space: normal; overflow-wrap: anywhere; padding: 3px 6px; }
+.rap-sc__params { border-collapse: collapse; font-size: 12px; }
+.rap-sc__params th, .rap-sc__params td { text-align: left; padding: 2px 10px 2px 0; vertical-align: top; }
+.rap-sc__params th { color: #646970; font-weight: 600; }
+.rap-sc-details summary { cursor: pointer; font-weight: 600; margin: 6px 0; }
+.rap-sc-details .rap-sc__params { font-size: 11px; }
