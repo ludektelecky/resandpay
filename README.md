@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.15.0** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 6.0** (13. 11. 2026, vydáno k pluginu 0.15.0; kniha rozvoje kap. 15.1) – viz `docs/`.
+> **Aktuální verze pluginu: 0.16.0** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 6.1** (13. 11. 2026, vydáno k pluginu 0.16.0; kniha rozvoje kap. 15.1) – viz `docs/`.
 
 ### Název a označení
 
@@ -159,10 +159,35 @@ Po etapách E1 a E2 lze rezervace spustit s ručním potvrzováním plateb.
 
 ## Instalace
 
-1. Stáhnout aktuální verzi pluginu jako `.zip` (Releases).
+1. Stáhnout aktuální verzi pluginu jako `reserveandpay-X.Y.Z.zip` z [GitHub Releases](https://github.com/ludektelecky/resandpay/releases).
 2. WordPress → **Pluginy → Přidat nový → Nahrát plugin** → vybrat `.zip` → Instalovat → Aktivovat.
 3. Na vývojovém webu zapnout **testovací režim** v nastavení pluginu.
 4. Před každou instalací nové verze vytvořit zálohu webu (Duplicator).
+
+## Aktualizace
+
+Od verze **0.16.0** se plugin aktualizuje z prostředí WordPressu (verze 0.16.0 se nahrává ručně naposledy):
+
+- Plugin zhruba každých 12 hodin zjistí na GitHubu poslední vydanou verzi (release s balíčkem `reserveandpay-X.Y.Z.zip`). Okamžitě: odkaz **„Zkontrolovat aktualizace“** u pluginu v Pluginech.
+- V **Pluginech** se ukáže „Je k dispozici nová verze ReserveAndPay“, **„Zobrazit podrobnosti“** otevře popis změn a **„Aktualizovat nyní“** verzi nainstaluje. Úpravy databáze proběhnou samy.
+- **Automatické aktualizace nechte vypnuté** (výchozí stav WordPressu), dokud web nemá staging – aktualizujte ručně tlačítkem, po záloze.
+- Každá vydaná verze je určena k aktualizaci (bez testovacího kanálu).
+- Vypnutí kontroly na konkrétním webu: `define( 'RESANDPAY_DISABLE_UPDATES', true );` ve `wp-config.php`. Web musí mít povolené odchozí HTTPS na api.github.com a github.com.
+
+### Číslování verzí
+
+Verze mají tvar **0.x.y**:
+
+- **y** (0.16.0 → 0.16.1) – opravy a drobnosti, bez nutnosti zásahu;
+- **x** (0.16.1 → 0.17.0) – nové funkce; **změna, která vyžaduje zásah nebo mění chování** (nastavení, shortcode, šablona, e-mail), vždy zvyšuje x.
+
+V `docs/DEVLOG.md` je u verze, která po aktualizaci vyžaduje zásah, na začátku řádek **„⚠ Po aktualizaci:“** s přesným postupem (např. „uložte Nastavení → Trvalé odkazy“). Totéž je v popisu změn, který WordPress zobrazí v „Zobrazit podrobnosti“.
+
+### Vydání verze (pro správce repozitáře)
+
+1. Číslo verze v hlavičce `reserveandpay.php` (Version a `RESANDPAY_VERSION`), DEVLOG, README, analytické zadání.
+2. Balíček `reserveandpay-X.Y.Z.zip` s kořenovou složkou `reserveandpay/` (bez `tests/`, `docs/`).
+3. GitHub release se značkou `vX.Y.Z`, popisem z DEVLOGu a přiloženým balíčkem. Release nesmí být „pre-release“ (ten se k aktualizaci nenabízí).
 
 ---
 

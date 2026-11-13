@@ -1740,6 +1740,14 @@ $cdNoEarly = rap_event( 'Bez slevy', $now + 20 * $day, $now + 20 * $day + HOUR_I
 rap_t( array() === Resandpay_Countdown::steps( Resandpay_Events::get( $cdNoEarly ) ), 'cíl bez data se nezobrazí' );
 rap_t( false !== strpos( Resandpay_Admin_Shortcodes::event_box( $cdE ), '[reserveandpay_countdown id=&quot;' . $cdCode ) || false !== strpos( Resandpay_Admin_Shortcodes::event_box( $cdE ), '[reserveandpay_countdown id="' . $cdCode ), 'nápověda: celý shortcode s kódem akce' );
 
+echo "== 0.16.0: aktualizace z GitHub Releases (R14)\n";
+rap_t( is_object( Resandpay_Updater::checker() ), 'kontrola aktualizací je zapnutá' );
+rap_t( 'reserveandpay' === Resandpay_Updater::checker()->slug, 'slug kontroly aktualizací = reserveandpay' );
+rap_t( 1 === preg_match( Resandpay_Updater::ASSET, 'reserveandpay-0.16.0.zip' ) && 0 === preg_match( Resandpay_Updater::ASSET, 'resandpay-main.zip' ) && 0 === preg_match( Resandpay_Updater::ASSET, 'reserveandpay-0.16.0.zip.sha256' ), 'stahuje se jen balíček reserveandpay-X.Y.Z.zip' );
+$upHdr = get_file_data( RESANDPAY_FILE, array( 'uri' => 'Update URI' ) );
+rap_t( 'https://github.com/ludektelecky/resandpay' === $upHdr['uri'], 'hlavička Update URI – bez záměny s wordpress.org' );
+rap_t( false === apply_filters( 'auto_update_plugin', false, (object) array( 'plugin' => plugin_basename( RESANDPAY_FILE ), 'slug' => 'reserveandpay' ) ), 'plugin sám nezapíná automatické aktualizace' );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );

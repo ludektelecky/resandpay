@@ -1,5 +1,19 @@
 # Vývojový deník ReserveAndPay
 
+> Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
+
+## 0.16.0 – Aktualizace z prostředí WordPressu (13. 11. 2026)
+
+- ⚠ **Po aktualizaci:** tuto verzi je potřeba nahrát ručně naposledy (Pluginy → Přidat nový → Nahrát plugin → Nahradit stávající). Další verze už nabídne WordPress sám.
+- **R14 – aktualizace z GitHub Releases** (Kniha rozvoje R-008, schváleno a implementováno): v **Pluginech** se zobrazí upozornění na novou verzi, **„Zobrazit podrobnosti“** (popis změn) a **„Aktualizovat nyní“**; u pluginu odkaz **„Zkontrolovat aktualizace“**. Kontrola zhruba každých 12 h přes veřejné API GitHubu (bez tokenu).
+- Zdroj: poslední release repozitáře ludektelecky/resandpay se značkou `vX.Y.Z`; stahuje se jen přiložený balíček `reserveandpay-X.Y.Z.zip` (nikdy zdrojový kód větve). Pre-release se nenabízí.
+- Knihovna **Plugin Update Checker 5.7** (MIT) v `lib/plugin-update-checker`, česká lokalizace součástí.
+- Hlavička **`Update URI`** – WordPress se na plugin neptá wordpress.org, takže nehrozí záměna s cizím pluginem stejného názvu.
+- **Automatické aktualizace** plugin nezapíná (výchozí stav WordPressu „vypnuto“) – do zavedení stagingu aktualizovat ručně tlačítkem.
+- Vypnutí kontroly na konkrétním webu: konstanta `RESANDPAY_DISABLE_UPDATES` ve `wp-config.php` nebo filtr `resandpay_update_checker`.
+- Pravidla číslování verzí 0.x.y a označení „⚠ Po aktualizaci:“ v DEVLOGu (README → Aktualizace).
+- Testy: 552 kontrol + souběh; analytické zadání v6.1
+
 ## 0.15.0 – Odpočet u akce (13. 11. 2026)
 
 - **R13 – odpočet** (Kniha rozvoje R-007, schváleno a implementováno): v Parametrech akce nový řádek **„Odpočet“** se třemi volbami – **do zahájení prodeje** (pole Zahájení rezervací), **do konce slevy** za včasnou rezervaci (23:59 posledního dne, i sleva převzatá ze služby) a **do ukončení prodeje** (začátek − uzávěrka rezervací). Výchozí stav vypnuto; u termínů služeb se řádek nezobrazuje.
