@@ -777,6 +777,7 @@ class Resandpay_Events {
 			self::save_access_meta( $post_id, $in );
 		}
 		update_post_meta( $post_id, '_rap_cancelled', empty( $in['rap_cancelled'] ) ? 0 : 1 );
+		Resandpay_FAQ::save( $post_id, $in );
 		update_post_meta( $post_id, '_rap_program', wp_kses_post( (string) ( $in['rap_program'] ?? '' ) ) );
 		if ( array_key_exists( 'rap_gallery', $in ) ) { // Generátor termínů galerii neposílá – ponechat.
 			update_post_meta( $post_id, '_rap_gallery', implode( ',', self::parse_gallery( $in['rap_gallery'] ) ) );

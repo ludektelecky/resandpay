@@ -408,3 +408,26 @@ audio.rap-mat-player { background: transparent; }
 	.rap-material { gap: 1.5rem; }
 	.rap-mat-box { position: static; max-width: none; }
 }
+
+/* ---------------------------------------------------------------------
+ * Časté dotazy – FAQ (0.14.0)
+ * Otázka vždy vidět, odpověď rozbalovací (<details>), výchozí stav sbaleno.
+ * ------------------------------------------------------------------- */
+.rap-faq { margin: 2.5rem 0 0; font-family: var(--rap-font); color: var(--rap-ink); }
+.rap-faq__title { margin: 0 0 .75rem; }
+.rap-faq__item { border-top: 1px solid var(--rap-line); }
+.rap-faq__item:last-child { border-bottom: 1px solid var(--rap-line); }
+.rap-faq__q { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 0; font-family: var(--rap-font-heading); font-weight: 500; font-size: 19px; line-height: 1.35; color: var(--rap-ink); }
+.rap-faq__q::-webkit-details-marker { display: none; }
+.rap-faq__q::marker { content: ""; }
+.rap-faq__q:hover > span:first-child, .rap-faq__q:focus-visible > span:first-child { color: var(--rap-accent); }
+.rap-faq__q:focus-visible { outline: 1px solid var(--rap-accent); outline-offset: 2px; }
+.rap-faq__icon { flex: 0 0 auto; width: 9px; height: 9px; margin: 0 4px 4px 0; border-right: 1.3px solid var(--rap-accent); border-bottom: 1.3px solid var(--rap-accent); transform: rotate(45deg); transition: transform .25s ease, margin .25s ease; }
+.rap-faq__item[open] .rap-faq__icon { transform: rotate(-135deg); margin: 4px 4px 0 0; }
+.rap-faq__a { margin: 0 0 1.1rem; padding: .15rem 0 .15rem 1rem; border-left: 2px solid var(--rap-line); color: var(--rap-ink-soft); font-size: 16px; line-height: 1.65; }
+.rap-faq__a > :first-child { margin-top: 0; }
+.rap-faq__a > :last-child { margin-bottom: 0; }
+.rap-faq__a a { color: var(--rap-accent); }
+.rap-event__desc .rap-faq { margin-top: 2.5rem; }
+.rap-slots .rap-faq { margin-top: 3rem; }
+@media (prefers-reduced-motion: reduce) { .rap-faq__icon { transition: none; } }

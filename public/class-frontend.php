@@ -219,7 +219,7 @@ class Resandpay_Frontend {
 		if ( self::full_layout() ) {
 			return self::render_event_page( $id, $content, (bool) Resandpay_Settings::get( 'detail_own_title' ) );
 		}
-		return self::render_details( $id ) . $content . self::render_booking( $id );
+		return self::render_details( $id ) . $content . Resandpay_FAQ::render_event( $id ) . self::render_booking( $id );
 	}
 
 	/**
@@ -316,6 +316,7 @@ class Resandpay_Frontend {
 		if ( 'multiday' === $ev['type'] && $ev['program'] ) {
 			echo '<div class="rap-program"><p class="rap-eyebrow">' . esc_html__( 'Program', 'reserveandpay' ) . '</p>' . wp_kses_post( wpautop( $ev['program'] ) ) . '</div>';
 		}
+		echo Resandpay_FAQ::render_event( $event_id ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
 		echo '</div>';
 		echo '<aside class="rap-event__aside">';
 		echo self::render_booking( $event_id, true ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
@@ -437,6 +438,7 @@ class Resandpay_Frontend {
 				'service'     => '',
 				'days'        => 21,
 				'description' => '', // yes = vždy zobrazit, toggle = rozbalovací, no = nezobrazovat; prázdné = volba u služby.
+				'faq'         => 'yes', // no = nezobrazit časté dotazy služby pod termíny.
 			),
 			$atts,
 			'reserveandpay_slots'

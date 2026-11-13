@@ -719,7 +719,11 @@ class Resandpay_Views {
 		if ( $later ) {
 			echo '<a class="rap-button rap-button--ghost" rel="nofollow" href="' . esc_url( add_query_arg( 'rap_from', $to->format( 'Y-m-d' ), $base ) . '#rap-slots' ) . '">' . esc_html__( 'Další termíny →', 'reserveandpay' ) . '</a>';
 		}
-		echo '</p></div>';
+		echo '</p>';
+		if ( 'no' !== ( $args['faq'] ?? 'yes' ) ) {
+			echo Resandpay_FAQ::render_service( $svc['id'] ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
+		}
+		echo '</div>';
 		return ob_get_clean();
 	}
 }

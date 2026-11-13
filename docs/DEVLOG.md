@@ -1,5 +1,15 @@
 # Vývojový deník ReserveAndPay
 
+## 0.14.0 – Časté dotazy (FAQ) u akcí a služeb (13. 11. 2026)
+
+- **Časté dotazy (R12)**: nový rámeček **„Časté dotazy“** v editaci akce i služby – opakovač otázka + odpověď (přidat, odebrat, posunout ↑↓; max. 30). Řádek bez otázky nebo odpovědi se neuloží. V odpovědi lze HTML (odkaz, tučné, odrážky).
+- Web: sekce „ČASTÉ DOTAZY“ pod popisem akce (i pod programem vícedenní akce, i v jednoduchém vzhledu detailu) a pod volnými termíny služby. **Otázka je vidět vždy, odpověď se rozbalí** pod ní (nativní `<details>`, bez JavaScriptu, ovladatelné klávesnicí); výchozí stav **vše sbalené**, otevřít lze více odpovědí najednou. Vzhled dle grafického manuálu: otázka Fraunces 500, vlasové linky, tenká šipka ve zlatohnědé, odpověď s levou linkou jako u rozbalovacího popisu služby. Bez dotazů se sekce nevykreslí.
+- **Individuální termín** bez vlastních dotazů přebírá dotazy své služby; duplikát akce dotazy zkopíruje.
+- **Strukturovaná data schema.org FAQPage** (JSON-LD) jednou za stránku v patičce; vypnutí filtrem `resandpay_faq_schema` (např. když je generuje SEO plugin). Nadpis sekce mění filtr `resandpay_faq_title`.
+- Shortcode `[reserveandpay_faq id="…"]` (kód akce/služby nebo ID; bez id aktuální akce); `[reserveandpay_slots … faq="no"]` dotazy pod termíny skryje.
+- Bez změny databáze (post meta `_rap_faq`).
+- Analytické zadání v5.8 (R12)
+
 ## 0.13.0 – Knihovna materiálů ke stažení (31. 10. 2026)
 
 - **Materiály ke stažení** (SWD kap. 15.1, R11 – schváleno a implementováno): nový typ obsahu ResAndPay → **Materiály** (adresa /materialy/…/, kód **MA-NNN**, blokový editor, perex, náhled 3:4, kategorie sdílené s akcemi)

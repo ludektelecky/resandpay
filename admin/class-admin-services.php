@@ -26,6 +26,7 @@ class Resandpay_Admin_Services {
 
 	public static function meta_boxes() {
 		add_meta_box( 'rap_service', __( 'Parametry služby', 'reserveandpay' ), array( __CLASS__, 'box_service' ), Resandpay_Post_Types::SERVICE, 'normal', 'high' );
+		add_meta_box( 'rap_faq_box', __( 'Časté dotazy', 'reserveandpay' ), array( 'Resandpay_FAQ', 'box' ), Resandpay_Post_Types::SERVICE, 'normal', 'default' );
 		add_meta_box( 'rap_service_slots', __( 'Termíny', 'reserveandpay' ), array( __CLASS__, 'box_slots' ), Resandpay_Post_Types::SERVICE, 'side', 'high' );
 	}
 
@@ -132,6 +133,7 @@ class Resandpay_Admin_Services {
 	public static function save_service_meta( $post_id, array $in ) {
 		$currency = strtoupper( preg_replace( '/[^A-Za-z]/', '', (string) ( $in['rap_currency'] ?? '' ) ) );
 		$due      = trim( (string) ( $in['rap_due_days'] ?? '' ) );
+		Resandpay_FAQ::save( $post_id, $in );
 		update_post_meta( $post_id, '_rap_duration', max( 5, (int) ( $in['rap_duration'] ?? 60 ) ) );
 		update_post_meta( $post_id, '_rap_pause', max( 0, (int) ( $in['rap_pause'] ?? 15 ) ) );
 		update_post_meta( $post_id, '_rap_capacity', min( 500, max( 1, (int) ( $in['rap_capacity'] ?? 1 ) ) ) );

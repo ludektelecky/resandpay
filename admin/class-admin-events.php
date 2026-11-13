@@ -34,6 +34,7 @@ class Resandpay_Admin_Events {
 		add_meta_box( 'rap_summary', __( 'Akce', 'reserveandpay' ), array( __CLASS__, 'box_summary' ), Resandpay_Post_Types::EVENT, 'side', 'high' );
 		add_meta_box( 'rap_occupancy', __( 'Obsazenost', 'reserveandpay' ), array( __CLASS__, 'box_occupancy' ), Resandpay_Post_Types::EVENT, 'side', 'default' );
 		add_meta_box( 'rap_gallery_box', __( 'Fotky akce', 'reserveandpay' ), array( __CLASS__, 'box_gallery' ), Resandpay_Post_Types::EVENT, 'normal', 'high' );
+		add_meta_box( 'rap_faq_box', __( 'Časté dotazy', 'reserveandpay' ), array( 'Resandpay_FAQ', 'box' ), Resandpay_Post_Types::EVENT, 'normal', 'default' );
 		add_meta_box( 'rap_program_box', __( 'Program po dnech (vícedenní akce)', 'reserveandpay' ), array( __CLASS__, 'box_program' ), Resandpay_Post_Types::EVENT, 'normal', 'default' );
 		add_meta_box( 'rap_location', __( 'Adresa lokace', 'reserveandpay' ), array( __CLASS__, 'box_location' ), Resandpay_Post_Types::LOCATION, 'normal', 'high' );
 	}
