@@ -12,6 +12,11 @@ on:
 
 permissions:
   contents: write
+  statuses: write
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   release:
@@ -23,6 +28,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          exec > >(tee -a "$RUNNER_TEMP/rap.log") 2>&1
           HDR=$(sed -n 's/^ \* Version: *//p' reserveandpay.php | tr -d '[:space:]')
           CONST=$(sed -n "s/.*define( 'RESANDPAY_VERSION', '\([^']*\)'.*/\1/p" reserveandpay.php)
           echo "Hlavička $HDR, konstanta $CONST"
@@ -34,14 +40,16 @@ jobs:
       - name: Balíček
         if: env.SKIP != '1'
         run: |
+          exec > >(tee -a "$RUNNER_TEMP/rap.log") 2>&1
           mkdir -p build/reserveandpay
           cp -r README.md admin assets includes languages lib public reserveandpay.php templates build/reserveandpay/
-          (cd build && zip -qr "../reserveandpay-${VERSION}.zip" reserveandpay)
-          unzip -l "reserveandpay-${VERSION}.zip" | tail -1
+          python3 -c "import shutil,sys; shutil.make_archive(sys.argv[1], 'zip', 'build', 'reserveandpay')" "reserveandpay-${VERSION}"
+          python3 -c "import zipfile,sys; z=zipfile.ZipFile(sys.argv[1]); print(len(z.namelist()), 'souborů')" "reserveandpay-${VERSION}.zip"
 
       - name: Popis změn z DEVLOGu
         if: env.SKIP != '1'
         run: |
+          exec > >(tee -a "$RUNNER_TEMP/rap.log") 2>&1
           awk -v v="## ${VERSION} " 'index($0, v) == 1 {f=1; next} /^## / {if (f) exit} f' docs/DEVLOG.md > notes.md
           TITLE=$(grep -m1 "^## ${VERSION} " docs/DEVLOG.md | sed 's/^## [^ ]* – //; s/ ([^)]*)$//')
           echo "TITLE=ReserveAndPay ${VERSION} – ${TITLE}" >> "$GITHUB_ENV"
@@ -51,4 +59,15 @@ jobs:
         if: env.SKIP != '1'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "v${VERSION}" "reserveandpay-${VERSION}.zip" --target "$GITHUB_SHA" --title "$TITLE" --notes-file notes.md
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/rap.log") 2>&1
+          gh release create "v${VERSION}" "reserveandpay-${VERSION}.zip" --target "$GITHUB_SHA" --title "$TITLE" --notes-file notes.md
+
+      # Při chybě zapíše poslední řádek logu do stavu commitu (kontext „release“), aby šel přečíst i bez přístupu k logům.
+      - name: Stav při chybě
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          MSG=$(grep -v '^\s*$' "$RUNNER_TEMP/rap.log" 2>/dev/null | tail -1 | cut -c1-135)
+          gh api "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -f state=failure -f context=release -f description="${MSG:-bez logu}" 
