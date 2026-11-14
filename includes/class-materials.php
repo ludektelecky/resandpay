@@ -1249,6 +1249,51 @@ class Resandpay_Materials {
 		);
 	}
 
+	/** Podmínka logu stažení „patří zákazníkovi“: e-mail (bez přihlášení) nebo účty se stejným e-mailem (#41). */
+	private static function log_who_sql( $email, $user_id = 0 ) {
+		global $wpdb;
+		$key = Resandpay_Customers::key( $email );
+		$ids = array_filter( array( (int) $user_id ) );
+		if ( '' !== $key ) {
+			$u = get_user_by( 'email', $key );
+			if ( $u ) {
+				$ids[] = (int) $u->ID;
+			}
+		}
+		$or = array();
+		if ( '' !== $key ) {
+			$or[] = $wpdb->prepare( 'email = %s', $key );
+		}
+		if ( $ids ) {
+			$or[] = 'user_id IN (' . implode( ',', array_map( 'intval', array_unique( $ids ) ) ) . ')';
+		}
+		return $or ? '(' . implode( ' OR ', $or ) . ')' : '1=0';
+	}
+
+	/**
+	 * Historie stažení materiálu zákazníkem (#41): jen úspěšná stažení a přehrání (bez ukázek).
+	 *
+	 * @return array{total:int, rows:array}
+	 */
+	public static function download_history( $material_id, $email, $user_id = 0, $limit = null ) {
+		global $wpdb;
+		$limit = null === $limit ? max( 0, (int) Resandpay_Settings::get( 'mat_history_count' ) ) : (int) $limit;
+		$where = $wpdb->prepare( "material_id = %d AND result = 'ok' AND kind IN ('download', 'play') AND ", $material_id ) . self::log_who_sql( $email, $user_id );
+		$t     = self::downloads_table();
+		$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$t} WHERE {$where}" ); // phpcs:ignore WordPress.DB.PreparedSQL
+		$rows  = $limit > 0 ? $wpdb->get_results( "SELECT created_at, file_id, kind FROM {$t} WHERE {$where} ORDER BY created_at DESC, id DESC LIMIT " . (int) $limit, ARRAY_A ) : array(); // phpcs:ignore WordPress.DB.PreparedSQL
+		return array(
+			'total' => $total,
+			'rows'  => $rows,
+		);
+	}
+
+	/** Materiály, které si zákazník někdy stáhl (podle logu) – id. */
+	public static function downloaded_ids( $email, $user_id = 0 ) {
+		global $wpdb;
+		return array_map( 'intval', $wpdb->get_col( 'SELECT DISTINCT material_id FROM ' . self::downloads_table() . " WHERE result = 'ok' AND kind IN ('download', 'play') AND " . self::log_who_sql( $email, $user_id ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL
+	}
+
 	/** Počet stažení souboru uživatelem za posledních 24 h (bez přehrávání). */
 	public static function downloads_24h( $user_id, $file_id, $now = null, $email = '' ) {
 		global $wpdb;
