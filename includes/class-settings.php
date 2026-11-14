@@ -214,6 +214,8 @@ class Resandpay_Settings {
 			'tpl_mat_admin_subject'    => 'Nová objednávka materiálu: {event} – {name}',
 			'tpl_mat_admin_body'       => "Nová objednávka materiálu\n\nMateriál: {event} ({event_code})\nJméno: {name}\nE-mail: {email}\nČástka: {amount}\nVS: {vs}",
 			'tpl_mat_grant_subject'    => 'Materiál je pro Vás připraven: {event}',
+			'tpl_mat_grant_guest_subject' => 'Materiál je pro Vás připraven: {event}',
+			'tpl_mat_grant_guest_body'    => "Dobrý den, {name},\n\nzpřístupnili jsme Vám materiál {event}.\n\nStáhnout (bez přihlášení): {material_url}\n{access_until}\n\nS pozdravem\n{company}",
 			'tpl_mat_grant_body'       => "Dobrý den, {name},\n\nzpřístupnili jsme Vám materiál {event}.\n\nStáhnout (po přihlášení): {material_url}\nVšechny Vaše materiály: {my_materials_url}\n{access_until}\n\nS pozdravem\n{company}",
 			'tpl_admin_body'        => "Nová rezervace\n\nAkce: {event}\nTermín: {date}\nJméno: {name}\nE-mail: {email}\nTelefon: {phone}\nČástka: {amount}\nVS: {vs}\nPoznámka: {note}\n\nVolná místa po rezervaci: {free}",
 		);

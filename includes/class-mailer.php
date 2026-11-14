@@ -155,7 +155,8 @@ class Resandpay_Mailer {
 			'{map_url}'          => ! empty( $ev['location_map'] ) ? __( 'Mapa:', 'reserveandpay' ) . ' ' . $ev['location_map'] : '',
 			'{reminder_note}'    => (string) ( $ev['reminder_note'] ?? '' ),
 			'{payment_note}'     => self::payment_note( $r ),
-			'{material_url}'     => 'material' === ( $r['item_type'] ?? '' ) && get_permalink( $r['event_id'] ) ? get_permalink( $r['event_id'] ) : '',
+			// Zákazník bez účtu (#29): odkaz na materiál s osobním tokenem – otevře ho bez přihlášení.
+			'{material_url}'     => 'material' === ( $r['item_type'] ?? '' ) && get_permalink( $r['event_id'] ) ? ( empty( $r['user_id'] ) ? Resandpay_Profile::link_with_token( get_permalink( $r['event_id'] ), $r ) : get_permalink( $r['event_id'] ) ) : '',
 			'{my_materials_url}' => Resandpay_Materials::my_url(),
 			'{access_until}'     => 'material' === ( $r['item_type'] ?? '' ) ? Resandpay_Materials::order_until_text( $r ) : '',
 			'{profile_url}'      => Resandpay_Profile::url_for( $r ),
@@ -207,7 +208,7 @@ class Resandpay_Mailer {
 		$subject = self::render( $s[ 'tpl_' . $tkey . '_subject' ] ?? '', $r, $key );
 		$body    = self::render( $s[ 'tpl_' . $tkey . '_body' ] ?? '', $r, $key );
 		// Odkaz na profil „Moje rezervace“ v každém e-mailu zákazníkovi (R18).
-		if ( ! in_array( $key, array( 'admin', 'profile_link', 'test', 'security', 'event_summary' ), true ) && '' !== trim( (string) $s['tpl_profile_footer'] ) && false === strpos( $body, 'rap_p=' ) && '' !== Resandpay_Profile::url_for( $r ) ) {
+		if ( ! in_array( $key, array( 'admin', 'profile_link', 'test', 'security', 'event_summary' ), true ) && '' !== trim( (string) $s['tpl_profile_footer'] ) && Resandpay_Profile::page_id() && false === strpos( $body, (string) get_permalink( Resandpay_Profile::page_id() ) ) && '' !== Resandpay_Profile::url_for( $r ) ) {
 			$body .= "\n\n" . self::render( $s['tpl_profile_footer'], $r, $key );
 		}
 		$parts   = array(
@@ -493,6 +494,7 @@ class Resandpay_Mailer {
 			'event_summary'  => __( 'Přehled účastníků (správce)', 'reserveandpay' ),
 			'mat_grant'      => __( 'Materiál zpřístupněn', 'reserveandpay' ),
 			'profile_link'   => __( 'Odkaz na profil zákazníka', 'reserveandpay' ),
+			'mat_grant_guest' => __( 'Materiál zpřístupněn (bez účtu)', 'reserveandpay' ),
 		);
 	}
 

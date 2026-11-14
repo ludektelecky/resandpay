@@ -234,6 +234,8 @@ class Resandpay_Admin_Settings {
 				'tpl_mat_admin_body'        => array( __( 'Materiál – nová objednávka (správce) – text', 'reserveandpay' ), 'textarea' ),
 				'tpl_mat_grant_subject'     => array( __( 'Materiál – ručně zpřístupněn – předmět', 'reserveandpay' ), $text ),
 				'tpl_mat_grant_body'        => array( __( 'Materiál – ručně zpřístupněn – text', 'reserveandpay' ), 'textarea', __( 'Posílá se, když správce zpřístupní materiál uživateli a zaškrtne „Poslat e-mail“.', 'reserveandpay' ) ),
+				'tpl_mat_grant_guest_subject' => array( __( 'Materiál – zpřístupněn bez účtu – předmět', 'reserveandpay' ), 'text' ),
+				'tpl_mat_grant_guest_body'    => array( __( 'Materiál – zpřístupněn bez účtu – text', 'reserveandpay' ), 'textarea', __( 'Posílá se zákazníkovi bez účtu, kterému správce zpřístupní materiál podle e-mailu. {material_url} = odkaz na materiál s osobním tokenem (stáhne bez přihlášení); odkaz na profil se připojí automaticky.', 'reserveandpay' ) ),
 			),
 			__( 'Testovací režim', 'reserveandpay' )   => array(
 				'test_mode'  => array( __( 'Zapnout testovací režim', 'reserveandpay' ), 'checkbox', __( 'Všechny e-maily pluginu se pošlou jen na testovací adresu. Na vývojovém webu nechte zapnuté.', 'reserveandpay' ) ),

@@ -201,8 +201,9 @@ class Resandpay_Admin_Materials {
 		if ( $grants ) {
 			echo '<table class="widefat striped"><thead><tr><th>' . esc_html__( 'Uživatel', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Od', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Do', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Poznámka', 'reserveandpay' ) . '</th><th></th></tr></thead><tbody>';
 			foreach ( $grants as $g ) {
-				$u = get_userdata( $g['user_id'] );
-				echo '<tr><td>' . esc_html( $u ? $u->display_name . ' <' . $u->user_email . '>' : '#' . $g['user_id'] ) . '</td><td>' . esc_html( wp_date( 'j. n. Y', Resandpay_Events::ts( $g['granted_at'] ) ) ) . '</td><td>' . esc_html( $g['expires_at'] ? wp_date( 'j. n. Y', Resandpay_Events::ts( $g['expires_at'] ) ) : __( 'natrvalo', 'reserveandpay' ) ) . '</td><td>' . esc_html( $g['note'] ) . '</td><td>';
+				$u   = get_userdata( $g['user_id'] );
+				$who = $u ? $u->display_name . ' <' . $u->user_email . '>' : trim( ( $g['name'] ?? '' ) . ' <' . ( $g['email'] ?? '' ) . '>' ) . ' – ' . __( 'bez účtu', 'reserveandpay' );
+				echo '<tr><td>' . esc_html( $who ) . '</td><td>' . esc_html( wp_date( 'j. n. Y', Resandpay_Events::ts( $g['granted_at'] ) ) ) . '</td><td>' . esc_html( $g['expires_at'] ? wp_date( 'j. n. Y', Resandpay_Events::ts( $g['expires_at'] ) ) : __( 'natrvalo', 'reserveandpay' ) ) . '</td><td>' . esc_html( $g['note'] ) . '</td><td>';
 				if ( $g['revoked_at'] ) {
 					/* translators: %s: datum */
 					echo '<em>' . esc_html( sprintf( __( 'odebráno %s', 'reserveandpay' ), wp_date( 'j. n. Y', Resandpay_Events::ts( $g['revoked_at'] ) ) ) . ( $g['revoke_reason'] ? ' – ' . $g['revoke_reason'] : '' ) ) . '</em>';
@@ -216,13 +217,16 @@ class Resandpay_Admin_Materials {
 		} else {
 			echo '<p class="description">' . esc_html__( 'Nikomu.', 'reserveandpay' ) . '</p>';
 		}
-		echo '<p style="margin-top:.8em"><label>' . esc_html__( 'E-mail uživatele', 'reserveandpay' ) . ' <input type="email" name="rap_grant_email" class="regular-text"></label> ';
+		echo '<p style="margin-top:.8em"><label>' . esc_html__( 'E-maily zákazníků', 'reserveandpay' ) . '<br><textarea name="rap_grant_emails" rows="3" class="large-text" placeholder="jana@example.cz&#10;Petr Novák &lt;petr@example.cz&gt;"></textarea></label><br>';
 		echo '<label>' . esc_html__( 'dní', 'reserveandpay' ) . ' <input type="number" name="rap_grant_days" min="-1" class="small-text" placeholder="0"></label> ';
 		echo '<label>' . esc_html__( 'poznámka', 'reserveandpay' ) . ' <input type="text" name="rap_grant_note" class="regular-text" style="width:14em"></label> ';
 		echo '<label><input type="checkbox" name="rap_grant_notify" value="1" checked> ' . esc_html__( 'poslat e-mail', 'reserveandpay' ) . '</label> ';
 		echo '<input type="hidden" name="rap_grant_nonce" value="' . esc_attr( wp_create_nonce( 'rap_mat_grant_' . $post->ID ) ) . '">';
 		echo '<button type="submit" class="button" formaction="' . esc_url( admin_url( 'admin-post.php?action=resandpay_mat_grant&material=' . (int) $post->ID ) ) . '" formnovalidate>' . esc_html__( 'Zpřístupnit', 'reserveandpay' ) . '</button></p>';
-		echo '<p class="description">' . esc_html__( 'Uživatel musí mít na webu účet. Dní: 0 / prázdné = doba přístupu materiálu, −1 = natrvalo. Pozor: tlačítko neuloží ostatní změny materiálu.', 'reserveandpay' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'Jeden nebo více e-mailů – každý na řádek (případně „Jméno <e-mail>“ nebo „e-mail;Jméno“). Účet na webu není potřeba: zákazník dostane e-mail s odkazem na materiál a na svůj profil, kde si ho stáhne bez přihlášení (má-li účet se stejným e-mailem, uvidí materiál i v Moje materiály). Dní: 0 / prázdné = doba přístupu materiálu, −1 = natrvalo. Pozor: tlačítko neuloží ostatní změny materiálu.', 'reserveandpay' ) . '</p>';
+		if ( ! Resandpay_Profile::page_id() ) {
+			echo '<p class="description rap-err">' . esc_html__( 'Tip: vyberte stránku profilu zákazníka (Nastavení → Rezervace → Profil zákazníka) – zákazník bez účtu si na ní po vypršení odkazu nechá poslat nový.', 'reserveandpay' ) . '</p>';
+		}
 
 		$rows = Resandpay_Materials::recent_downloads( $post->ID, 20 );
 		echo '<h4>' . esc_html__( 'Poslední stažení', 'reserveandpay' ) . '</h4>';
@@ -374,14 +378,17 @@ class Resandpay_Admin_Materials {
 		if ( ! $mid || ! isset( $_POST['rap_grant_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['rap_grant_nonce'] ) ), 'rap_mat_grant_' . $mid ) || ! current_user_can( resandpay_cap_reservations() ) ) {
 			wp_die( esc_html__( 'Nemáte oprávnění.', 'reserveandpay' ) );
 		}
-		$email = sanitize_email( wp_unslash( $_POST['rap_grant_email'] ?? '' ) );
-		$user  = $email ? get_user_by( 'email', $email ) : null;
-		$msg   = 'grant_nouser';
-		if ( $user ) {
-			$res = Resandpay_Materials::grant( $mid, $user->ID, (int) ( $_POST['rap_grant_days'] ?? 0 ), sanitize_text_field( wp_unslash( $_POST['rap_grant_note'] ?? '' ) ), ! empty( $_POST['rap_grant_notify'] ) );
-			$msg = is_wp_error( $res ) ? 'grant_error' : 'granted';
+		// Jeden i více e-mailů, i bez účtu (#29); starší formulář posílal jeden e-mail v rap_grant_email.
+		$lines = sanitize_textarea_field( wp_unslash( $_POST['rap_grant_emails'] ?? ( $_POST['rap_grant_email'] ?? '' ) ) );
+		$res   = Resandpay_Materials::grant_bulk( $mid, $lines, (int) ( $_POST['rap_grant_days'] ?? 0 ), sanitize_text_field( wp_unslash( $_POST['rap_grant_note'] ?? '' ) ), ! empty( $_POST['rap_grant_notify'] ) );
+		$args  = array(
+			'rap_msg' => $res['ok'] ? 'granted_n' : 'grant_error',
+			'rap_n'   => $res['ok'],
+		);
+		if ( $res['invalid'] ) {
+			$args['rap_bad'] = rawurlencode( mb_substr( implode( ', ', $res['invalid'] ), 0, 300 ) );
 		}
-		wp_safe_redirect( add_query_arg( 'rap_msg', $msg, get_edit_post_link( $mid, 'url' ) ) . '#rap_material_access' );
+		wp_safe_redirect( add_query_arg( $args, get_edit_post_link( $mid, 'url' ) ) . '#rap_material_access' );
 		exit;
 	}
 
@@ -403,10 +410,16 @@ class Resandpay_Admin_Materials {
 			'granted'      => array( 'success', __( 'Materiál byl zpřístupněn.', 'reserveandpay' ) ),
 			'revoked'      => array( 'success', __( 'Přístup byl odebrán.', 'reserveandpay' ) ),
 			'grant_nouser' => array( 'error', __( 'Uživatel s tímto e-mailem na webu nemá účet.', 'reserveandpay' ) ),
-			'grant_error'  => array( 'error', __( 'Materiál se nepodařilo zpřístupnit.', 'reserveandpay' ) ),
+			'grant_error'  => array( 'error', __( 'Materiál se nepodařilo zpřístupnit – zkontrolujte e-maily.', 'reserveandpay' ) ),
+			/* translators: %d: počet */
+			'granted_n'    => array( 'success', sprintf( __( 'Materiál byl zpřístupněn (%d).', 'reserveandpay' ), absint( $_GET['rap_n'] ?? 0 ) ) ), // phpcs:ignore WordPress.Security.NonceVerification
 		);
 		if ( isset( $map[ $msg ] ) ) {
 			echo '<div class="notice notice-' . esc_attr( $map[ $msg ][0] ) . ' is-dismissible"><p>' . esc_html( $map[ $msg ][1] ) . '</p></div>';
+		}
+		if ( ! empty( $_GET['rap_bad'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			/* translators: %s: neplatné řádky */
+			echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html( sprintf( __( 'Přeskočeno (neplatný e-mail): %s', 'reserveandpay' ), sanitize_text_field( rawurldecode( wp_unslash( $_GET['rap_bad'] ) ) ) ) ) . '</p></div>'; // phpcs:ignore WordPress.Security.NonceVerification
 		}
 	}
 

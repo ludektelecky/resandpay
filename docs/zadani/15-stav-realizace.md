@@ -19,7 +19,7 @@ Vývoj probíhá na webu slehkouhlavou.cz (WordPress 7.1, PHP 8.5, MySQL 8.4, Ac
 
 ## 15.1 Kniha rozvoje
 
-> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R21 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
+> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R22 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
 
 Funkce navržené k dalšímu rozvoji pluginu. Položka se po schválení podrobného zadání přesune do příslušné kapitoly a do tabulky stavu realizace.
 
@@ -141,7 +141,7 @@ Sekce webu pro stahování eBooků, videí a dalších elektronických instrukt�
 | **Otázka** | **Rozhodnutí (31. 10. 2026)** |
 |---|---|
 | R11-a Videa | Soubory přímo na webu (chráněná složka). Na stránce materiálu se video i audio přehrává v prohlížeči a lze ho stáhnout; externí přehrávače (Vimeo, YouTube) se nezavádějí. |
-| R11-b Kdo může objednat | Jen přihlášený uživatel – objednávka i nárok jsou vázané na účet (jméno a e-mail z účtu). |
+| R11-b Kdo může objednat | Přihlášený uživatel (jméno a e-mail z účtu); od 0.24.0 (R22) i zákazník bez účtu podle e-mailu. |
 | R11-c Doba přístupu | Nastavitelná u každého materiálu: počet dní, 0 = natrvalo; výchozí hodnota v nastavení (0). |
 | R11-d Materiály pro účastnice | Ano – u materiálu lze vybrat akce a služby; zaplacená rezervace dává materiál zdarma. |
 | R11-h Právní a daňová stránka | Znění souhlasu se ztrátou práva na odstoupení ověří vlastník s právníkem, daně s účetní. Text souhlasu je v nastavení. |
@@ -338,3 +338,14 @@ Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, po
 - Nastavení → Materiály ke stažení: **Vodoznak v PDF – výchozí** (vypnuto), **Text vodoznaku** (proměnné {name}, {email}, {date}, {code}, {site}; výchozí „{name} · {email} · {date}“), **Umístění** – zápatí stránky / šikmo přes stránku / obojí (výchozí zápatí). U materiálu Parametry → **Vodoznak v PDF**: výchozí / ano / ne.
 - Při stažení i zobrazení PDF v prohlížeči (ne u ukázky) se vytvoří kopie, do každé stránky se vloží text (zápatí: malý šedý text dole; šikmo: velký světlý text přes střed, průhlednost 14 %) a údaje se zapíší do **metadat PDF** (předmět a klíčová slova „Licencováno pro: …“). Soubor na disku se nemění; kopie je v chráněné mezipaměti (resandpay-protected/wm-cache, 24 h, úklid automaticky) a odesílá se stejně jako originál včetně HTTP Range.
 - Třída Resandpay_Watermark, knihovna FPDI 2.6.4 (MIT, lib/fpdi) nad TCPDF. Omezení: bezplatný parser FPDI nezpracuje PDF s komprimovanými křížovými odkazy (PDF 1.5+) ani zašifrované PDF – takový soubor se stáhne **bez vodoznaku**, do logu stažení se zapíše záznam (druh wm, výsledek unsupported) a editor materiálu u souboru zobrazí upozornění s postupem (uložit jako PDF kompatibilní s 1.4). Odkazy, záložky a formuláře původního PDF se do kopie nepřenášejí.
+
+### R22 – Materiál podle e-mailu bez účtu
+
+**Pozn.: Navrženo a schváleno 14. 11. 2026 ([Issue #29](https://github.com/ludektelecky/resandpay/issues/29)), implementováno ve verzi pluginu 0.24.0.**
+
+- **Zpřístupnění podle e-mailu** (editor materiálu → Přístupy): jeden nebo více e-mailů najednou (řádek „e-mail“, „Jméno <e-mail>“ nebo „e-mail;Jméno“; duplicity a neplatné řádky se přeskočí), doba přístupu, poznámka, „poslat e-mail“. Účet na webu není potřeba. Zákazník bez účtu dostane e-mail „Materiál – zpřístupněn bez účtu“ (šablona v Nastavení → E-maily) s **odkazem na materiál** s osobním tokenem a s **odkazem na profil zákazníka**; zákazník s účtem stávající e-mail „Materiál – ručně zpřístupněn“. Odebrání přístupu s důvodem jako dosud.
+- **Objednávka placeného materiálu bez účtu**: nepřihlášený zákazník na stránce materiálu vyplní jméno a e-mail (+ souhlasy, firma, kupón, newsletter) – jen je-li vybraná stránka profilu zákazníka; možnost „Přihlaste se“ zůstává. Ochrana formuláře proti robotům jako u rezervací. Po odeslání se stránka otevře s osobním odkazem a platebními údaji; e-mail o zaplacení obsahuje odkaz na materiál s osobním tokenem. Druhá objednávka téhož e-mailu nevznikne, dokud se čeká na platbu.
+- **Stahování bez přihlášení**: osobní odkaz (?rap_p=, profil R18 – token objednávky / rezervace nebo nově token zpřístupnění) otevře stránku materiálu se soubory a **profil zákazníka** s novou částí **Materiály ke stažení** (zpřístupněné podle e-mailu, zaplacené objednávky, účastníci navázaných akcí). Odkaz ke stažení je podepsaný, časově omezený a vázaný na e-mail; platí limity stažení (počítané podle e-mailu), log stažení (sloupec email) a vodoznak (jméno z objednávky / zpřístupnění). Materiály „zdarma pro přihlášené“ a „jen pro role“ dál vyžadují přihlášení.
+- **Účet se stejným e-mailem**: objednávky a zpřístupnění podle e-mailu platí i po přihlášení – materiál se zobrazí v Moje materiály (rozhodnutí 14. 11. 2026).
+- „Pošlete mi odkaz“ na stránce profilu funguje i pro zákazníka, který má jen zpřístupnění (bez rezervace).
+- Databáze 15: tabulka resandpay_grants – sloupce email, name, token; resandpay_downloads – sloupec email. Funkce Resandpay_Materials::access_email(), grant_email(), grant_bulk(), for_email().

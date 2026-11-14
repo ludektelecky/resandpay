@@ -382,29 +382,52 @@ class Resandpay_Materials {
 		return ( new DateTimeImmutable( '@' . $from ) )->setTimezone( wp_timezone() )->modify( '+' . (int) $mat['access_days'] . ' days' )->setTime( 23, 59, 59 )->getTimestamp();
 	}
 
-	/** Zaplacené objednávky materiálu uživatelem (nejnovější první). */
-	public static function orders_for( $material_id, $user_id, $statuses = null ) {
+	/** E-mail zákazníka: zadaný, jinak e-mail účtu (klíč – malými písmeny). */
+	public static function email_of( $user_id, $email = '' ) {
+		if ( '' !== (string) $email ) {
+			return Resandpay_Customers::key( $email );
+		}
+		$u = $user_id ? get_userdata( $user_id ) : null;
+		return $u ? Resandpay_Customers::key( $u->user_email ) : '';
+	}
+
+	/** Podmínka SQL „patří zákazníkovi“: účet nebo stejný e-mail (#29 – i objednávky a zpřístupnění bez účtu). */
+	private static function who_sql( $user_id, $email, $user_col = 'user_id', $email_col = 'email' ) {
+		global $wpdb;
+		$or = array();
+		if ( $user_id ) {
+			$or[] = $wpdb->prepare( "{$user_col} = %d", $user_id ); // phpcs:ignore WordPress.DB.PreparedSQL
+		}
+		if ( '' !== $email ) {
+			$or[] = $wpdb->prepare( "LOWER(TRIM({$email_col})) = %s", $email ); // phpcs:ignore WordPress.DB.PreparedSQL
+		}
+		return $or ? '(' . implode( ' OR ', $or ) . ')' : '1=0';
+	}
+
+	/** Zaplacené objednávky materiálu uživatelem / e-mailem (nejnovější první). */
+	public static function orders_for( $material_id, $user_id, $statuses = null, $email = '' ) {
 		global $wpdb;
 		$statuses = $statuses ?? array( Resandpay_Reservations::PAID );
 		$in       = "'" . implode( "','", array_map( 'esc_sql', $statuses ) ) . "'";
-		return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . Resandpay_Reservations::table() . " WHERE item_type = 'material' AND event_id = %d AND user_id = %d AND status IN ({$in}) ORDER BY id DESC", $material_id, $user_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL
+		$who      = self::who_sql( (int) $user_id, self::email_of( $user_id, $email ) );
+		return $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . Resandpay_Reservations::table() . " WHERE item_type = 'material' AND event_id = %d AND {$who} AND status IN ({$in}) ORDER BY id DESC", $material_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL
 	}
 
-	/** Rozpracovaná (nezaplacená) objednávka uživatele, je-li. */
-	public static function open_order( $material_id, $user_id ) {
-		$rows = self::orders_for( $material_id, $user_id, array( Resandpay_Reservations::PENDING, Resandpay_Reservations::PARTIAL, Resandpay_Reservations::OVERDUE ) );
+	/** Rozpracovaná (nezaplacená) objednávka uživatele / e-mailu, je-li. */
+	public static function open_order( $material_id, $user_id, $email = '' ) {
+		$rows = self::orders_for( $material_id, $user_id, array( Resandpay_Reservations::PENDING, Resandpay_Reservations::PARTIAL, Resandpay_Reservations::OVERDUE ), $email );
 		return $rows ? $rows[0] : null;
 	}
 
 	/** Aktivní ruční zpřístupnění. */
-	public static function grants( $material_id = 0, $user_id = 0, $active_only = true ) {
+	public static function grants( $material_id = 0, $user_id = 0, $active_only = true, $email = '' ) {
 		global $wpdb;
 		$where = array( '1=1' );
 		if ( $material_id ) {
 			$where[] = $wpdb->prepare( 'material_id = %d', $material_id );
 		}
-		if ( $user_id ) {
-			$where[] = $wpdb->prepare( 'user_id = %d', $user_id );
+		if ( $user_id || '' !== $email ) {
+			$where[] = self::who_sql( (int) $user_id, self::email_of( $user_id, $email ) );
 		}
 		if ( $active_only ) {
 			$where[] = 'revoked_at IS NULL';
@@ -416,23 +439,21 @@ class Resandpay_Materials {
 	 * Zaplacené rezervace navázaných akcí / služeb (účastnice dostávají materiál zdarma).
 	 * Uživatel = rezervace s jeho ID účtu nebo s jeho e-mailem.
 	 */
-	public static function event_reservations( array $mat, $user_id ) {
+	public static function event_reservations( array $mat, $user_id, $email = '' ) {
 		global $wpdb;
-		if ( ! $mat['links'] || ! $user_id ) {
-			return array();
-		}
-		$u = get_userdata( $user_id );
-		if ( ! $u ) {
+		$email = self::email_of( $user_id, $email );
+		if ( ! $mat['links'] || ( ! $user_id && '' === $email ) ) {
 			return array();
 		}
 		$ids  = array_map( 'intval', $mat['links'] );
 		$list = implode( ',', $ids );
 		$t    = Resandpay_Reservations::table();
+		$who  = self::who_sql( (int) $user_id, $email, 'r.user_id', 'r.email' );
 		// Akce přímo, nebo termíny navázaných služeb (_rap_service).
 		$sql = "SELECT r.* FROM {$t} r LEFT JOIN {$wpdb->postmeta} pm ON pm.post_id = r.event_id AND pm.meta_key = '_rap_service'
-			WHERE r.item_type = 'event' AND r.status = %s AND ( r.user_id = %d OR r.email = %s )
+			WHERE r.item_type = 'event' AND r.status = %s AND {$who}
 			AND ( r.event_id IN ({$list}) OR pm.meta_value IN ({$list}) ) ORDER BY r.paid_at ASC";
-		return $wpdb->get_results( $wpdb->prepare( $sql, Resandpay_Reservations::PAID, $user_id, $u->user_email ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL
+		return $wpdb->get_results( $wpdb->prepare( $sql, Resandpay_Reservations::PAID ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL
 	}
 
 	private static function user_has_role( $user_id, array $roles ) {
@@ -449,8 +470,21 @@ class Resandpay_Materials {
 	 *               order (otevřená / poslední objednávka), expired_at (timestamp).
 	 */
 	public static function access( $material, $user_id = null, $now = null, $ignore_disabled = false ) {
-		$mat     = is_array( $material ) ? $material : self::get( $material );
 		$user_id = null === $user_id ? get_current_user_id() : (int) $user_id;
+		return self::access_core( $material, $user_id, self::email_of( $user_id ), $now, $ignore_disabled );
+	}
+
+	/**
+	 * Přístup podle e-mailu bez přihlášení (#29 – osobní odkaz z e-mailu / profil zákazníka):
+	 * zaplacená objednávka, zpřístupnění podle e-mailu nebo účastník navázané akce. Materiály
+	 * „zdarma pro přihlášené“ a „jen pro role“ vyžadují přihlášení (reason login).
+	 */
+	public static function access_email( $material, $email, $now = null, $ignore_disabled = false ) {
+		return self::access_core( $material, 0, Resandpay_Customers::key( $email ), $now, $ignore_disabled );
+	}
+
+	private static function access_core( $material, $user_id, $email, $now, $ignore_disabled ) {
+		$mat     = is_array( $material ) ? $material : self::get( $material );
 		$now     = self::now_ts( $now );
 		$res     = array(
 			'ok'         => false,
@@ -464,10 +498,10 @@ class Resandpay_Materials {
 			$res['reason'] = 'unavailable';
 			return $res;
 		}
-		if ( ! $user_id ) {
+		if ( ! $user_id && '' === $email ) {
 			return $res;
 		}
-		if ( user_can( $user_id, resandpay_cap_reservations() ) ) {
+		if ( $user_id && user_can( $user_id, resandpay_cap_reservations() ) ) {
 			return array_merge( $res, array( 'ok' => true, 'reason' => '', 'source' => 'admin' ) );
 		}
 		if ( ! empty( $mat['disabled'] ) && ! $ignore_disabled ) {
@@ -480,7 +514,7 @@ class Resandpay_Materials {
 		};
 		$best_expired = 0;
 		// Objednávka (zaplacená) – nárok zůstává i po stažení materiálu z nabídky.
-		foreach ( self::orders_for( $mat['id'], $user_id ) as $o ) {
+		foreach ( self::orders_for( $mat['id'], $user_id, null, $email ) as $o ) {
 			$until = self::until_from( $mat, $o['paid_at'] ?: $o['updated_at'] );
 			if ( ! $until || $until >= $now ) {
 				$out          = $grant( 'order', $until );
@@ -490,7 +524,7 @@ class Resandpay_Materials {
 			$best_expired = max( $best_expired, $until );
 		}
 		// Ruční zpřístupnění.
-		foreach ( self::grants( $mat['id'], $user_id ) as $g ) {
+		foreach ( self::grants( $mat['id'], $user_id, true, $email ) as $g ) {
 			$until = $g['expires_at'] ? Resandpay_Events::ts( $g['expires_at'] ) : 0;
 			if ( ! $until || $until >= $now ) {
 				return $grant( 'grant', $until );
@@ -498,7 +532,7 @@ class Resandpay_Materials {
 			$best_expired = max( $best_expired, $until );
 		}
 		// Účastnice navázané akce / služby.
-		foreach ( self::event_reservations( $mat, $user_id ) as $r ) {
+		foreach ( self::event_reservations( $mat, $user_id, $email ) as $r ) {
 			$until = self::until_from( $mat, $r['paid_at'] ?: $r['updated_at'] );
 			if ( ! $until || $until >= $now ) {
 				return $grant( 'event', $until );
@@ -508,6 +542,9 @@ class Resandpay_Materials {
 		if ( ! $published ) {
 			$res['reason'] = 'unavailable';
 			return $res;
+		}
+		if ( ! $user_id && self::ACCESS_PAID !== $mat['access'] ) {
+			return $res; // Zdarma pro přihlášené / jen pro role: bez účtu jen s nárokem výše.
 		}
 		if ( self::ACCESS_FREE === $mat['access'] ) {
 			return $grant( 'free', 0 );
@@ -520,7 +557,7 @@ class Resandpay_Materials {
 			return $res;
 		}
 		// Placený materiál bez nároku.
-		$open = self::open_order( $mat['id'], $user_id );
+		$open = self::open_order( $mat['id'], $user_id, $email );
 		if ( $open ) {
 			$res['reason'] = 'pending';
 			$res['order']  = $open;
@@ -630,11 +667,14 @@ class Resandpay_Materials {
 				'now'    => time(),
 			)
 		);
-		$mat  = self::get( $material_id );
-		$user = $user_id ? get_userdata( $user_id ) : null;
-		if ( ! $user ) {
-			return new WP_Error( 'login', __( 'Pro objednávku se prosím přihlaste.', 'reserveandpay' ) );
+		$mat   = self::get( $material_id );
+		$user  = $user_id ? get_userdata( $user_id ) : null;
+		$email = $user ? Resandpay_Customers::key( $user->user_email ) : Resandpay_Customers::key( sanitize_email( (string) ( $data['email'] ?? '' ) ) );
+		if ( ! $user && ! is_email( $email ) ) {
+			// Bez účtu (#29) je potřeba platný e-mail – na něj přijde platba i osobní odkaz.
+			return new WP_Error( 'login', __( 'Pro objednávku se prosím přihlaste nebo vyplňte e-mail.', 'reserveandpay' ) );
 		}
+		$user_id = $user ? (int) $user->ID : 0;
 		if ( ! $mat || ! self::purchasable( $mat ) ) {
 			return new WP_Error( 'not_available', __( 'Materiál teď nelze objednat.', 'reserveandpay' ) );
 		}
@@ -642,10 +682,13 @@ class Resandpay_Materials {
 			return new WP_Error( 'consent', __( 'Pro objednávku jsou nutné všechny tři souhlasy.', 'reserveandpay' ) );
 		}
 		$name = trim( (string) ( $data['customer_name'] ?? '' ) );
-		if ( '' === $name ) {
+		if ( '' === $name && $user ) {
 			$name = trim( $user->first_name . ' ' . $user->last_name ) ?: $user->display_name;
 		}
-		$lock = 'mat_order_' . (int) $user_id;
+		if ( '' === $name ) {
+			return new WP_Error( 'name', __( 'Vyplňte jméno a příjmení.', 'reserveandpay' ) );
+		}
+		$lock = 'mat_order_' . ( $user_id ? (int) $user_id : 'e' . substr( md5( $email ), 0, 16 ) );
 		if ( ! Resandpay_Lock::acquire( $lock ) ) {
 			return new WP_Error( 'busy', __( 'Systém je právě vytížen, zkuste to prosím za chvíli znovu.', 'reserveandpay' ) );
 		}
@@ -656,7 +699,7 @@ class Resandpay_Materials {
 			return new WP_Error( 'busy', __( 'Systém je právě vytížen, zkuste to prosím za chvíli znovu.', 'reserveandpay' ) );
 		}
 		try {
-			$acc = self::access( $mat, $user_id, $opts['now'] );
+			$acc = $user_id ? self::access( $mat, $user_id, $opts['now'] ) : self::access_email( $mat, $email, $opts['now'] );
 			if ( $acc['ok'] ) {
 				return new WP_Error( 'owned', __( 'Materiál už máte k dispozici.', 'reserveandpay' ) );
 			}
@@ -669,7 +712,7 @@ class Resandpay_Materials {
 				array(
 					'now'    => $opts['now'],
 					'coupon' => $coupon_code,
-					'email'  => $user->user_email,
+					'email'  => $email,
 				)
 			);
 			if ( $price['error'] ) {
@@ -692,7 +735,7 @@ class Resandpay_Materials {
 				'proforma_no'        => Resandpay_Reservations::format_proforma( $seq, $now_ts ),
 				'token'              => wp_generate_password( 40, false, false ),
 				'customer_name'      => mb_substr( sanitize_text_field( $name ), 0, 190 ),
-				'email'              => $user->user_email,
+				'email'              => $user ? $user->user_email : $email,
 				'phone'              => mb_substr( sanitize_text_field( $data['phone'] ?? '' ), 0, 50 ),
 				'company'            => mb_substr( sanitize_text_field( $data['company'] ?? '' ), 0, 190 ),
 				'company_ic'         => mb_substr( sanitize_text_field( $data['company_ic'] ?? '' ), 0, 20 ),
@@ -716,6 +759,7 @@ class Resandpay_Materials {
 				'consent_digital_at' => ! empty( $data['consent_digital'] ) ? $local : null,
 				'newsletter'         => ! empty( $data['newsletter'] ) ? 1 : 0,
 				'user_id'            => (int) $user_id,
+				'ip_hash'            => (string) ( $data['ip_hash'] ?? '' ),
 				'source'             => 'admin' === $opts['source'] ? 'admin' : 'web',
 				'created_at'         => $local,
 				'updated_at'         => $local,
@@ -768,6 +812,9 @@ class Resandpay_Materials {
 			array(
 				'material_id' => (int) $material_id,
 				'user_id'     => (int) $user_id,
+				'email'       => Resandpay_Customers::key( $user->user_email ),
+				'name'        => mb_substr( trim( $user->first_name . ' ' . $user->last_name ) ?: $user->display_name, 0, 190 ),
+				'token'       => wp_generate_password( 40, false, false ),
 				'note'        => mb_substr( sanitize_text_field( $note ), 0, 190 ),
 				'granted_at'  => current_time( 'mysql' ),
 				'granted_by'  => get_current_user_id(),
@@ -786,6 +833,173 @@ class Resandpay_Materials {
 			remove_filter( 'resandpay_mail_placeholders', $f, 10 );
 		}
 		return $id;
+	}
+
+	/**
+	 * Zpřístupnění podle e-mailu – zákazník nemusí mít účet (#29). Má-li účet se stejným e-mailem,
+	 * zapíše se k účtu. E-mail obsahuje odkaz na materiál a na profil zákazníka (osobní odkaz).
+	 *
+	 * @param int $days 0 = podle materiálu, -1 = natrvalo.
+	 * @return array|WP_Error Záznam zpřístupnění.
+	 */
+	public static function grant_email( $material_id, $email, $name = '', $days = 0, $note = '', $notify = false ) {
+		global $wpdb;
+		$mat   = self::get( $material_id );
+		$email = Resandpay_Customers::key( sanitize_email( (string) $email ) );
+		if ( ! $mat || ! is_email( $email ) ) {
+			return new WP_Error( 'invalid', __( 'Neplatný materiál nebo e-mail.', 'reserveandpay' ) );
+		}
+		$user = get_user_by( 'email', $email );
+		if ( $user && ! $notify ) {
+			$id = self::grant( $material_id, $user->ID, $days, $note, false );
+			return is_wp_error( $id ) ? $id : self::grant_get( $id );
+		}
+		$days    = (int) $days;
+		$days    = 0 === $days ? $mat['access_days'] : max( 0, $days );
+		$expires = $days > 0 ? wp_date( 'Y-m-d 23:59:59', time() + $days * DAY_IN_SECONDS ) : null;
+		$name    = mb_substr( sanitize_text_field( (string) $name ), 0, 190 );
+		if ( '' === $name && $user ) {
+			$name = trim( $user->first_name . ' ' . $user->last_name ) ?: $user->display_name;
+		}
+		$wpdb->insert(
+			self::grants_table(),
+			array(
+				'material_id' => (int) $material_id,
+				'user_id'     => $user ? (int) $user->ID : 0,
+				'email'       => $email,
+				'name'        => $name,
+				'token'       => wp_generate_password( 40, false, false ),
+				'note'        => mb_substr( sanitize_text_field( $note ), 0, 190 ),
+				'granted_at'  => current_time( 'mysql' ),
+				'granted_by'  => get_current_user_id(),
+				'expires_at'  => $expires,
+			)
+		);
+		$g = self::grant_get( (int) $wpdb->insert_id );
+		if ( $g && $notify ) {
+			$r = self::pseudo_grant( $mat, $g );
+			if ( $expires ) {
+				/* translators: %s: datum */
+				$r['access_note'] = sprintf( __( 'Přístup k materiálu platí do %s.', 'reserveandpay' ), wp_date( 'j. n. Y', Resandpay_Events::ts( $expires ) ) );
+			}
+			add_filter( 'resandpay_mail_placeholders', $f = fn( $ph, $rr ) => array_merge( $ph, array( '{access_until}' => (string) ( $rr['access_note'] ?? '' ) ) ), 10, 2 );
+			Resandpay_Mailer::send_template( $email, $user ? 'mat_grant' : 'mat_grant_guest', $r );
+			remove_filter( 'resandpay_mail_placeholders', $f, 10 );
+		}
+		return $g ?: new WP_Error( 'db', __( 'Zpřístupnění se nepodařilo uložit.', 'reserveandpay' ) );
+	}
+
+	/**
+	 * Hromadné zpřístupnění: řádky „e-mail“, „Jméno <e-mail>“ nebo „e-mail;Jméno“.
+	 *
+	 * @return array{ok:int, invalid:string[]}
+	 */
+	public static function grant_bulk( $material_id, $lines, $days = 0, $note = '', $notify = false ) {
+		$out  = array(
+			'ok'      => 0,
+			'invalid' => array(),
+		);
+		$seen = array();
+		foreach ( preg_split( '/[\r\n,]+/', (string) $lines ) as $line ) {
+			$line = trim( $line );
+			if ( '' === $line ) {
+				continue;
+			}
+			$name = '';
+			if ( preg_match( '/^(.*)<([^>]+)>$/', $line, $mm ) ) {
+				$name  = trim( $mm[1], " \t\"'" );
+				$email = trim( $mm[2] );
+			} elseif ( false !== strpos( $line, ';' ) ) {
+				list( $email, $name ) = array_map( 'trim', explode( ';', $line, 2 ) );
+			} else {
+				$email = $line;
+			}
+			$key = Resandpay_Customers::key( $email );
+			if ( ! is_email( $key ) ) {
+				$out['invalid'][] = $line;
+				continue;
+			}
+			if ( isset( $seen[ $key ] ) ) {
+				continue;
+			}
+			$seen[ $key ] = true;
+			$res          = self::grant_email( $material_id, $key, $name, $days, $note, $notify );
+			if ( is_wp_error( $res ) ) {
+				$out['invalid'][] = $line;
+			} else {
+				++$out['ok'];
+			}
+		}
+		return $out;
+	}
+
+	public static function grant_get( $grant_id ) {
+		global $wpdb;
+		return $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::grants_table() . ' WHERE id = %d', $grant_id ), ARRAY_A );
+	}
+
+	/** Zpřístupnění podle tokenu (osobní odkaz na profil – Resandpay_Profile::verify). */
+	public static function grant_by_token( $token ) {
+		global $wpdb;
+		if ( strlen( (string) $token ) < 20 ) {
+			return null;
+		}
+		return $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::grants_table() . ' WHERE token = %s', $token ), ARRAY_A );
+	}
+
+	/** Jméno zákazníka podle e-mailu (poslední rezervace / zpřístupnění), pro vodoznak a e-maily. */
+	public static function name_for_email( $email ) {
+		global $wpdb;
+		$key  = Resandpay_Customers::key( $email );
+		$name = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT customer_name FROM ' . Resandpay_Reservations::table() . ' WHERE LOWER(TRIM(email)) = %s ORDER BY id DESC LIMIT 1', $key ) );
+		if ( '' === $name ) {
+			$name = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT name FROM ' . self::grants_table() . " WHERE email = %s AND name <> '' ORDER BY id DESC LIMIT 1", $key ) );
+		}
+		return $name;
+	}
+
+	/** „Objednávka“ pro e-mail o zpřístupnění podle e-mailu (token = token zpřístupnění → osobní odkaz). */
+	public static function pseudo_grant( array $mat, array $g ) {
+		$r                  = self::pseudo_order( $mat, new WP_User() );
+		$r['customer_name'] = $g['name'];
+		$r['email']         = $g['email'];
+		$r['token']         = $g['token'];
+		$r['user_id']       = (int) $g['user_id'];
+		return $r;
+	}
+
+	/**
+	 * Materiály dostupné e-mailu (profil zákazníka bez přihlášení), včetně znepřístupněných,
+	 * ke kterým měl nárok (access.disabled).
+	 *
+	 * @return array[] ['mat' => …, 'access' => …]
+	 */
+	public static function for_email( $email ) {
+		$ids = get_posts(
+			array(
+				'post_type'      => Resandpay_Post_Types::MATERIAL,
+				'post_status'    => array( 'publish', 'private' ),
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+				'orderby'        => 'title',
+				'order'          => 'ASC',
+			)
+		);
+		$out = array();
+		foreach ( $ids as $id ) {
+			$mat = self::get( $id );
+			$acc = self::access_email( $mat, $email );
+			if ( ! $acc['ok'] && 'disabled' === $acc['reason'] && self::access_email( $mat, $email, null, true )['ok'] ) {
+				$acc['disabled'] = true;
+			} elseif ( ! $acc['ok'] ) {
+				continue;
+			}
+			$out[] = array(
+				'mat'    => $mat,
+				'access' => $acc,
+			);
+		}
+		return $out;
 	}
 
 	public static function revoke( $grant_id, $reason = '' ) {
@@ -813,6 +1027,8 @@ class Resandpay_Materials {
 			'status'          => Resandpay_Reservations::PAID,
 			'customer_name'   => trim( $user->first_name . ' ' . $user->last_name ) ?: $user->display_name,
 			'email'           => $user->user_email,
+			'user_id'         => (int) $user->ID,
+			'token'           => '',
 			'phone'           => '',
 			'note'            => '',
 			'amount'          => 0,
@@ -855,10 +1071,14 @@ class Resandpay_Materials {
 	 *
 	 * @param bool $inline Přehrát v prohlížeči (video / audio / PDF) místo stažení.
 	 */
-	public static function download_url( $material_id, $file_id, $inline = false, $user_id = null, $now = null ) {
+	public static function download_url( $material_id, $file_id, $inline = false, $user_id = null, $now = null, $email = '' ) {
 		$user_id = null === $user_id ? get_current_user_id() : (int) $user_id;
 		$exp     = self::now_ts( $now ) + max( 5, (int) Resandpay_Settings::get( 'mat_link_minutes' ) ) * MINUTE_IN_SECONDS;
-		$payload = self::b64( wp_json_encode( array( (int) $user_id, (int) $material_id, (string) $file_id, $exp, $inline ? 1 : 0 ) ) );
+		$data    = array( (int) $user_id, (int) $material_id, (string) $file_id, $exp, $inline ? 1 : 0 );
+		if ( ! $user_id && '' !== (string) $email ) {
+			$data[] = Resandpay_Customers::key( $email ); // Zákazník bez přihlášení (#29) – odkaz vázaný na e-mail.
+		}
+		$payload = self::b64( wp_json_encode( $data ) );
 		return add_query_arg( 'rap_dl', $payload . '.' . self::sign( $payload ), home_url( '/' ) );
 	}
 
@@ -873,7 +1093,7 @@ class Resandpay_Materials {
 			return new WP_Error( 'bad_token', __( 'Odkaz ke stažení je neplatný.', 'reserveandpay' ) );
 		}
 		$data = json_decode( (string) self::unb64( $parts[0] ), true );
-		if ( ! is_array( $data ) || 5 !== count( $data ) ) {
+		if ( ! is_array( $data ) || ! in_array( count( $data ), array( 5, 6 ), true ) ) {
 			return new WP_Error( 'bad_token', __( 'Odkaz ke stažení je neplatný.', 'reserveandpay' ) );
 		}
 		if ( (int) $data[3] < self::now_ts( $now ) ) {
@@ -885,16 +1105,18 @@ class Resandpay_Materials {
 			'file'     => (string) $data[2],
 			'exp'      => (int) $data[3],
 			'inline'   => (bool) $data[4],
+			'email'    => isset( $data[5] ) ? (string) $data[5] : '',
 		);
 	}
 
 	/** Počet stažení souboru uživatelem za posledních 24 h (bez přehrávání). */
-	public static function downloads_24h( $user_id, $file_id, $now = null ) {
+	public static function downloads_24h( $user_id, $file_id, $now = null, $email = '' ) {
 		global $wpdb;
-		return (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . self::downloads_table() . " WHERE user_id = %d AND file_id = %s AND kind = 'download' AND result = 'ok' AND created_at > %s", $user_id, $file_id, wp_date( 'Y-m-d H:i:s', self::now_ts( $now ) - DAY_IN_SECONDS ) ) );
+		$who = '' !== $email && ! $user_id ? $wpdb->prepare( 'user_id = 0 AND email = %s', $email ) : $wpdb->prepare( 'user_id = %d', $user_id );
+		return (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . self::downloads_table() . " WHERE {$who} AND file_id = %s AND kind = 'download' AND result = 'ok' AND created_at > %s", $file_id, wp_date( 'Y-m-d H:i:s', self::now_ts( $now ) - DAY_IN_SECONDS ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL
 	}
 
-	public static function log_download( $user_id, $material_id, $file_id, $kind, $result ) {
+	public static function log_download( $user_id, $material_id, $file_id, $kind, $result, $email = '' ) {
 		global $wpdb;
 		$wpdb->insert(
 			self::downloads_table(),
@@ -906,6 +1128,7 @@ class Resandpay_Materials {
 				'kind'        => $kind,
 				'result'      => $result,
 				'ip_hash'     => class_exists( 'Resandpay_Antibot' ) ? Resandpay_Antibot::ip_hash() : '',
+				'email'       => (string) $email,
 			)
 		);
 		if ( 'limit' === $result ) {
@@ -972,12 +1195,16 @@ class Resandpay_Materials {
 		if ( ! $mat || ! $file ) {
 			return new WP_Error( 'not_found', __( 'Soubor už není k dispozici.', 'reserveandpay' ), array( 'status' => 404 ) );
 		}
-		if ( $t['user'] !== $user_id ) {
+		$email = '';
+		if ( 0 === $t['user'] && '' !== $t['email'] ) {
+			$email   = $t['email']; // Odkaz vázaný na e-mail (bez přihlášení).
+			$user_id = 0;
+		} elseif ( $t['user'] !== $user_id ) {
 			return new WP_Error( 'login', __( 'Odkaz ke stažení patří jinému přihlášení. Přihlaste se a načtěte stránku materiálu znovu.', 'reserveandpay' ), array( 'status' => 403 ) );
 		}
 		$sample = $file['sample'] && in_array( $mat['status'], array( 'publish', 'private' ), true ) && empty( $mat['disabled'] );
 		if ( ! $sample ) {
-			$acc = self::access( $mat, $user_id, $now );
+			$acc = '' !== $email ? self::access_email( $mat, $email, $now ) : self::access( $mat, $user_id, $now );
 			if ( ! $acc['ok'] ) {
 				$msg = 'login' === $acc['reason'] ? (string) Resandpay_Settings::get( 'mat_login_text' ) : ( 'disabled' === $acc['reason'] ? (string) Resandpay_Settings::get( 'mat_disabled_text' ) : __( 'K tomuto materiálu nemáte přístup.', 'reserveandpay' ) );
 				return new WP_Error( 'disabled' === $acc['reason'] ? 'disabled' : 'denied', $msg, array( 'status' => 403 ) );
@@ -990,8 +1217,8 @@ class Resandpay_Materials {
 		$kind  = $sample ? 'sample' : ( $t['inline'] ? 'play' : 'download' );
 		// Vodoznak v PDF (#27): kopie s údaji kupujícího; když nejde vytvořit, stáhne se originál a zapíše se do logu.
 		$wm_note = '';
-		if ( 'sample' !== $kind && $user_id && Resandpay_Watermark::is_pdf( $file ) && Resandpay_Watermark::enabled_for( $mat ) ) {
-			$wm = Resandpay_Watermark::make( $abs, $mat, $file, $user_id, $now );
+		if ( 'sample' !== $kind && ( $user_id || '' !== $email ) && Resandpay_Watermark::is_pdf( $file ) && Resandpay_Watermark::enabled_for( $mat ) ) {
+			$wm = Resandpay_Watermark::make( $abs, $mat, $file, $user_id, $now, $email );
 			if ( is_wp_error( $wm ) ) {
 				$wm_note = $wm->get_error_code();
 			} else {
@@ -1000,8 +1227,8 @@ class Resandpay_Materials {
 		}
 		$limit = (int) Resandpay_Settings::get( 'mat_download_limit' );
 		// Limit jen pro skutečné stažení (první požadavek, ne pokračování přerušeného stahování).
-		if ( 'download' === $kind && $limit > 0 && 0 === (int) $range_start && $user_id && ! user_can( $user_id, resandpay_cap_reservations() ) && self::downloads_24h( $user_id, $file['id'], $now ) >= $limit ) {
-			self::log_download( $user_id, $mat['id'], $file['id'], $kind, 'limit' );
+		if ( 'download' === $kind && $limit > 0 && 0 === (int) $range_start && ( '' !== $email || ( $user_id && ! user_can( $user_id, resandpay_cap_reservations() ) ) ) && self::downloads_24h( $user_id, $file['id'], $now, $email ) >= $limit ) {
+			self::log_download( $user_id, $mat['id'], $file['id'], $kind, 'limit', $email );
 			/* translators: %d: limit */
 			return new WP_Error( 'limit', sprintf( __( 'Soubor jste za posledních 24 hodin stáhli už %d×. Zkuste to prosím později, případně nás kontaktujte.', 'reserveandpay' ), $limit ), array( 'status' => 429 ) );
 		}
@@ -1013,6 +1240,7 @@ class Resandpay_Materials {
 			'user'     => $user_id,
 			'inline'   => $t['inline'],
 			'wm_error' => $wm_note,
+			'email'    => $email,
 		);
 	}
 
@@ -1038,9 +1266,9 @@ class Resandpay_Materials {
 			exit;
 		}
 		if ( null === $rng || 0 === $rng[0] ) {
-			self::log_download( $auth['user'], $auth['material']['id'], $auth['file']['id'], $auth['kind'], 'ok' );
+			self::log_download( $auth['user'], $auth['material']['id'], $auth['file']['id'], $auth['kind'], 'ok', $auth['email'] );
 			if ( $auth['wm_error'] ) {
-				self::log_download( $auth['user'], $auth['material']['id'], $auth['file']['id'], 'wm', 'unsupported' ); // Staženo bez vodoznaku.
+				self::log_download( $auth['user'], $auth['material']['id'], $auth['file']['id'], 'wm', 'unsupported', $auth['email'] ); // Staženo bez vodoznaku.
 			}
 		}
 		self::stream( $auth['abs'], $auth['file'], $auth['inline'], $rng, $size );

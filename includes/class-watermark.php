@@ -39,14 +39,15 @@ class Resandpay_Watermark {
 	}
 
 	/** Text vodoznaku pro uživatele. */
-	public static function text( array $mat, $user_id, $now = null ) {
-		$u = $user_id ? get_userdata( $user_id ) : null;
+	public static function text( array $mat, $user_id, $now = null, $email = '' ) {
+		$u    = $user_id ? get_userdata( $user_id ) : null;
+		$name = $u ? ( trim( $u->first_name . ' ' . $u->last_name ) ?: $u->display_name ) : ( '' !== $email ? Resandpay_Materials::name_for_email( $email ) : '' );
 		return trim(
 			strtr(
 				(string) Resandpay_Settings::get( 'mat_wm_text' ),
 				array(
-					'{name}'  => $u ? ( trim( $u->first_name . ' ' . $u->last_name ) ?: $u->display_name ) : '',
-					'{email}' => $u ? $u->user_email : '',
+					'{name}'  => $name,
+					'{email}' => $u ? $u->user_email : $email,
 					'{date}'  => wp_date( 'j. n. Y', $now ?? time() ),
 					'{code}'  => $mat['code'],
 					'{site}'  => wp_parse_url( home_url(), PHP_URL_HOST ),
@@ -107,15 +108,15 @@ class Resandpay_Watermark {
 	 *
 	 * @return string|WP_Error Absolutní cesta ke kopii.
 	 */
-	public static function make( $abs, array $mat, array $file, $user_id, $now = null ) {
+	public static function make( $abs, array $mat, array $file, $user_id, $now = null, $email = '' ) {
 		$sup = self::supported( $abs );
 		if ( is_wp_error( $sup ) ) {
 			return $sup;
 		}
-		$text = self::text( $mat, $user_id, $now );
+		$text = self::text( $mat, $user_id, $now, $email );
 		$pos  = (string) Resandpay_Settings::get( 'mat_wm_position' );
 		$pos  = isset( self::positions()[ $pos ] ) ? $pos : 'footer';
-		$out  = self::cache_dir() . '/' . md5( $abs . '|' . filemtime( $abs ) . '|' . $user_id . '|' . $text . '|' . $pos . '|' . wp_salt() ) . '.pdf';
+		$out  = self::cache_dir() . '/' . md5( $abs . '|' . filemtime( $abs ) . '|' . $user_id . '|' . $email . '|' . $text . '|' . $pos . '|' . wp_salt() ) . '.pdf';
 		if ( is_readable( $out ) && filemtime( $out ) > time() - DAY_IN_SECONDS ) {
 			return $out;
 		}

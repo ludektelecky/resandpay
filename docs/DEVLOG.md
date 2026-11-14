@@ -4,6 +4,17 @@
 >
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
+## 0.24.0 – Materiály podle e-mailu bez účtu (14. 11. 2026)
+
+- **R22 – materiál bez účtu** ([Issue #29](https://github.com/ludektelecky/resandpay/issues/29), schváleno a implementováno):
+  - **Zpřístupnění podle e-mailu** v editoru materiálu (Přístupy) – i **více e-mailů najednou** (každý na řádek, případně „Jméno <e-mail>“), **účet není potřeba**. Zákazník dostane e-mail s **odkazem na materiál** a na **svůj profil**, kde si ho stáhne bez přihlášení.
+  - **Objednávka placeného materiálu bez účtu** – na stránce materiálu jméno a e-mail místo přihlášení (je-li vybraná stránka profilu zákazníka); po zaplacení přijde odkaz ke stažení.
+  - **Profil zákazníka** má novou část **Materiály ke stažení**; odkaz z e-mailu otevře i stránku materiálu se soubory.
+  - Kdo si později založí **účet se stejným e-mailem**, uvidí materiál i v **Moje materiály**.
+  - Limity stažení, log stažení a vodoznak fungují i podle e-mailu.
+- Nová šablona e-mailu **Materiál – zpřístupněn bez účtu** (Nastavení → E-maily).
+- Databáze 15 (e-mail a token u zpřístupnění, e-mail v logu stažení). Testy: 733 kontrol + souběh
+
 ## 0.23.0 – Vodoznak v PDF materiálů (14. 11. 2026)
 
 - **R21 – vodoznak v PDF** (R11-e, [Issue #27](https://github.com/ludektelecky/resandpay/issues/27), schváleno a implementováno): do staženého PDF materiálu se vloží **údaje kupujícího** a zapíší se i do **metadat PDF**. Ve výchozím stavu vypnuto.

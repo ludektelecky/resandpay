@@ -2027,7 +2027,7 @@ update_option( Resandpay_Settings::OPTION, $mlSaved, false );
 
 echo "== 0.20.0: profil zákazníka Moje rezervace (#24)\n";
 $pfSaved = get_option( Resandpay_Settings::OPTION );
-rap_t( '14' === RESANDPAY_DB_VERSION && array_key_exists( 'newsletter_src', Resandpay_Reservations::query( array( 'per_page' => 1 ) )['items'][0] ?? array() ), 'migrace DB 14: záznam změny souhlasu u rezervací' );
+rap_t( (int) RESANDPAY_DB_VERSION >= 14 && array_key_exists( 'newsletter_src', Resandpay_Reservations::query( array( 'per_page' => 1 ) )['items'][0] ?? array() ), 'migrace DB 14: záznam změny souhlasu u rezervací' );
 rap_t( 0 === (int) Resandpay_Settings::defaults()['profile_page'] && 30 === (int) Resandpay_Settings::defaults()['profile_link_days'], 'výchozí stav: profil bez stránky, odkaz 30 dní' );
 $pfEvA = rap_event( 'Profil nadcházející', $now + 60 * $day, $now + 60 * $day + HOUR_IN_SECONDS, 10 );
 $pfEvB = rap_event( 'Profil proběhlá', $now + 61 * $day, $now + 61 * $day + HOUR_IN_SECONDS, 10 );
@@ -2312,6 +2312,80 @@ rap_t( '' === get_post_meta( $wmM, '_rap_mat_wm', true ), 'neplatná volba u mat
 wp_delete_post( $wmM, true );
 wp_delete_user( $wmUser );
 update_option( Resandpay_Settings::OPTION, $wmSaved, false );
+
+echo "== 0.24.0: materiál podle e-mailu bez účtu (#29)\n";
+$geSaved = get_option( Resandpay_Settings::OPTION );
+$gePage  = wp_insert_post( array( 'post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'Profil 29', 'post_content' => '[reserveandpay_my_reservations]' ) );
+Resandpay_Settings::update( array( 'profile_page' => $gePage, 'antibot_min_seconds' => 0 ) );
+$geM = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::MATERIAL, 'post_status' => 'publish', 'post_title' => 'Kniha bez účtu' ) );
+Resandpay_Admin_Materials::save_meta( $geM, array( 'rap_mat_access' => 'paid', 'rap_price' => '150' ) );
+Resandpay_Materials::save_files( $geM, array( array( 'id' => 'g1', 'label' => 'Kniha', 'name' => 'kniha.epub', 'path' => 'm' . $geM . '-abcdefghij/kniha.epub', 'size' => 5, 'mime' => 'application/epub+zip', 'sample' => 0 ) ) );
+$geF = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::MATERIAL, 'post_status' => 'publish', 'post_title' => 'Zdarma pro přihlášené 29' ) );
+Resandpay_Admin_Materials::save_meta( $geF, array( 'rap_mat_access' => 'free' ) );
+// Hromadné zpřístupnění podle e-mailu.
+$GLOBALS['rap_mails'] = array();
+$geB = Resandpay_Materials::grant_bulk( $geM, "anna.zak29@example.cz\nBohdan Bez Účtu <Bohdan.Zak29@Example.cz>\nnesmysl\nanna.zak29@example.cz", 0, 'workshop', true );
+rap_t( 2 === $geB['ok'] && array( 'nesmysl' ) === $geB['invalid'] && 2 === count( $GLOBALS['rap_mails'] ), 'hromadné zpřístupnění: platné e-maily (bez duplicit), neplatné přeskočeny, e-maily odeslány' );
+$geG = Resandpay_Materials::grants( $geM, 0, true, 'bohdan.zak29@example.cz' );
+rap_t( 1 === count( $geG ) && 0 === (int) $geG[0]['user_id'] && 'Bohdan Bez Účtu' === $geG[0]['name'] && strlen( $geG[0]['token'] ) >= 40, 'zpřístupnění bez účtu: e-mail, jméno, token' );
+$geMail = $GLOBALS['rap_mails'][1]['message'] ?? '';
+rap_t( false !== strpos( $geMail, 'rap_p=' ) && false !== strpos( $geMail, get_permalink( $geM ) ) && false !== strpos( $geMail, get_permalink( $gePage ) ), 'e-mail: odkaz na materiál i na profil s osobním tokenem' );
+$geMat = Resandpay_Materials::get( $geM );
+rap_t( Resandpay_Materials::access_email( $geMat, 'BOHDAN.zak29@example.cz' )['ok'] && ! Resandpay_Materials::access_email( $geMat, 'cizi.zak29@example.cz' )['ok'], 'přístup podle e-mailu bez přihlášení' );
+rap_t( 'login' === Resandpay_Materials::access_email( Resandpay_Materials::get( $geF ), 'bohdan.zak29@example.cz' )['reason'], 'materiál zdarma pro přihlášené bez účtu nezpřístupní' );
+$geTok = Resandpay_Profile::token_for( $geG[0] );
+rap_t( 'bohdan.zak29@example.cz' === Resandpay_Profile::verify( $geTok ), 'osobní odkaz ze zpřístupnění platí pro profil' );
+// Profil bez přihlášení: materiál ke stažení.
+wp_set_current_user( 0 );
+$_REQUEST['rap_p'] = $geTok;
+$geProf = Resandpay_Profile::shortcode();
+rap_t( false !== strpos( $geProf, 'Materiály ke stažení' ) && false !== strpos( $geProf, 'Kniha bez účtu' ) && false !== strpos( $geProf, 'rap_dl=' ), 'profil: materiál ke stažení bez přihlášení' );
+preg_match( '/rap_dl=([^"&]+)/', $geProf, $geDl );
+$geAuth = Resandpay_Materials::authorize( rawurldecode( $geDl[1] ?? '' ), 0 );
+rap_t( is_wp_error( $geAuth ) && 'not_found' === $geAuth->get_error_code(), 'odkaz ke stažení vázaný na e-mail projde ověřením nároku' );
+$geBad = Resandpay_Materials::download_url( $geM, 'g1', false, 0, null, 'cizi.zak29@example.cz' );
+parse_str( (string) wp_parse_url( $geBad, PHP_URL_QUERY ), $geQ );
+$geAuth2 = Resandpay_Materials::authorize( $geQ['rap_dl'], 0 );
+rap_t( is_wp_error( $geAuth2 ) && 'denied' === $geAuth2->get_error_code(), 'odkaz na cizí e-mail bez nároku se odmítne' );
+$geBox = Resandpay_Materials_Views::render_box( $geMat );
+rap_t( false !== strpos( $geBox, 'rap_dl=' ) && false === strpos( $geBox, 'Přihlásit se' ), 'stránka materiálu s osobním odkazem: soubory ke stažení bez přihlášení' );
+unset( $_REQUEST['rap_p'] );
+// Objednávka bez účtu.
+$geBox0 = Resandpay_Materials_Views::render_box( $geMat );
+rap_t( false !== strpos( $geBox0, 'name="rap_email"' ) && false !== strpos( $geBox0, 'Přihlaste se' ), 'nepřihlášený: objednávkový formulář s e-mailem (a možnost přihlášení)' );
+$geO = Resandpay_Materials::order( $geM, 0, array( 'customer_name' => 'Cyril Bez Účtu', 'email' => 'Cyril.Zak29@example.cz', 'consent_gdpr' => 1, 'consent_terms' => 1, 'consent_digital' => 1, 'newsletter' => 1 ) );
+rap_t( ! is_wp_error( $geO ) && 0 === (int) $geO['user_id'] && 'cyril.zak29@example.cz' === $geO['email'] && Resandpay_Reservations::PENDING === $geO['status'], 'objednávka bez účtu: e-mail, čeká na platbu' );
+rap_t( is_wp_error( Resandpay_Materials::order( $geM, 0, array( 'customer_name' => 'X', 'email' => 'nesmysl', 'consent_gdpr' => 1, 'consent_terms' => 1, 'consent_digital' => 1 ) ) ), 'objednávka bez účtu vyžaduje platný e-mail' );
+$geDup = Resandpay_Materials::order( $geM, 0, array( 'customer_name' => 'Cyril', 'email' => 'cyril.zak29@example.cz', 'consent_gdpr' => 1, 'consent_terms' => 1, 'consent_digital' => 1 ) );
+rap_t( is_wp_error( $geDup ) && 'pending' === $geDup->get_error_code(), 'druhá objednávka téhož e-mailu nevznikne, dokud se čeká na platbu' );
+rap_t( 'pending' === Resandpay_Materials::access_email( $geMat, 'cyril.zak29@example.cz' )['reason'], 'bez účtu: čeká na platbu' );
+Resandpay_Reservations::set_status( $geO['id'], Resandpay_Reservations::PAID, array( 'method' => 'transfer_manual' ) );
+rap_t( Resandpay_Materials::access_email( $geMat, 'cyril.zak29@example.cz' )['ok'], 'po zaplacení přístup podle e-mailu' );
+$gePaid = Resandpay_Mailer::build( 'paid', Resandpay_Reservations::get( $geO['id'] ) );
+rap_t( 1 <= substr_count( $gePaid['text'], 'rap_p=' ), 'e-mail o zaplacení: odkaz ke stažení bez přihlášení' );
+// Účet se stejným e-mailem později – Moje materiály.
+$geUser = wp_insert_user( array( 'user_login' => 'cyril29', 'user_email' => 'cyril.zak29@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
+$geBohUser = wp_insert_user( array( 'user_login' => 'bohdan29', 'user_email' => 'bohdan.zak29@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
+rap_t( Resandpay_Materials::access( $geMat, $geUser )['ok'] && Resandpay_Materials::access( $geMat, $geBohUser )['ok'], 'účet se stejným e-mailem: objednávka i zpřístupnění bez účtu platí' );
+rap_t( (bool) wp_list_filter( wp_list_pluck( Resandpay_Materials::for_user( $geBohUser ), 'mat' ), array( 'id' => $geM ) ), 'Moje materiály po přihlášení zobrazí materiál zpřístupněný přes e-mail' );
+// Pošlete mi odkaz – jen zpřístupnění, bez rezervace.
+$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '\\_transient\\_%rap\\_pl\\_%'" );
+wp_cache_flush();
+$GLOBALS['rap_mails'] = array();
+Resandpay_Profile::send_link( 'anna.zak29@example.cz' );
+rap_t( 1 === count( $GLOBALS['rap_mails'] ) && false !== strpos( $GLOBALS['rap_mails'][0]['message'], 'rap_p=' ), 'Pošlete mi odkaz funguje i jen se zpřístupněním (bez rezervace)' );
+// Odebrání a log stažení podle e-mailu.
+Resandpay_Materials::revoke( $geG[0]['id'], 'test' );
+rap_t( ! Resandpay_Materials::access_email( $geMat, 'bohdan.zak29@example.cz' )['ok'], 'odebrání přístupu platí i bez účtu' );
+$wpdb->delete( Resandpay_Materials::downloads_table(), array( 'email' => 'anna.zak29@example.cz' ) );
+Resandpay_Materials::log_download( 0, $geM, 'g1', 'download', 'ok', 'anna.zak29@example.cz' );
+rap_t( 1 === Resandpay_Materials::downloads_24h( 0, 'g1', null, 'anna.zak29@example.cz' ) && 0 === Resandpay_Materials::downloads_24h( 0, 'g1', null, 'jina.zak29@example.cz' ), 'limit stažení počítá podle e-mailu' );
+foreach ( array( $geUser, $geBohUser ) as $geX ) {
+	wp_delete_user( $geX );
+}
+wp_delete_post( $geM, true );
+wp_delete_post( $geF, true );
+update_option( Resandpay_Settings::OPTION, $geSaved, false );
 
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
