@@ -10,6 +10,14 @@
 - Banka pro příjem plateb: Raiffeisenbank (avíza „Pohyb na účtě“ z info@rb.cz). Vzorové avízo: `tests/fixtures/rb-prichozi-okamzita-platba.eml`.
 - Pravidla fáze 1 (zadání kap. 14.1): nic natvrdo – identifikace, schránka, banka, vzhled, texty a měna jsou v nastavení.
 
+## Pravidla vývoje (obecný plugin)
+- **Zpětná kompatibilita:** technické názvy se nikdy nemění ani neruší – složka a slug `reserveandpay`, tabulky, volby a meta `resandpay_*` / `_rap_*`, shortcody `[reserveandpay_…]`, hooky a filtry `resandpay_*`, CSS proměnné `--rap-*` a třídy `rap-…` (README → Vzhled a CSS). Nové názvy lze přidat jako alias, staré zůstávají funkční.
+- **Změny dat a nastavení jen migrací:** zvýšit `RESANDPAY_DB_VERSION` a doplnit krok do `Resandpay_Install::maybe_upgrade()`. Migrace nikdy nepřepíše hodnoty uložené uživatelem; nový výchozí stav pro nové instalace nesmí změnit chování stávajících webů (vzor: `keep_legacy_brand()` v 0.17.0).
+- **Nic vázaného na jeden web:** v kódu žádné texty, barvy, adresy, loga ani výchozí hodnoty ze slehkouhlavou.cz – patří jen do nastavení daného webu. Výchozí hodnoty pro nové instalace jsou neutrální.
+- **Texty pro uživatele přes `__()` / `esc_html__()`** s textovou doménou `reserveandpay` (příprava na angličtinu); texty upravitelné v Nastavení mají výchozí hodnotu v `Resandpay_Settings::defaults()`.
+- **Každá změna s testem** v `tests/run-tests.php`; u opravy chyby test, který chybu zachytí. Před commitem musí projít `run-tests.php` i `concurrency.sh 12`.
+- Bezpečnost: vstupy ošetřovat (`sanitize_*`), výstupy escapovat (`esc_*`), akce v administraci s nonce a kontrolou oprávnění.
+
 ## Vydání verze (od 0.16.0)
 - Push na `main` se změněným číslem verze v `reserveandpay.php` spustí `.github/workflows/release.yml` → GitHub release `vX.Y.Z` s balíčkem a popisem z DEVLOGu; z něj se plugin aktualizuje ve WordPressu. Tagy a releasy ze session vytvářet nejde – vše dělá workflow. Číslo verze měnit jen při vydání; sekce `## X.Y.Z – …` v DEVLOGu musí existovat. Změny vyžadující zásah označit v DEVLOGu „⚠ Po aktualizaci:“.
 
@@ -19,7 +27,7 @@
 - Repozitář je veřejný: v dokumentaci a testech jen vzorové údaje (účty `123456789/2700`, adresy `@example.cz`, IČ `12345678`), nikdy skutečná čísla účtů, schránky ani hesla.
 - Google Disk se už nepoužívá; balíčky jsou v GitHub Releases.
 
-## Pojmenování (SWD kap. 14.5)
+## Pojmenování (zadání kap. 14.5)
 - Plný název **ReserveAndPay** – kde se pojmenovává produkt (seznam pluginů, titulky stránek, dokumentace, CRON, PDF).
 - **ResAndPay** – název v menu administrace a repozitář; cesty v textech psát „ResAndPay → Platby“.
 - **RAP** – jen kde je nutné nejkratší označení (předmět testovacích e-mailů, log, technické předpony).
