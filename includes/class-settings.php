@@ -105,6 +105,7 @@ class Resandpay_Settings {
 			'mat_register_page'    => 0,
 			'mat_login_text'       => 'Materiály ke stažení jsou pro přihlášené. Přihlaste se, nebo si zdarma založte účet.',
 			'mat_roles_text'       => 'Tento materiál je jen pro členy.',
+			'mat_disabled_text'    => 'Materiál už není k dispozici.',
 			'mat_digital_consent'  => 'Souhlasím s poskytnutím digitálního obsahu před uplynutím lhůty pro odstoupení od smlouvy a beru na vědomí, že tím právo na odstoupení zaniká.',
 			// Kontrola plateb (SWD kap. 6.4).
 			'payment_mode'         => 'auto',

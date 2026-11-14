@@ -169,6 +169,9 @@ class Resandpay_Materials_Views {
 				case 'role':
 					$out .= '<p class="rap-notice">' . esc_html( (string) Resandpay_Settings::get( 'mat_roles_text' ) ) . '</p>';
 					break;
+				case 'disabled':
+					$out .= '<p class="rap-notice">' . esc_html( (string) Resandpay_Settings::get( 'mat_disabled_text' ) ) . '</p>';
+					break;
 				case 'withdrawn':
 				case 'unavailable':
 					$out .= '<p class="rap-notice">' . esc_html__( 'Materiál už není v nabídce.', 'reserveandpay' ) . '</p>';
@@ -193,6 +196,9 @@ class Resandpay_Materials_Views {
 	 * Seznam souborů. $locked = bez přístupu: vypíše názvy (a ukázky ke stažení).
 	 */
 	public static function render_files( array $mat, $locked ) {
+		if ( ! empty( $mat['disabled'] ) && $locked ) {
+			return ''; // Znepřístupněný materiál: ani názvy souborů, ani ukázky.
+		}
 		if ( ! $mat['files'] ) {
 			return $locked ? '' : '<p class="rap-small">' . esc_html__( 'Soubory se připravují.', 'reserveandpay' ) . '</p>';
 		}
@@ -391,7 +397,7 @@ class Resandpay_Materials_Views {
 		$a  = shortcode_atts( array( 'id' => '' ), $atts, 'reserveandpay_material' );
 		$id = self::resolve( $a['id'] );
 		$m  = $id ? Resandpay_Materials::get( $id ) : null;
-		return $m && 'publish' === $m['status'] ? '<div class="rap-materials rap-mat-grid rap-mat-grid--single">' . self::card( $m ) . '</div>' : '';
+		return $m && 'publish' === $m['status'] && empty( $m['disabled'] ) ? '<div class="rap-materials rap-mat-grid rap-mat-grid--single">' . self::card( $m ) . '</div>' : '';
 	}
 
 	/** Kód (MA-001), slug nebo ID → ID materiálu. */
@@ -452,6 +458,10 @@ class Resandpay_Materials_Views {
 			if ( $it['access']['until'] ) {
 				/* translators: %s: datum */
 				$out .= '<p class="rap-small">' . esc_html( sprintf( __( 'Přístup do %s', 'reserveandpay' ), wp_date( 'j. n. Y', $it['access']['until'] ) ) ) . '</p>';
+			}
+			if ( ! empty( $it['access']['disabled'] ) ) {
+				$out .= '<p class="rap-notice">' . esc_html( (string) Resandpay_Settings::get( 'mat_disabled_text' ) ) . '</p></section>';
+				continue;
 			}
 			$out .= self::render_files( $m, false ) . '</section>';
 		}

@@ -58,7 +58,7 @@ function rap_person( $n ) {
 }
 
 require_once ABSPATH . 'wp-admin/includes/template.php';
-foreach ( array( 'class-admin.php', 'class-admin-events.php', 'class-admin-settings.php', 'class-admin-services.php', 'class-admin-shortcodes.php', 'class-admin-checkin.php', 'class-admin-payments.php', 'class-customers-table.php', 'class-admin-customers.php', 'class-admin-mailerlite.php' ) as $f ) {
+foreach ( array( 'class-admin.php', 'class-admin-events.php', 'class-admin-settings.php', 'class-admin-services.php', 'class-admin-shortcodes.php', 'class-admin-checkin.php', 'class-admin-payments.php', 'class-customers-table.php', 'class-admin-customers.php', 'class-admin-mailerlite.php', 'class-admin-materials.php' ) as $f ) {
 	require_once RESANDPAY_DIR . 'admin/' . $f;
 }
 
@@ -2133,6 +2133,53 @@ remove_filter( 'pre_http_request', $pfMock, 10 );
 wp_clear_scheduled_hook( Resandpay_MailerLite::CRON );
 wp_delete_user( $pfUser );
 update_option( Resandpay_Settings::OPTION, $pfSaved, false );
+
+echo "== 0.21.0: znepřístupnění materiálu (#26)\n";
+require_once RESANDPAY_DIR . 'public/class-materials-views.php';
+$mdUser  = wp_insert_user( array( 'user_login' => 'mat26', 'user_email' => 'mat26.zak@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
+$mdOther = wp_insert_user( array( 'user_login' => 'mat26b', 'user_email' => 'mat26b.zak@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
+$mdId    = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::MATERIAL, 'post_status' => 'publish', 'post_title' => 'Znepřístupněný eBook' ) );
+Resandpay_Admin_Materials::save_meta( $mdId, array( 'rap_mat_access' => 'paid', 'rap_price' => '200', 'rap_mat_days' => '0' ) );
+Resandpay_Materials::save_files( $mdId, array( array( 'id' => 'f26', 'label' => 'eBook PDF', 'name' => 'ebook.pdf', 'path' => 'm26/ebook.pdf', 'size' => 10, 'mime' => 'application/pdf', 'sample' => 1 ) ) );
+Resandpay_Materials::grant( $mdId, $mdUser, -1, 'test' );
+$mdMat = Resandpay_Materials::get( $mdId );
+rap_t( ! $mdMat['disabled'] && ! $mdMat['withdrawn'] && Resandpay_Materials::access( $mdMat, $mdUser )['ok'] && ! Resandpay_Materials::access( $mdMat, $mdOther )['ok'] && Resandpay_Materials::purchasable( $mdMat ), 'v nabídce: nárok funguje, ostatní mohou koupit' );
+// Staženo z nabídky – kdo má, stahuje dál.
+Resandpay_Admin_Materials::save_meta( $mdId, array( 'rap_mat_access' => 'paid', 'rap_price' => '200', 'rap_mat_availability' => 'withdrawn' ) );
+$mdMat = Resandpay_Materials::get( $mdId );
+rap_t( $mdMat['withdrawn'] && ! $mdMat['disabled'] && Resandpay_Materials::access( $mdMat, $mdUser )['ok'] && ! Resandpay_Materials::purchasable( $mdMat ), 'staženo z nabídky: kdo ho má, stahuje dál; nelze koupit' );
+// Znepřístupněno – nikdo kromě správců.
+wp_set_current_user( 1 );
+Resandpay_Admin_Materials::save_meta( $mdId, array( 'rap_mat_access' => 'paid', 'rap_price' => '200', 'rap_mat_availability' => 'disabled' ) );
+wp_set_current_user( 0 );
+$mdMat = Resandpay_Materials::get( $mdId );
+$mdAcc = Resandpay_Materials::access( $mdMat, $mdUser );
+rap_t( $mdMat['disabled'] && $mdMat['withdrawn'] && ! $mdAcc['ok'] && 'disabled' === $mdAcc['reason'] && ! Resandpay_Materials::purchasable( $mdMat ), 'znepřístupněno: ani kdo ho má, nestáhne; nelze koupit' );
+rap_t( Resandpay_Materials::access( $mdMat, 1 )['ok'], 'znepřístupněno: správce má přístup dál' );
+rap_t( get_post_meta( $mdId, '_rap_mat_disabled_at', true ) && 1 === (int) get_post_meta( $mdId, '_rap_mat_disabled_by', true ), 'záznam kdo a kdy materiál znepřístupnil' );
+$mdTok = wp_parse_url( Resandpay_Materials::download_url( $mdId, 'f26', false, $mdUser ), PHP_URL_QUERY );
+parse_str( $mdTok, $mdQ );
+$mdAuth = Resandpay_Materials::authorize( $mdQ['rap_dl'], $mdUser );
+rap_t( is_wp_error( $mdAuth ) && 'disabled' === $mdAuth->get_error_code() && 403 === $mdAuth->get_error_data()['status'], 'už vydaný odkaz ke stažení přestane platit' );
+$mdTok0 = wp_parse_url( Resandpay_Materials::download_url( $mdId, 'f26', false, 0 ), PHP_URL_QUERY );
+parse_str( $mdTok0, $mdQ0 );
+rap_t( is_wp_error( Resandpay_Materials::authorize( $mdQ0['rap_dl'], 0 ) ), 'ani ukázka se nestáhne' );
+$mdMy = Resandpay_Materials::for_user( $mdUser );
+$mdIt = wp_list_filter( wp_list_pluck( $mdMy, 'mat' ), array( 'id' => $mdId ) );
+rap_t( $mdIt && ! empty( array_values( array_filter( $mdMy, fn( $x ) => $x['mat']['id'] === $mdId ) )[0]['access']['disabled'] ) && ! wp_list_filter( wp_list_pluck( Resandpay_Materials::for_user( $mdOther ), 'mat' ), array( 'id' => $mdId ) ), 'Moje materiály: u toho, kdo měl nárok, jako nedostupný; u ostatních vůbec' );
+wp_set_current_user( $mdUser );
+$mdMyHtml  = Resandpay_Materials_Views::shortcode_my();
+$mdBox     = Resandpay_Materials_Views::shortcode_card( array( 'id' => (string) $mdId ) );
+wp_set_current_user( 0 );
+rap_t( false !== strpos( $mdMyHtml, 'Materiál už není k dispozici.' ) && false === strpos( $mdMyHtml, 'rap_dl=' ) && '' === $mdBox, 'Moje materiály: text z nastavení, bez odkazů; karta materiálu se nezobrazí' );
+// Vrácení do nabídky obnoví nárok.
+Resandpay_Admin_Materials::save_meta( $mdId, array( 'rap_mat_access' => 'paid', 'rap_price' => '200', 'rap_mat_availability' => 'offer' ) );
+rap_t( Resandpay_Materials::access( Resandpay_Materials::get( $mdId ), $mdUser )['ok'], 'po vrácení do nabídky se nárok obnoví' );
+Resandpay_Admin_Materials::save_meta( $mdId, array( 'rap_mat_access' => 'paid', 'rap_price' => '200', 'rap_mat_withdrawn' => '1' ) );
+rap_t( Resandpay_Materials::get( $mdId )['withdrawn'] && ! Resandpay_Materials::get( $mdId )['disabled'], 'starší formulář (zaškrtávátko) dál funguje' );
+wp_delete_user( $mdUser );
+wp_delete_user( $mdOther );
+wp_delete_post( $mdId, true );
 
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 

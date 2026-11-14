@@ -120,9 +120,20 @@ class Resandpay_Admin_Materials {
 					<?php endforeach; ?></optgroup>
 				</select>
 					<p class="description"><?php esc_html_e( 'Kdo má zaplacenou rezervaci vybrané akce nebo termínu služby, má materiál zdarma (podle účtu nebo stejného e-mailu). Výběr více položek s Ctrl / Cmd.', 'reserveandpay' ); ?></p></td></tr>
-			<tr><th><?php esc_html_e( 'Nabídka', 'reserveandpay' ); ?></th>
-				<td><label><input type="checkbox" name="rap_mat_withdrawn" value="1" <?php checked( $mat['withdrawn'] ); ?>> <?php esc_html_e( 'Staženo z nabídky', 'reserveandpay' ); ?></label>
-					<p class="description"><?php esc_html_e( 'Materiál zmizí z katalogu a nelze ho objednat; kdo už ho má, stahuje dál.', 'reserveandpay' ); ?></p></td></tr>
+			<?php $avail = $mat['disabled'] ? 'disabled' : ( $mat['withdrawn'] ? 'withdrawn' : 'offer' ); ?>
+			<tr><th><?php esc_html_e( 'Dostupnost', 'reserveandpay' ); ?></th>
+				<td><label class="rap-inline"><input type="radio" name="rap_mat_availability" value="offer" <?php checked( $avail, 'offer' ); ?>> <?php esc_html_e( 'V nabídce', 'reserveandpay' ); ?></label><br>
+					<label class="rap-inline"><input type="radio" name="rap_mat_availability" value="withdrawn" <?php checked( $avail, 'withdrawn' ); ?>> <?php esc_html_e( 'Staženo z nabídky', 'reserveandpay' ); ?></label> – <span class="description"><?php esc_html_e( 'zmizí z katalogu a nelze ho objednat; kdo už ho má, stahuje dál.', 'reserveandpay' ); ?></span><br>
+					<label class="rap-inline"><input type="radio" name="rap_mat_availability" value="disabled" <?php checked( $avail, 'disabled' ); ?>> <?php esc_html_e( 'Znepřístupněno', 'reserveandpay' ); ?></label> – <span class="description"><?php esc_html_e( 'zmizí z katalogu a nikdo ho nestáhne, ani kdo ho už má (správci ano). Nároky zůstávají – po vrácení do nabídky se obnoví. Zákazníkům se nic neposílá.', 'reserveandpay' ); ?></span>
+					<?php
+					$dis_at = get_post_meta( $post->ID, '_rap_mat_disabled_at', true );
+					if ( $mat['disabled'] && $dis_at ) {
+						$by = get_userdata( (int) get_post_meta( $post->ID, '_rap_mat_disabled_by', true ) );
+						/* translators: 1: datum, 2: uživatel */
+						echo '<p class="description">' . esc_html( sprintf( __( 'Znepřístupněno %1$s (%2$s).', 'reserveandpay' ), wp_date( 'j. n. Y G:i', Resandpay_Events::ts( $dis_at ) ), $by ? $by->display_name : '—' ) ) . '</p>';
+					}
+					?>
+				</td></tr>
 		</table>
 		<?php
 	}
@@ -255,7 +266,15 @@ class Resandpay_Admin_Materials {
 			update_post_meta( $post_id, $meta, '' === $v ? '' : max( 0, (int) $v ) );
 		}
 		update_post_meta( $post_id, '_rap_mat_links', implode( ',', array_filter( array_map( 'absint', (array) ( $in['rap_mat_links'] ?? array() ) ) ) ) );
-		update_post_meta( $post_id, '_rap_mat_withdrawn', empty( $in['rap_mat_withdrawn'] ) ? 0 : 1 );
+		// Dostupnost (#26): v nabídce / staženo z nabídky / znepřístupněno (starší formulář: zaškrtávátko rap_mat_withdrawn).
+		$avail = isset( $in['rap_mat_availability'] ) ? sanitize_key( $in['rap_mat_availability'] ) : ( empty( $in['rap_mat_withdrawn'] ) ? 'offer' : 'withdrawn' );
+		$was   = (bool) get_post_meta( $post_id, '_rap_mat_disabled', true );
+		update_post_meta( $post_id, '_rap_mat_withdrawn', in_array( $avail, array( 'withdrawn', 'disabled' ), true ) ? 1 : 0 );
+		update_post_meta( $post_id, '_rap_mat_disabled', 'disabled' === $avail ? 1 : 0 );
+		if ( 'disabled' === $avail && ! $was ) {
+			update_post_meta( $post_id, '_rap_mat_disabled_at', current_time( 'mysql' ) );
+			update_post_meta( $post_id, '_rap_mat_disabled_by', get_current_user_id() );
+		}
 
 		// Soubory: popisky, ukázka, pořadí, odstranění; nově nahrané (JS) mají data v hidden poli.
 		if ( isset( $in['rap_files'] ) || isset( $in['rap_files_present'] ) ) {
@@ -407,7 +426,9 @@ class Resandpay_Admin_Materials {
 				break;
 			case 'rap_access':
 				echo esc_html( Resandpay_Materials::ACCESS_PAID === $mat['access'] ? Resandpay_Events::format_price( $mat['price'], $mat['currency'] ) : Resandpay_Materials::access_labels()[ $mat['access'] ] );
-				if ( $mat['withdrawn'] ) {
+				if ( $mat['disabled'] ) {
+					echo '<br><strong class="rap-err">' . esc_html__( 'znepřístupněno', 'reserveandpay' ) . '</strong>';
+				} elseif ( $mat['withdrawn'] ) {
 					echo '<br><em>' . esc_html__( 'staženo z nabídky', 'reserveandpay' ) . '</em>';
 				}
 				break;

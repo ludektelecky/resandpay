@@ -19,7 +19,7 @@ Vývoj probíhá na webu slehkouhlavou.cz (WordPress 7.1, PHP 8.5, MySQL 8.4, Ac
 
 ## 15.1 Kniha rozvoje
 
-> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R18 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
+> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R19 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
 
 Funkce navržené k dalšímu rozvoji pluginu. Položka se po schválení podrobného zadání přesune do příslušné kapitoly a do tabulky stavu realizace.
 
@@ -168,7 +168,7 @@ Typ obsahu „Materiál“ (resandpay_material) s adresou /materialy/…/, bloko
 | Splatnost objednávky | Dní od objednání; prázdné = nastavení (výchozí 7) |
 | Doba přístupu | Dní od zaplacení (u účastnic od zaplacení rezervace, u ručního zpřístupnění od jeho data); 0 = natrvalo; prázdné = nastavení |
 | Zdarma pro účastnice | Výběr akcí a služeb (všechny termíny služby); rezervace se páruje podle účtu nebo stejného e-mailu |
-| Staženo z nabídky | Zmizí z katalogu a nelze ho objednat; kdo ho má, stahuje dál |
+| Dostupnost | V nabídce / **Staženo z nabídky** – zmizí z katalogu a nelze ho objednat, kdo ho má, stahuje dál / **Znepřístupněno** (od 0.21.0, R19) – zmizí z katalogu a nikdo ho nestáhne |
 | Soubory | 1 až N: popisek na webu, původní název, velikost, typ, „ukázka (bez přihlášení)“, pořadí |
 
 Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, poznámka, odebrání s důvodem) a resandpay_downloads (log stažení). Tabulka rezervací má nové sloupce item_type (event / material) a consent_digital_at.
@@ -309,3 +309,13 @@ Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, po
 - **Obsah profilu:** všechny rezervace zákazníka – **Nadcházející** (platné rezervace akcí a termínů, které ještě neskončily, podle data), **Proběhlé nebo zrušené** (proběhlé, zrušené a expirované), **Objednávky materiálů**. U každé: název s odkazem, termín, místo, datum rezervace, stav, částka, uhrazeno a zbývá, splatnost, VS; u nezaplacených QR platba a **Platební pokyn (PDF)**; u zaplacených materiálů odkaz do Moje materiály. Poznámka zákazníka se nezobrazuje.
 - **Novinky e-mailem:** zaškrtávací pole „Chci dostávat novinky e-mailem“ – změna se zapíše ke všem rezervacím zákazníka s datem a způsobem (sloupce newsletter_at, newsletter_src; DB 14; v detailu rezervace „změněno zákazníkem v profilu“). Udělení souhlasu → zařazení do MailerLite; odvolání → odhlášení v MailerLite (stav „odhlášeno (souhlas odvolán)“, filtr v přehledu Zákazníci; import ho nenabízí) – je-li napojení zapnuté. Hook resandpay_newsletter_changed.
 - Stránka profilu se neukládá do cache, neindexuje (noindex) a posílá Referrer-Policy: no-referrer.
+
+### R19 – Znepřístupnění materiálu
+
+**Pozn.: Navrženo a schváleno 14. 11. 2026 ([Issue #26](https://github.com/ludektelecky/resandpay/issues/26)), implementováno ve verzi pluginu 0.21.0.**
+
+- Parametry materiálu → **Dostupnost**: V nabídce / Staženo z nabídky (beze změny: zmizí z katalogu, nelze objednat, kdo ho má, stahuje dál) / **Znepřístupněno**.
+- Znepřístupněný materiál zmizí z katalogu i z karty `[reserveandpay_material]` a **nikdo ho nestáhne** – ani se zaplacenou objednávkou, ručním zpřístupněním nebo jako účastník; nestáhne se ani ukázka a už vydané odkazy ke stažení přestanou platit (nárok se ověřuje při každém stažení). Správci (oprávnění k rezervacím) mají přístup dál.
+- Na stránce materiálu, v Moje materiály (u toho, kdo měl nárok) a v profilu zákazníka se místo souborů zobrazí text z Nastavení → Materiály ke stažení („Text u znepřístupněného materiálu“, výchozí „Materiál už není k dispozici.“).
+- Nároky se nemažou – po vrácení do nabídky se obnoví. Zákazníkům se nic neposílá, správce se na vrácení peněz neupozorňuje (rozhodnutí 14. 11. 2026).
+- Záznam, kdo a kdy materiál znepřístupnil (meta _rap_mat_disabled_at / _by, zobrazeno v Parametrech materiálu); v seznamu materiálů štítek „znepřístupněno“. Meta _rap_mat_withdrawn zůstává (znepřístupněný materiál je zároveň stažený z nabídky).

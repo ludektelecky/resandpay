@@ -302,7 +302,10 @@ class Resandpay_Profile {
 			}
 			$out .= '<p><a class="rap-button" href="' . esc_url( Resandpay_PDF::url( $r ) ) . '" target="_blank" rel="noopener">' . esc_html__( 'Platební pokyn (PDF)', 'reserveandpay' ) . '</a></p></div>';
 		}
-		if ( $mat && Resandpay_Reservations::PAID === $r['status'] && class_exists( 'Resandpay_Materials' ) && Resandpay_Materials::my_url() ) {
+		$mobj = $mat ? Resandpay_Materials::get( $r['event_id'] ) : null;
+		if ( $mobj && $mobj['disabled'] && Resandpay_Reservations::PAID === $r['status'] ) {
+			$out .= '<p class="rap-notice">' . esc_html( (string) Resandpay_Settings::get( 'mat_disabled_text' ) ) . '</p>';
+		} elseif ( $mat && Resandpay_Reservations::PAID === $r['status'] && class_exists( 'Resandpay_Materials' ) && Resandpay_Materials::my_url() ) {
 			$out .= '<p><a href="' . esc_url( Resandpay_Materials::my_url() ) . '">' . esc_html__( 'Stáhnout v Moje materiály →', 'reserveandpay' ) . '</a></p>';
 		}
 		return $out . '</li>';

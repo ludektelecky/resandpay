@@ -4,10 +4,14 @@
 >
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
-## 0.20.1 – Úprava textu v profilu zákazníka (14. 11. 2026)
+## 0.21.0 – Znepřístupnění materiálu (14. 11. 2026)
 
-- Profil zákazníka „Moje rezervace“: nadpis části **„Proběhlé a zrušené“** změněn na **„Proběhlé nebo zrušené“**.
-- Testy: 668 kontrol + souběh
+- **R19 – znepřístupnění materiálu** ([Issue #26](https://github.com/ludektelecky/resandpay/issues/26), schváleno a implementováno): v Parametrech materiálu nová volba **Dostupnost** – **V nabídce** / **Staženo z nabídky** (kdo materiál má, stahuje dál) / **Znepřístupněno** – materiál zmizí z katalogu a **nikdo ho nestáhne**, ani kdo ho už má; už vydané odkazy ke stažení přestanou platit. Správci mají přístup dál.
+  - na stránce materiálu, v Moje materiály a v profilu zákazníka text „Materiál už není k dispozici.“ (Nastavení → Materiály ke stažení)
+  - nároky zůstávají – po vrácení do nabídky se obnoví; zákazníkům se nic neposílá
+  - záznam, kdo a kdy materiál znepřístupnil; v seznamu materiálů štítek „znepřístupněno“
+- Profil zákazníka: nadpis části „Proběhlé a zrušené“ změněn na **„Proběhlé nebo zrušené“** (dříve nevydaná 0.20.1).
+- Bez změny databáze (post meta). První testy materiálů. Testy: 679 kontrol + souběh
 
 ## 0.20.0 – Profil zákazníka „Moje rezervace“ (14. 11. 2026)
 

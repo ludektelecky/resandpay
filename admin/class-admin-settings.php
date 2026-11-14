@@ -162,6 +162,7 @@ class Resandpay_Admin_Settings {
 				'mat_log_days'         => array( __( 'Uchovávat záznamy o stažení (dní)', 'reserveandpay' ), 'number' ),
 				'mat_login_text'       => array( __( 'Text pro nepřihlášené', 'reserveandpay' ), 'text' ),
 				'mat_roles_text'       => array( __( 'Text u materiálu jen pro vybrané role', 'reserveandpay' ), 'text' ),
+				'mat_disabled_text'    => array( __( 'Text u znepřístupněného materiálu', 'reserveandpay' ), 'text', __( 'Zobrazí se na stránce materiálu, v Moje materiály a v profilu zákazníka, když je materiál znepřístupněný (nikdo ho nestáhne).', 'reserveandpay' ) ),
 				'mat_digital_consent'  => array( __( 'Souhlas s okamžitým poskytnutím digitálního obsahu', 'reserveandpay' ), 'textarea', __( 'Povinné zaškrtávací pole v objednávce placeného materiálu (občanský zákoník § 1837 písm. l). Znění doporučujeme ověřit s právníkem.', 'reserveandpay' ) ),
 			),
 			__( 'Statistika', 'reserveandpay' )        => array(

@@ -102,7 +102,9 @@ class Resandpay_Materials {
 			'access_days' => '' === $days ? (int) Resandpay_Settings::get( 'mat_access_days' ) : max( 0, (int) $days ),
 			'links'       => array_values( array_filter( array_map( 'absint', explode( ',', (string) $m( 'mat_links' ) ) ) ) ),
 			'files'       => self::files( $post->ID ),
-			'withdrawn'   => (bool) (int) $m( 'mat_withdrawn', 0 ),
+			// Znepřístupněno (#26) = zmizí z katalogu a nikdo ho nestáhne; zahrnuje i „staženo z nabídky“.
+			'disabled'    => (bool) (int) $m( 'mat_disabled', 0 ),
+			'withdrawn'   => (bool) (int) $m( 'mat_withdrawn', 0 ) || (bool) (int) $m( 'mat_disabled', 0 ),
 			'url'         => get_permalink( $post ),
 		);
 	}
@@ -441,11 +443,12 @@ class Resandpay_Materials {
 	/**
 	 * Má uživatel přístup k materiálu?
 	 *
-	 * @return array ok (bool), reason (login|buy|pending|role|expired|withdrawn|unavailable),
+	 * @param bool $ignore_disabled Vyhodnotit nárok, jako by materiál nebyl znepřístupněný (výpis „už nedostupné“).
+	 * @return array ok (bool), reason (login|buy|pending|role|expired|withdrawn|disabled|unavailable),
 	 *               source (admin|free|role|order|grant|event), until (timestamp, 0 = natrvalo),
 	 *               order (otevřená / poslední objednávka), expired_at (timestamp).
 	 */
-	public static function access( $material, $user_id = null, $now = null ) {
+	public static function access( $material, $user_id = null, $now = null, $ignore_disabled = false ) {
 		$mat     = is_array( $material ) ? $material : self::get( $material );
 		$user_id = null === $user_id ? get_current_user_id() : (int) $user_id;
 		$now     = self::now_ts( $now );
@@ -466,6 +469,10 @@ class Resandpay_Materials {
 		}
 		if ( user_can( $user_id, resandpay_cap_reservations() ) ) {
 			return array_merge( $res, array( 'ok' => true, 'reason' => '', 'source' => 'admin' ) );
+		}
+		if ( ! empty( $mat['disabled'] ) && ! $ignore_disabled ) {
+			$res['reason'] = 'disabled'; // Znepřístupněno: nikdo kromě správců (nároky se nemažou).
+			return $res;
 		}
 		$published = in_array( $mat['status'], array( 'publish', 'private' ), true );
 		$grant     = function ( $source, $until ) use ( $res ) {
@@ -581,12 +588,16 @@ class Resandpay_Materials {
 		foreach ( $ids as $id ) {
 			$mat = self::get( $id );
 			$acc = self::access( $mat, $user_id );
-			if ( $acc['ok'] ) {
-				$out[] = array(
-					'mat'    => $mat,
-					'access' => $acc,
-				);
+			if ( ! $acc['ok'] && 'disabled' === $acc['reason'] && self::access( $mat, $user_id, null, true )['ok'] ) {
+				$acc['ok']       = false; // Měl by nárok, ale materiál je znepřístupněný – zobrazí se bez souborů.
+				$acc['disabled'] = true;
+			} elseif ( ! $acc['ok'] ) {
+				continue;
 			}
+			$out[] = array(
+				'mat'    => $mat,
+				'access' => $acc,
+			);
 		}
 		return $out;
 	}
@@ -964,11 +975,12 @@ class Resandpay_Materials {
 		if ( $t['user'] !== $user_id ) {
 			return new WP_Error( 'login', __( 'Odkaz ke stažení patří jinému přihlášení. Přihlaste se a načtěte stránku materiálu znovu.', 'reserveandpay' ), array( 'status' => 403 ) );
 		}
-		$sample = $file['sample'] && in_array( $mat['status'], array( 'publish', 'private' ), true );
+		$sample = $file['sample'] && in_array( $mat['status'], array( 'publish', 'private' ), true ) && empty( $mat['disabled'] );
 		if ( ! $sample ) {
 			$acc = self::access( $mat, $user_id, $now );
 			if ( ! $acc['ok'] ) {
-				return new WP_Error( 'denied', 'login' === $acc['reason'] ? (string) Resandpay_Settings::get( 'mat_login_text' ) : __( 'K tomuto materiálu nemáte přístup.', 'reserveandpay' ), array( 'status' => 403 ) );
+				$msg = 'login' === $acc['reason'] ? (string) Resandpay_Settings::get( 'mat_login_text' ) : ( 'disabled' === $acc['reason'] ? (string) Resandpay_Settings::get( 'mat_disabled_text' ) : __( 'K tomuto materiálu nemáte přístup.', 'reserveandpay' ) );
+				return new WP_Error( 'disabled' === $acc['reason'] ? 'disabled' : 'denied', $msg, array( 'status' => 403 ) );
 			}
 		}
 		$abs = self::abs_path( $file['path'] );
