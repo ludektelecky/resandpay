@@ -1,0 +1,37 @@
+# 13. Akceptační kritéria / testovací scénáře
+
+- Lze založit jednodenní, vícedenní (např. 5denní) i krátkou akci od–do (např. 20. 1. 2027, 16:00–18:00); termíny se správně zobrazí v kalendáři, detailu i e-mailech.
+- Rezervace vytvoří záznam ve stavu „Čeká na platbu“ s unikátním VS a sníží počet volných míst právě o jedno; dvě místa = dvě rezervace se dvěma různými VS; při vyprodání se formulář skryje.
+- U vícedenní akce nelze rezervovat jednotlivé dny.
+- Dvě současně odeslané rezervace na poslední volné místo nepřeplní akci – jedna projde, druhá dostane hlášení o obsazení.
+- Generátor vytvoří termíny masáží podle nastavené délky a pauzy; změna délky se projeví jen u nově generovaných termínů; termíny překrývající se s jinou akcí jsou v náhledu označeny upozorněním, ale lze je vytvořit.
+- Rezervace termínu méně než nastavenou hranici před začátkem (výchozí 24 h) je možná; pokud platba do začátku nedorazí, rezervace neexpiruje, přejde na „Platba na místě“ a Hanka ji může ručně označit jako zaplacenou.
+- Obsazený termín masáže zmizí z pohledu „Volné termíny“; po expiraci nebo zrušení se znovu objeví.
+- Termín služby s 15 místy přijme 15 samostatných rezervací (každá s vlastním VS), do zaplnění zůstává ve volných termínech s počtem volných míst, 16. rezervace je odmítnuta; změna počtu míst služby bez volby promítnutí existující termíny nemění.
+- Splatnost odpovídá pravidlu: od rezervace nikdy nepřesáhne začátek termínu; vůči termínu −1 / 0 / +1 vyjde den před / v den / den po termínu (do konce dne); kombinace vybere dřívější datum; pravidlo u akce či služby přepíše nastavení.
+- Nezaplacená rezervace se splatností v den termínu nebo po něm přejde po splatnosti do stavu „Po splatnosti“, místo zůstává blokované a připomínka odejde právě jednou.
+- Při povolené hotovosti je ve formuláři předvybraný převod; rezervace s volbou hotovosti je ve stavu „Platba na místě“ a e-mail obsahuje i údaje pro platbu převodem. Při vypnuté hotovosti formulář volbu nenabízí a volbu nelze podvrhnout.
+- Každá akce, služba i termín má kód podle nastaveného formátu; kód se nemění při úpravách, duplikát dostane nový, kód smazané akce se znovu nepoužije, existující položky dostanou kód při aktualizaci; podle kódu lze vyhledat akci, službu i rezervace.
+- Odbavení: rezervaci lze najít podle VS (i bez úvodních nul nebo z textu QR platby) a označit zaplacenou hotově nebo převodem; zaplacenou ani zrušenou nelze odbavit znovu.
+- Vygenerovaný QR kód rozpozná bankovní aplikace (min. Raiffeisenbank a ještě jedna další banka) a předvyplní částku, účet i VS.
+- Parser správně zpracuje vzorové avízo Raiffeisenbank (částka 5 000,00 Kč, VS bez úvodních nul, protiúčet) a odmítne podvržené avízo, avízo na jiný účet a odchozí platbu.
+- E-mail s platebním pokynem dorazí do 1 minuty jako HTML v barvách webu s QR kódem v těle a PDF v příloze; odkaz na PDF funguje i po několika dnech; textová verze obsahuje platební údaje.
+- QR kód přečte zpět stejný SPD řetězec (automatický test); zpráva pro příjemce je jen v ASCII a nejvýš 60 znaků; bez IBAN nebo u jiné měny než CZK se QR negeneruje.
+- Odbavení: načtení QR kódu kamerou telefonu zobrazí kartu správné rezervace.
+- Testovací platba s korektním VS a částkou je v automatickém režimu spárována nejpozději do uplynutí nastaveného intervalu (standardně 60 min); v ručním režimu po stisknutí „Zkontrolovat platby nyní“.
+- Změna režimu nebo intervalu se projeví bez zásahu do CRONu Active24; souběžný ruční a automatický běh nezpracuje žádné avízo dvakrát.
+- Po spárování dorazí potvrzovací e-mail a účet v Ultimate Member získá odpovídající roli (ověřit i scénář bez existujícího účtu).
+- Platba s nesprávným/chybějícím VS se objeví v seznamu nespárovaných plateb.
+- Avízo na jiný účet a odchozí platba se ignorují; podvržené avízo (SPF/DKIM/DMARC neprošly nebo vložená hlavička antispamu) se nespáruje ani při správném VS; stejné avízo se nezpracuje dvakrát; možná duplicita jde k ruční kontrole.
+- Běh nad schránkou: zpracovaná avíza se přesunou do složky „Zpracováno“, jiné e-maily zůstanou; špatné heslo skončí srozumitelnou chybou v logu; volání CRONu při úspěchu nic nevypíše, při chybě vypíše důvod; výpadek > 3× interval vyvolá upozornění nejvýš 1× denně.
+- Rezervace bez platby do splatnosti přejde na „Expirováno“, zákazník dostane e-mail a místo se uvolní; ověřit hraniční případy kolem půlnoci a platbu doručenou těsně před expirací.
+- Pozdní platba expirované rezervace ji při volném místě obnoví jako zaplacenou, při obsazené akci jde k ruční kontrole.
+- Každý e-mail pluginu je v seznamu odeslaných e-mailů (Nástroje i detail rezervace) s časem, typem, příjemcem a výsledkem; v testovacím režimu i se skutečnou testovací adresou; neúspěšné odeslání je vidět jako chyba; staré záznamy se mažou podle nastavení.
+- Ochrana formuláře: odeslání se skrytým polem nebo dříve než za nastavenou dobu se odmítne; 4. rezervace z jedné IP adresy za 10 minut a 4. aktivní rezervace jednoho e-mailu u akce se odmítnou s hláškou a upozorněním správce (limity v nastavení, 0 = bez limitu); po uplynutí okna je rezervace opět možná; ruční rezervace v administraci se neomezuje; při zapnutém Turnstile projde jen ověřené odeslání.
+- Odpárování: po odpárování platby z avíza je rezervace podle zbylých plateb Čeká na platbu / Částečně zaplaceno, avízo je K ruční kontrole a lze ho přiřadit jiné rezervaci; bez důvodu odpárovat nelze; odpárovanou platbu nelze odpárovat znovu. Smazání: jen zrušenou rezervaci bez platné platby, smaže i evidenci plateb a e-maily; VS se znovu nepoužije.
+- Slevy: sleva za včasnou rezervaci se zobrazí na webu u ceny a uplatní se jen při převodu a rezervaci do data; QR kódy obsahují částky po slevě, u dvou plateb se sleva odečte z doplatku (nejvýš do jeho výše); platba, část platby nebo nedoplatek po splatnosti (podle data připsání) slevu zruší a zákazník dostane jeden e-mail o změně předpisu, splatnost se nemění; Ponechat slevu ji vrátí. Kupón: neplatný / mimo platnost / mimo rozsah / vyčerpaný / kombinace se slevou za včasnou rezervaci je odmítnut s hláškou; odkaz z QR kupón vyplní; 100 % = rezervace zdarma; po zrušení nebo vypršení se použití vrátí; QR kód kupónu je zlatý a čitelný čtečkou.
+- Pozdní rezervace (splatnost −30, rezervace 14 dní předem): celá částka do 7 dní, nejpozději den před akcí, bez rozdělení a bez platby na místě; po splatnosti expiruje. Méně než 24 h před začátkem zůstává rezervací na poslední chvíli.
+- Připomínka před splatností odejde N dní předem právě jednou pro každou splatnost; při 0 dnech se neposílá.
+- Platba ve dvou částech: 1. část jako pevná částka i procento; e-mail, PDF a potvrzovací stránka obsahují rozpis, QR na 1. část i QR „vše najednou“ (oba se splatností 1. části); po 1. části stav Částečně zaplaceno a e-mail s QR na doplatek; po doplatku Zaplaceno; zaplacení vše najednou rovnou Zaplaceno.
+- Menší platba se zapíše automaticky (Částečně zaplaceno) a zákazník je upozorněn na zbývající částku; přeplatek jde k ruční kontrole; nezaplacený doplatek po splatnosti přejde do „Po splatnosti“ s připomínkou a místo zůstává.
+- Úvodní stránka: v sekci „Nadcházející události“ je na prvním místě nejbližší služba s volným termínem a za ní nadcházející akce podle data, celkem nejvýše 3; zrušená ani probíhající akce se nezobrazí; nová akce se objeví bez úprav stránky.

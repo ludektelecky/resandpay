@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.17.1** · zdrojové zadání: **ReserveAndPay WP plugin – Analytické zadání, verze 6.4** (13. 11. 2026, vydáno k pluginu 0.17.1; kniha rozvoje kap. 15.1) – viz `docs/`.
+> **Aktuální verze pluginu: 0.17.1** · zadání: [`docs/zadani/`](docs/zadani/README.md) (odpovídá aktuální verzi pluginu) · rozvojové požadavky: [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) · změny: [DEVLOG](docs/DEVLOG.md)
 
 ### Název a označení
 
@@ -41,7 +41,7 @@ Technické identifikátory se nemění (slug a textdomain `reserveandpay`, před
 ### Platby
 - Platební pokyn (proforma) s QR kódem dle standardu SPD, PDF ke stažení přes neuhodnutelný odkaz
 - Unikátní, nikdy znovu nepoužitý variabilní symbol pro každou rezervaci (prefix s proměnnými %YYYY%, %YY%, %MM% – mění se s rokem sám)
-- Kontrola plateb čtením schránky `bankovni.transakce@slehkouhlavou.cz` přes IMAP
+- Kontrola plateb čtením schránky `platby@example.cz` přes IMAP
   - režim **ručně** (tlačítko „Zkontrolovat platby nyní“) nebo **automaticky** v intervalu (standardně 60 min, konfigurovatelné)
   - spouštění serverovým CRONem hostingu Active24 (ne WP-Cron)
   - nespárované platby k ručnímu přiřazení, log běhů, upozornění při výpadku
@@ -248,8 +248,8 @@ V `docs/DEVLOG.md` je u verze, která po aktualizaci vyžaduje zásah, na začá
 
 ### Vydání verze (pro správce repozitáře)
 
-1. Číslo verze v hlavičce `reserveandpay.php` (Version a `RESANDPAY_VERSION`), DEVLOG, README, analytické zadání.
-2. Balíček `reserveandpay-X.Y.Z.zip` s kořenovou složkou `reserveandpay/` (bez `tests/`, `docs/`) – sestaví ho workflow, kopie se ukládá na Google Disk.
+1. Číslo verze v hlavičce `reserveandpay.php` (Version a `RESANDPAY_VERSION`), DEVLOG, README a dotčené kapitoly zadání v `docs/zadani/`.
+2. Balíček `reserveandpay-X.Y.Z.zip` s kořenovou složkou `reserveandpay/` (bez `tests/`, `docs/`) – sestaví ho workflow a přiloží k releasu.
 3. Push na `main` s novým číslem verze v `reserveandpay.php`: workflow `.github/workflows/release.yml` ověří verzi a sekci v DEVLOGu, sestaví balíček a založí GitHub release `vX.Y.Z` s popisem změn z DEVLOGu (existující release nepřepisuje; ručně lze spustit přes „Run workflow“). Release nesmí být „pre-release“ (ten se k aktualizaci nenabízí).
 
 ---

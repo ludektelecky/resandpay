@@ -1,5 +1,7 @@
 # Vývojový deník ReserveAndPay
 
+> Zadání: [`docs/zadani/`](zadani/README.md) (od 14. 11. 2026 v Markdownu, verzováno verzí pluginu), rozvojové požadavky: GitHub Issues.
+>
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
 ## 0.17.1 – Záložky v Nastavení (13. 11. 2026)

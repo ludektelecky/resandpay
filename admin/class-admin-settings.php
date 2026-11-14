@@ -109,7 +109,7 @@ class Resandpay_Admin_Settings {
 				'imap_host'            => array( __( 'IMAP server', 'reserveandpay' ), $text, __( 'Active24/Websupport: imap.websupport.cz', 'reserveandpay' ) ),
 				'imap_port'            => array( __( 'Port', 'reserveandpay' ), 'number', __( '993 (SSL/TLS)', 'reserveandpay' ) ),
 				'imap_security'        => array( __( 'Šifrování', 'reserveandpay' ), 'select', '', array( 'ssl' => 'SSL/TLS', 'none' => __( 'bez šifrování (jen pro testy)', 'reserveandpay' ) ) ),
-				'imap_user'            => array( __( 'Uživatel (e-mailová adresa)', 'reserveandpay' ), $text, __( 'Např. bankovni.transakce@slehkouhlavou.cz', 'reserveandpay' ) ),
+				'imap_user'            => array( __( 'Uživatel (e-mailová adresa)', 'reserveandpay' ), $text, __( 'Např. platby@example.cz', 'reserveandpay' ) ),
 				'imap_password'        => array( __( 'Heslo ke schránce', 'reserveandpay' ), 'password', __( 'Ukládá se šifrovaně a už se nezobrazí. Prázdné pole = ponechat uložené heslo. Pozor: prohlížeč sem může sám vložit heslo k WordPressu – před uložením nastavení pole zkontrolujte. Alternativně konstanta RESANDPAY_IMAP_PASSWORD ve wp-config.php.', 'reserveandpay' ) ),
 				'imap_folder'          => array( __( 'Složka s avízy', 'reserveandpay' ), $text ),
 				'imap_folder_done'     => array( __( 'Složka pro zpracovaná avíza', 'reserveandpay' ), $text, __( 'Zpracovaná avíza se do ní přesunou (vytvoří se automaticky). Prázdné = nepřesouvat.', 'reserveandpay' ) ),

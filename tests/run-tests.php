@@ -99,7 +99,7 @@ Resandpay_Settings::update(
 	)
 );
 Resandpay_Settings::reset_templates();
-Resandpay_Settings::update( array( 'company_name' => 'INSYSTEMS CZ s.r.o.', 'brand_name' => 'S lehkou hlavou…', 'company_ic' => '01919555', 'company_address' => 'Pod višňovkou 1661/31, 140 00 Praha 4', 'contact_web' => 'slehkouhlavou.cz', 'contact_email' => 'hana@slehkouhlavou.cz', 'qr_recipient_name' => '', 'pdf_footer' => 'Nejedná se o daňový doklad' ) );
+Resandpay_Settings::update( array( 'company_name' => 'INSYSTEMS CZ s.r.o.', 'brand_name' => 'S lehkou hlavou…', 'company_ic' => '12345678', 'company_address' => 'Pod višňovkou 1661/31, 140 00 Praha 4', 'contact_web' => 'slehkouhlavou.cz', 'contact_email' => 'info@example.cz', 'qr_recipient_name' => '', 'pdf_footer' => 'Nejedná se o daňový doklad' ) );
 $loc = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::LOCATION, 'post_status' => 'publish', 'post_title' => 'Studio Brno' ) );
 update_post_meta( $loc, '_rap_address', 'Hlavní 1, Brno' );
 
@@ -566,15 +566,15 @@ echo "== E5: čtení avíza Raiffeisenbank\n";
 $eml = file_get_contents( RESANDPAY_DIR . 'tests/fixtures/rb-prichozi-okamzita-platba.eml' );
 /** Varianta vzorového avíza: VS, částka, Message-ID a další úpravy. */
 function rap_avizo( $base, $vs, $amount, $id, array $repl = array() ) {
-	$e = str_replace( array( '<1983301034.29395.1792613962452@rb.cz>', '>01919555<', '>+5.000,00 CZK<' ), array( '<' . $id . '@rb.cz>', '>' . $vs . '<', '>' . $amount . '<' ), $base );
+	$e = str_replace( array( '<1983301034.29395.1792613962452@rb.cz>', '>12345678<', '>+5.000,00 CZK<' ), array( '<' . $id . '@rb.cz>', '>' . $vs . '<', '>' . $amount . '<' ), $base );
 	return strtr( $e, $repl );
 }
 $mime = Resandpay_Mime::parse( $eml );
 $pa   = Resandpay_Bank_RB::parse( $mime );
 rap_t( 'Pohyb na účtě' === Resandpay_Mime::decode_header( Resandpay_Mime::first( $mime['headers'], 'subject' ) ), 'předmět „Pohyb na účtě“ (UTF-8)' );
 rap_t( 5000.0 === $pa['amount'] && 'CZK' === $pa['currency'] && 'in' === $pa['direction'], 'částka +5.000,00 CZK, příchozí' );
-rap_t( '01919555' === $pa['vs'] && '0308' === $pa['ks'] && '' === $pa['ss'], 'VS, KS, SS' );
-rap_t( '8032378004/5500' === $pa['to_account'] && '2108880408/2700' === $pa['counter_account'] && 'INSYSTEMS CZ s.r.o.' === $pa['counter_name'], 'účet příjemce, protiúčet a jméno plátce' );
+rap_t( '12345678' === $pa['vs'] && '0308' === $pa['ks'] && '' === $pa['ss'], 'VS, KS, SS' );
+rap_t( '1234567890/5500' === $pa['to_account'] && '123456789/2700' === $pa['counter_account'] && 'INSYSTEMS CZ s.r.o.' === $pa['counter_name'], 'účet příjemce, protiúčet a jméno plátce' );
 rap_t( '2026-10-21 22:18:00' === $pa['booked_at'] && 'Prevod z vlastniho uctu UCB' === $pa['message'] && 'Příchozí okamžitá úhrada' === $pa['movement'], 'datum a čas, zpráva pro příjemce, typ pohybu' );
 $au = Resandpay_Bank_RB::verify( $mime );
 rap_t( $au['ok'] && $au['checks']['spf'] && $au['checks']['dkim'] && $au['checks']['dmarc'] && $au['checks']['sender'], 'pravost vzorového avíza: odesílatel, SPF, DKIM, DMARC' );
@@ -584,10 +584,10 @@ $inject = Resandpay_Mime::parse( str_replace( "X-purgate-type: clean\n", "X-purg
 rap_t( ! Resandpay_Bank_RB::verify( $inject )['checks']['dkim'], 'vložená falešná hlavička výsledku antispamu → nedůvěřovat' );
 rap_t( ! Resandpay_Bank_RB::verify( Resandpay_Mime::parse( str_replace( 'From: Raiffeisenbank a.s. <info@rb.cz>', 'From: Raiffeisenbank <info@rb-cz.example>', $eml ) ) )['ok'], 'jiný odesílatel neprojde' );
 rap_t( array( 'value' => 1234567.5, 'currency' => 'CZK' ) === Resandpay_Bank_RB::amount( '+1.234.567,50 CZK' ) && -500.0 === Resandpay_Bank_RB::amount( '-500,00 CZK' )['value'], 'formát částek' );
-rap_t( Resandpay_Bank_RB::same_account( '8032378004/5500', ' 8032378004 / 5500' ) && Resandpay_Bank_RB::same_account( '000019-2000145399/0800', '19-2000145399/0800' ) && ! Resandpay_Bank_RB::same_account( '8032378004/5500', '8032378004/0100' ), 'porovnání čísel účtů' );
+rap_t( Resandpay_Bank_RB::same_account( '1234567890/5500', ' 1234567890 / 5500' ) && Resandpay_Bank_RB::same_account( '000019-2000145399/0800', '19-2000145399/0800' ) && ! Resandpay_Bank_RB::same_account( '1234567890/5500', '1234567890/0100' ), 'porovnání čísel účtů' );
 
 echo "== E5: párování s rezervacemi\n";
-Resandpay_Settings::update( array( 'bank_account' => '8032378004/5500', 'bank_sender' => 'info@rb.cz', 'bank_require_auth' => 1 ) );
+Resandpay_Settings::update( array( 'bank_account' => '1234567890/5500', 'bank_sender' => 'info@rb.cz', 'bank_require_auth' => 1 ) );
 global $wpdb;
 $wpdb->query( 'DELETE FROM ' . Resandpay_Payments::table() );
 $wpdb->query( 'DELETE FROM ' . Resandpay_Payments::runs_table() );
@@ -621,7 +621,7 @@ $o5  = Resandpay_Payments::process_raw( rap_avizo( $eml, '', '+300,00 CZK', 'm5'
 rap_t( 'review' === $o5['status'] && null === Resandpay_Payments::suggest( Resandpay_Payments::get( $o5['payment_id'] ) ), 'návrh se nenabídne, když nesedí částka (300 vs 500)' );
 $o6 = Resandpay_Payments::process_raw( rap_avizo( $eml, $pr3['vs'], '+500,00 CZK', 'm6', array( 'Received-SPF: Pass' => 'Received-SPF: Fail', 'R_DKIM_ALLOW' => 'R_DKIM_REJECT' ) ) );
 rap_t( 'review' === $o6['status'] && false !== strpos( $o6['reason'], 'pravost' ) && 'pending' === Resandpay_Reservations::get( $pr3['id'] )['status'], 'podvržené avízo se správným VS se nespáruje (ruční kontrola)' );
-$o7 = Resandpay_Payments::process_raw( rap_avizo( $eml, $pr3['vs'], '+500,00 CZK', 'm7', array( '8032378004/5500' => '1234567890/0100' ) ) );
+$o7 = Resandpay_Payments::process_raw( rap_avizo( $eml, $pr3['vs'], '+500,00 CZK', 'm7', array( '1234567890/5500' => '1234567890/0100' ) ) );
 rap_t( 'ignored' === $o7['status'] && false !== strpos( $o7['reason'], 'jiný účet' ), 'avízo na jiný účet → ignorováno' );
 $o8 = Resandpay_Payments::process_raw( rap_avizo( $eml, $pr3['vs'], '-500,00 CZK', 'm8', array( 'P=C5=99=C3=ADchoz=C3=AD' => 'Odchoz=C3=AD', 'p=C5=99=C3=ADchoz=C3=AD platba' => 'odchoz=C3=AD platba' ) ) );
 rap_t( 'ignored' === $o8['status'] && false !== strpos( $o8['reason'], 'Odchozí' ), 'odchozí platba → ignorováno' );
@@ -765,7 +765,7 @@ rap_t( $top && 'ResAndPay' === $top[0][0] && 'ReserveAndPay' === $top[0][3], 'me
 
 echo "== 0.6.0: platba ve dvou částech (1. část a doplatek)\n";
 require_once RESANDPAY_DIR . 'admin/class-admin-reservations.php';
-Resandpay_Settings::update( array( 'reminder_days' => 0, 'bank_account' => '8032378004/5500' ) );
+Resandpay_Settings::update( array( 'reminder_days' => 0, 'bank_account' => '1234567890/5500' ) );
 $sp = rap_event( 'Jóga víkend', $now + 30 * $day, $now + 31 * $day, 10, array( 'rap_due_mode' => 'event', 'rap_due_offset' => '-7', 'rap_part1_mode' => 'fixed', 'rap_part1_value' => '200', 'rap_part1_days' => '7' ) );
 rap_t( 200.0 === Resandpay_Events::part1_amount( Resandpay_Events::get( $sp ) ), '1. část jako pevná částka (200 z 500)' );
 update_post_meta( $sp, '_rap_part1_mode', 'percent' );
@@ -1099,7 +1099,7 @@ rap_t( false !== strpos( $tp3, 'Ochrana formuláře proti robotům' ) && false !
 echo "== 0.7.4: evidence plateb, odpárování, smazání\n";
 global $wpdb;
 require_once RESANDPAY_DIR . 'admin/class-reservations-table.php';
-Resandpay_Settings::update( array( 'bank_account' => '8032378004/5500', 'test_mode' => 1 ) );
+Resandpay_Settings::update( array( 'bank_account' => '1234567890/5500', 'test_mode' => 1 ) );
 $up  = rap_event( 'Odpárování', $now + 60 * $day, $now + 60 * $day + 3600, 10 );
 $u1  = Resandpay_Reservations::create( $up, rap_person( 170 ), array( 'notify' => false ) );
 $oU  = Resandpay_Payments::process_raw( rap_avizo( $eml, $u1['vs'], '+500,00 CZK', 'unpair-1' ), 'cron' );
@@ -1311,7 +1311,7 @@ rap_t( false !== strpos( $xcard, 'Nejbližší termín:' ) && false !== strpos( 
 echo "== 0.8.0: slevy – sleva za včasnou rezervaci\n";
 global $wpdb;
 require_once RESANDPAY_DIR . 'admin/class-admin-coupons.php';
-Resandpay_Settings::update( array( 'bank_account' => '8032378004/5500', 'test_mode' => 1, 'reminder_days' => 0, 'cash_enabled' => 1 ) );
+Resandpay_Settings::update( array( 'bank_account' => '1234567890/5500', 'test_mode' => 1, 'reminder_days' => 0, 'cash_enabled' => 1 ) );
 $dE = rap_event( 'Víkend se slevou', $now + 60 * $day, $now + 62 * $day, 20, array( 'rap_price' => '4900', 'rap_due_mode' => 'booking', 'rap_due_days' => '20', 'rap_part1_mode' => 'fixed', 'rap_part1_value' => '2000', 'rap_part1_days' => '7', 'rap_early_mode' => 'fixed', 'rap_early_value' => '500', 'rap_early_until' => wp_date( 'Y-m-d', $now + 10 * $day ), 'rap_early_label' => '' ) );
 $dEv = Resandpay_Events::get( $dE );
 rap_t( false !== strpos( Resandpay_Discounts::price_note( $dEv ), 'při rezervaci do' ) && false !== strpos( Resandpay_Frontend::price_html( $dEv ), '4 400 Kč' ), 'web: u ceny „při rezervaci do … a platbě ve splatnosti 4 400 Kč“' );

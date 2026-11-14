@@ -1,21 +1,21 @@
 Return-Path: <info@rb.cz>
-Delivered-To: bankovni.transakce@slehkouhlavou.cz
+Delivered-To: platby@example.cz
 Received: from m1-u112-backend.m1.websupport.sk
 	by m1-u112-backend with LMTP
 	id 8ItbGUse2Wq1GwIAUef4eA
 	(envelope-from <info@rb.cz>)
-	for <bankovni.transakce@slehkouhlavou.cz>; Wed, 21 Oct 2026 22:19:23 +0200
-X-Original-To: bankovni.transakce@slehkouhlavou.cz
+	for <platby@example.cz>; Wed, 21 Oct 2026 22:19:23 +0200
+X-Original-To: platby@example.cz
 Received: from m1-u7-mx.websupport.sk (unknown [10.30.7.3])
 	by m1-u112-backend.m1.websupport.sk (Postfix) with ESMTP id 4j90xR2y97z1R5yY
-	for <bankovni.transakce@slehkouhlavou.cz>; Wed, 21 Oct 2026 22:19:23 +0200 (CEST)
+	for <platby@example.cz>; Wed, 21 Oct 2026 22:19:23 +0200 (CEST)
 Received-SPF: Pass (mailfrom) identity=mailfrom; client-ip=62.168.7.100; helo=smtp2.rb.cz; envelope-from=info@rb.cz; receiver=slehkouhlavou.cz 
 Received: from smtp2.rb.cz (smtp2.rb.cz [62.168.7.100])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
 	by m1-u7-mx.websupport.sk (Postfix) with ESMTPS id 4j90xQ6s8Qz11Qh
-	for <bankovni.transakce@slehkouhlavou.cz>; Wed, 21 Oct 2026 22:19:22 +0200 (CEST)
+	for <platby@example.cz>; Wed, 21 Oct 2026 22:19:22 +0200 (CEST)
 Date: Wed, 21 Oct 2026 22:19:22 +0200
 DKIM-Filter: OpenDKIM Filter v2.11.0 smtp2.rb.cz 9980F10045D4
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=rb.cz; s=post;
@@ -28,7 +28,7 @@ DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=rb.cz; s=post;
 	 KlijINfntzcZkErC3KNM9YCAXV+ZOQBGWNn5AykWNGVIOdyeZSc6wOAge5h59M0baK
 	 EfyeFbLDhJ5rg==
 From: Raiffeisenbank a.s. <info@rb.cz>
-To: <bankovni.transakce@slehkouhlavou.cz>
+To: <platby@example.cz>
 Message-ID: <1983301034.29395.1792613962452@rb.cz>
 Subject: =?UTF-8?Q?Pohyb_na_=C3=BA=C4=8Dt=C4=9B?=
 MIME-Version: 1.0
@@ -353,7 +353,7 @@ olor: #3f3f3f;">
 <td align=3D"left" class=3D"long-text links-color" style=3D"text-align: rig=
 ht; font-weight:bold; font-size: 13px;      font-family: Arial, Helvetica, =
 sans-serif; color: #3f3f3f;">
-<p style=3D"margin: 0em 0px;margin-top: 0px;">8032378004/5500<br>INSYSTEMS =
+<p style=3D"margin: 0em 0px;margin-top: 0px;">1234567890/5500<br>INSYSTEMS =
 CZ s.r.o.</p>
 </td>
 </tr>
@@ -409,7 +409,7 @@ olor: #3f3f3f;">
 <td align=3D"left" class=3D"long-text links-color" style=3D"text-align: rig=
 ht; font-weight:bold; font-size: 13px;      font-family: Arial, Helvetica, =
 sans-serif; color: #3f3f3f;">
-<p style=3D"margin: 0em 0px;margin-top: 0px;">2108880408/2700<br>INSYSTEMS =
+<p style=3D"margin: 0em 0px;margin-top: 0px;">123456789/2700<br>INSYSTEMS =
 CZ s.r.o.</p>
 </td>
 </tr>
@@ -425,7 +425,7 @@ olor: #3f3f3f;">
 <td align=3D"left" class=3D"long-text links-color" style=3D"text-align: rig=
 ht; font-weight:bold; font-size: 13px;      font-family: Arial, Helvetica, =
 sans-serif; color: #3f3f3f;">
-<p style=3D"margin: 0em 0px;margin-top: 0px;">01919555</p>
+<p style=3D"margin: 0em 0px;margin-top: 0px;">12345678</p>
 </td>
 </tr>
 <tr>
