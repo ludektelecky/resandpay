@@ -4,6 +4,15 @@
 >
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
+## 0.18.0 – Přehled zákazníků (14. 11. 2026)
+
+- **R16 – přehled zákazníků** ([Issue #19](https://github.com/ludektelecky/resandpay/issues/19), schváleno a implementováno): nová stránka **ResAndPay → Zákazníci** – všichni, kdo kdy rezervovali (akce, termíny služeb, materiály), **jeden řádek na e-mail** (bez ohledu na velká a malá písmena).
+  - jméno a telefon z poslední rezervace, počet rezervací (aktivní · zrušené / expirované – počítají se i zrušené a expirované), první a poslední rezervace, zaplaceno celkem, souhlas s newsletterem
+  - hledání (jméno, e-mail, telefon), řazení podle sloupců, filtr **jen se souhlasem s newsletterem**, **Export CSV** podle filtru
+  - kliknutím na zákazníka se otevře **seznam jeho rezervací** (stejně jako rezervace akce) se souhrnem v záhlaví a exportem CSV; v detailu rezervace odkaz **„všechny rezervace zákazníka“**
+- Seznam rezervací umí filtr podle zákazníka (`admin.php?page=reserveandpay&email=…`), i v kombinaci s akcí; Export CSV i pro rezervace zákazníka.
+- Bez změny databáze. Testy: 600 kontrol + souběh
+
 ## 0.17.1 – Záložky v Nastavení (13. 11. 2026)
 
 - **ResAndPay → Nastavení** rozděleno do 7 záložek: **Provozovatel** · **Rezervace** · **Web a vzhled** · **E-maily** · **Kontrola plateb** · **Materiály** · **Kódy a statistika**. Přepínání bez přenačtení stránky.

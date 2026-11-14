@@ -51,11 +51,12 @@ Formulář je součástí rezervačního modulu. Zobrazí se v detailu akce, res
 ## 4.4 Administrace pro Hanku
 
 - Kódy (kap. 3.8): sloupec Kód v seznamu akcí a služeb, vyhledání podle kódu (najde i termín), kód v editaci, v seznamu a detailu rezervací, při odbavení a v CSV exportu; hledání rezervací podle kódu akce nebo služby.
-- Menu „ResAndPay“: Rezervace, Nová rezervace, Odbavení, Kategorie akcí, Akce, Lokace, Služby, Generátor termínů, Nastavení, Nástroje.
+- Menu „ResAndPay“: Rezervace, Nová rezervace, Zákazníci, Odbavení, Kategorie akcí, Akce, Lokace, Služby, Generátor termínů, Nastavení, Nástroje.
 - Přehled akcí a termínů s obsazeností (rezervováno / zaplaceno / volno); seznam akcí s filtrem Akce / Individuální termíny / Vše (výchozí bez individuálních termínů).
 - Editace akce: pole termínu, místa, kapacity a ceny v pravém panelu editoru, méně častá nastavení sbalená; konec akce se doplní automaticky, termín služby přebírá počet míst ze služby (lze upravit); upozornění na chybějící údaje (i v seznamu akcí).
 - Duplikace akce („Duplikovat“) – vytvoří koncept se stejnými údaji bez rezervací, stačí změnit termín.
 - Seznam účastnic u akce: jméno, kontakt, stav platby (vč. „Platba na místě“), poznámka; export do CSV/Excelu.
+- Přehled zákazníků (ResAndPay → Zákazníci, kap. 15.1 R16): jeden řádek na e-mail, proklik na seznam rezervací zákazníka (stejný seznam jako u akce, filtr `email`), z detailu rezervace odkaz „všechny rezervace zákazníka“; export CSV.
 - Ruční vytvoření rezervace (např. telefonická domluva), ruční zrušení rezervace s e-mailem zákaznici a ruční označení „zaplaceno hotově“. U rezervace je vidět zvolený způsob platby (štítek „zvolila hotovost“), v detailu akce počet a částka rezervací s hotovostí a odkaz na odbavení.
 - Upozornění na časové překryvy akcí a termínů (informativní, nebrání uložení).
 - Generátor a hromadné rušení termínů služeb (kap. 3.4).

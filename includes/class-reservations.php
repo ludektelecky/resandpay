@@ -667,9 +667,17 @@ class Resandpay_Reservations {
 		return (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . self::table() . " WHERE event_id = %d AND status IN ({$in})", $event_id ) );
 	}
 
-	public static function counts_by_status( $event_id = 0 ) {
+	/** Počty rezervací podle stavu; volitelně jen u akce a / nebo zákazníka (e-mail). */
+	public static function counts_by_status( $event_id = 0, $email = '' ) {
 		global $wpdb;
-		$where = $event_id ? $wpdb->prepare( 'WHERE event_id = %d', $event_id ) : '';
+		$cond = array();
+		if ( $event_id ) {
+			$cond[] = $wpdb->prepare( 'event_id = %d', $event_id );
+		}
+		if ( '' !== Resandpay_Customers::key( $email ) ) {
+			$cond[] = $wpdb->prepare( 'LOWER(TRIM(email)) = %s', Resandpay_Customers::key( $email ) );
+		}
+		$where = $cond ? 'WHERE ' . implode( ' AND ', $cond ) : '';
 		$rows  = $wpdb->get_results( 'SELECT status, COUNT(*) AS c FROM ' . self::table() . " {$where} GROUP BY status", ARRAY_A );
 		$out   = array_fill_keys( array_keys( self::status_labels() ), 0 );
 		foreach ( $rows as $r ) {
@@ -681,7 +689,7 @@ class Resandpay_Reservations {
 	/**
 	 * Výpis rezervací pro administraci.
 	 *
-	 * @param array $args event_id, status, search, orderby, order, per_page, page.
+	 * @param array $args event_id, email (zákazník, bez ohledu na velikost písmen), status, search, orderby, order, per_page, page.
 	 * @return array{items: array, total: int}
 	 */
 	public static function query( array $args = array() ) {
@@ -690,6 +698,7 @@ class Resandpay_Reservations {
 			$args,
 			array(
 				'event_id' => 0,
+				'email'    => '',
 				'status'   => '',
 				'search'   => '',
 				'orderby'  => 'created_at',
@@ -701,6 +710,9 @@ class Resandpay_Reservations {
 		$where = array( '1=1' );
 		if ( $args['event_id'] ) {
 			$where[] = $wpdb->prepare( 'event_id = %d', $args['event_id'] );
+		}
+		if ( '' !== Resandpay_Customers::key( $args['email'] ) ) {
+			$where[] = $wpdb->prepare( 'LOWER(TRIM(email)) = %s', Resandpay_Customers::key( $args['email'] ) );
 		}
 		if ( $args['status'] && isset( self::status_labels()[ $args['status'] ] ) ) {
 			$where[] = $wpdb->prepare( 'status = %s', $args['status'] );

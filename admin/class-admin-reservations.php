@@ -72,6 +72,23 @@ class Resandpay_Admin_Reservations {
 		return wp_nonce_url( $url, 'resandpay_res_' . $do . '_' . (int) $id );
 	}
 
+	/** Filtr seznamu rezervací podle zákazníka (?email=…), normalizovaný e-mail nebo ''. */
+	public static function customer_filter() {
+		return Resandpay_Customers::key( sanitize_text_field( wp_unslash( $_GET['email'] ?? '' ) ) ); // phpcs:ignore WordPress.Security.NonceVerification
+	}
+
+	/** Odkaz na export CSV rezervací akce a / nebo zákazníka. */
+	public static function export_url( $event_id = 0, $email = '' ) {
+		$q = array( 'action' => 'resandpay_export' );
+		if ( $event_id ) {
+			$q['event_id'] = (int) $event_id;
+		}
+		if ( '' !== Resandpay_Customers::key( $email ) ) {
+			$q['email'] = rawurlencode( Resandpay_Customers::key( $email ) );
+		}
+		return wp_nonce_url( add_query_arg( $q, admin_url( 'admin-post.php' ) ), 'resandpay_export' );
+	}
+
 	private static function back( $fallback = '' ) {
 		$ref = wp_get_referer();
 		return $ref ? remove_query_arg( array( 'rap_msg' ), $ref ) : ( $fallback ?: admin_url( 'admin.php?page=reserveandpay' ) );
@@ -198,10 +215,23 @@ class Resandpay_Admin_Reservations {
 				echo ' · <a href="' . esc_url( get_edit_post_link( $event ) ) . '">' . esc_html__( 'upravit akci', 'reserveandpay' ) . '</a></p>';
 			}
 		}
+		$email = self::customer_filter();
+		if ( '' !== $email ) {
+			$cust = Resandpay_Customers::get( $email );
+			echo '<p class="rap-event-head"><strong>' . esc_html( $cust ? $cust['customer_name'] : $email ) . '</strong> – <a href="mailto:' . esc_attr( $email ) . '">' . esc_html( $email ) . '</a>';
+			if ( $cust ) {
+				/* translators: 1: počet rezervací, 2: zaplaceno */
+				echo ' · ' . esc_html( sprintf( __( 'rezervací %1$d, zaplaceno %2$s', 'reserveandpay' ), $cust['total'], Resandpay_Customers::format_paid( $cust['paid_by_cur'] ) ) );
+			}
+			echo ' · <a href="' . esc_url( remove_query_arg( array( 'email', 'paged', 'rap_msg' ) ) ) . '">' . esc_html__( 'zrušit filtr zákazníka', 'reserveandpay' ) . '</a> · <a href="' . esc_url( Resandpay_Admin_Customers::url() ) . '">' . esc_html__( '← Zákazníci', 'reserveandpay' ) . '</a></p>';
+		}
 		$table->views();
 		echo '<form method="get"><input type="hidden" name="page" value="reserveandpay">';
 		if ( ! empty( $_GET['status'] ) ) {
 			echo '<input type="hidden" name="status" value="' . esc_attr( sanitize_key( $_GET['status'] ) ) . '">';
+		}
+		if ( '' !== $email ) {
+			echo '<input type="hidden" name="email" value="' . esc_attr( $email ) . '">';
 		}
 		$table->search_box( __( 'Hledat', 'reserveandpay' ), 'rap-search' );
 		$table->display();
@@ -226,7 +256,7 @@ class Resandpay_Admin_Reservations {
 			__( 'Stav', 'reserveandpay' )              => '<span class="rap-status rap-status--' . esc_attr( $r['status'] ) . '">' . esc_html( $labels[ $r['status'] ] ) . '</span>',
 			__( 'Akce', 'reserveandpay' )              => $ev ? '<a href="' . esc_url( admin_url( 'admin.php?page=reserveandpay&event_id=' . $ev['id'] ) ) . '">' . esc_html( $ev['title'] ) . '</a> – ' . esc_html( Resandpay_Events::format_date_full( $ev ) ) . ( $ev['code'] ? ' · <code>' . esc_html( $ev['code'] ) . '</code>' : '' ) : '—',
 			__( 'Jméno', 'reserveandpay' )             => esc_html( $r['customer_name'] ),
-			__( 'E-mail', 'reserveandpay' )            => '<a href="mailto:' . esc_attr( $r['email'] ) . '">' . esc_html( $r['email'] ) . '</a>',
+			__( 'E-mail', 'reserveandpay' )            => '<a href="mailto:' . esc_attr( $r['email'] ) . '">' . esc_html( $r['email'] ) . '</a>' . ( '' !== Resandpay_Customers::key( $r['email'] ) ? ' · <a href="' . esc_url( Resandpay_Admin_Customers::reservations_url( $r['email'] ) ) . '">' . esc_html( sprintf( /* translators: %d: počet rezervací */ __( 'všechny rezervace zákazníka (%d)', 'reserveandpay' ), Resandpay_Customers::count_reservations( $r['email'] ) ) ) . '</a>' : '' ),
 			__( 'Telefon', 'reserveandpay' )           => esc_html( $r['phone'] ),
 			__( 'Firma', 'reserveandpay' )             => esc_html( trim( $r['company'] . ( $r['company_ic'] ? ', IČ ' . $r['company_ic'] : '' ) . ( $r['company_dic'] ? ', DIČ ' . $r['company_dic'] : '' ), ', ' ) ?: '—' ),
 			__( 'Poznámka', 'reserveandpay' )          => nl2br( esc_html( $r['note'] ?: '—' ) ),
@@ -438,16 +468,18 @@ class Resandpay_Admin_Reservations {
 		}
 		check_admin_referer( 'resandpay_export' );
 		$event = absint( $_GET['event_id'] ?? 0 );
+		$email = self::customer_filter();
 		$ev    = Resandpay_Events::get( $event );
 		$rows  = Resandpay_Reservations::query(
 			array(
 				'event_id' => $event,
+				'email'    => $email,
 				'per_page' => 10000,
 				'orderby'  => 'created_at',
 				'order'    => 'ASC',
 			)
 		)['items'];
-		$name  = sanitize_file_name( 'ucastnice-' . ( $ev ? $ev['title'] : 'vse' ) . '-' . wp_date( 'Y-m-d' ) . '.csv' );
+		$name  = sanitize_file_name( ( '' !== $email && ! $ev ? 'rezervace-' . $email : 'ucastnice-' . ( $ev ? $ev['title'] : 'vse' ) ) . '-' . wp_date( 'Y-m-d' ) . '.csv' );
 		nocache_headers();
 		header( 'Content-Type: text/csv; charset=UTF-8' );
 		header( 'Content-Disposition: attachment; filename="' . $name . '"' );
