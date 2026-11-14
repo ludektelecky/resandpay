@@ -4,6 +4,15 @@
 >
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
+## 0.26.0 – Materiál „Odeslat na e-mail“ (14. 11. 2026)
+
+- **R24 – „Odeslat na e-mail (bez účtu)“** ([Issue #33](https://github.com/ludektelecky/resandpay/issues/33) a [#34](https://github.com/ludektelecky/resandpay/issues/34), schváleno a implementováno): nový přístup u materiálu **„Odeslat na e-mail (bez účtu)“**, který se řídí **cenou** – **s cenou** přijde zákazníkovi **platební pokyn** a po zaplacení odkaz, **bez ceny** odkaz ke stažení **zdarma**.
+  - zdarma: zákazník bez účtu vyplní **jméno a e-mail** (+ souhlas se zpracováním údajů, nepovinně **novinky**) a přijde mu e-mail s **odkazem na materiál a na svůj profil**, kde si ho stáhne
+  - soubory se zpřístupní až z odkazu v e-mailu; stejný e-mail podruhé jen znovu pošle odkaz
+  - zákazník je v přehledu **Zákazníci**, ve **statistice materiálů** a se souhlasem v **MailerLite**; přihlášený uživatel má materiál hned
+  - nový text e-mailu **Materiál zdarma po zadání e-mailu** (Nastavení → E-maily); funguje jen s vybranou stránkou profilu zákazníka
+- Bez změny databáze. Testy: 773 kontrol + souběh
+
 ## 0.25.0 – Odbavení na místě na webu (14. 11. 2026)
 
 - **R23 – odbavení na webu** ([Issue #30](https://github.com/ludektelecky/resandpay/issues/30), schváleno a implementováno): shortcode **`[reserveandpay_checkin]`** – odbavení na samostatné webové stránce, pro telefon přímo na lekci.
