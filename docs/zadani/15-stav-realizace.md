@@ -19,7 +19,7 @@ Vývoj probíhá na webu slehkouhlavou.cz (WordPress 7.1, PHP 8.5, MySQL 8.4, Ac
 
 ## 15.1 Kniha rozvoje
 
-> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R26 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
+> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R27 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
 
 Funkce navržené k dalšímu rozvoji pluginu. Položka se po schválení podrobného zadání přesune do příslušné kapitoly a do tabulky stavu realizace.
 
@@ -396,3 +396,12 @@ Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, po
 - **Materiál** se edituje v **klasickém editoru** (popis nahoře, nastavení hned pod ním na celé šířce; filtr resandpay_material_block_editor vrátí blokový editor). Dosavadní rámečky Parametry materiálu, Soubory ke stažení a Přístupy jsou sloučené do jednoho rámečku **„Nastavení materiálu“** se záložkami: **Základní** (kód, druh, dostupnost) · **Přístup a cena** (přístup, role, cena, akční cena, splatnost, doba přístupu) · **Zdarma pro účastníky** · **Soubory** (soubory, vodoznak v PDF) · **Přístupy a stažení** (objednávky, ruční zpřístupnění, poslední stažení) · **MailerLite** (jen při zapnutém napojení – přesunuto z pravého panelu).
 - **Akce** (Parametry akce) – záložky **Termín a místo** · **Cena a platba** · **Rezervace** · **Připomínka a odpočet** · **MailerLite**; **služba** (Parametry služby) – **Termíny a místo** · **Cena a platba** · **Rezervace a připomínka** · **Web a shortcody** · **MailerLite**. MailerLite už není v bočním panelu akce, služby ani materiálu. Ostatní rámečky akce (fotky, FAQ, program, obsazenost) beze změny.
 - Záložky přepínají zobrazení bez přenačtení, ukládá se vše najednou (Aktualizovat); poslední záložka se pamatuje, odkaz s kotvou (např. #rap_material_access po zpřístupnění) a neplatné pole otevřou příslušnou záložku; bez JavaScriptu je vidět vše jako dřív. Obecné pomocné funkce Resandpay_Admin::tabs_open() / tab() / tabs_script() (atributy data-rap-tabs, data-rap-tab).
+
+### R27 – Historie stažení materiálů u zákazníka
+
+**Pozn.: Navrženo a schváleno 14. 11. 2026 ([Issue #41](https://github.com/ludektelecky/resandpay/issues/41)), implementováno ve verzi pluginu 0.29.0.**
+
+- V profilu zákazníka (část Materiály ke stažení) a na stránce **Moje materiály** je u každého materiálu **„Staženo N× · naposledy …“** a rozbalovací **historie stažení** (datum a čas, soubor, stažení / přehrání; „… a N starších“). Počet záznamů v Nastavení → Materiály ke stažení → „Historie stažení u zákazníka – počet záznamů“ (výchozí 5, 0 = jen celkový počet).
+- Zákazník = e-mail profilu: záznamy logu s tímto e-mailem (stažení přes osobní odkaz) i záznamy účtů se stejným e-mailem (po přihlášení). Nepočítají se ukázky, neúspěšné pokusy (limit) ani technické záznamy vodoznaku.
+- Profil nově ukazuje i materiály, ke kterým zákazník nemá záznam o nároku, ale **stáhl si je** (typicky „Jen pro přihlášené“ zdarma): po přihlášení se stažením, přes osobní odkaz s historií a „Ke stažení po přihlášení“, bez přístupu „Materiál už nemáte k dispozici“, znepřístupněné s textem z nastavení.
+- Historie se řídí uchováváním logu (Uchovávat záznamy o stažení, výchozí 365 dní). Funkce Resandpay_Materials::download_history(), downloaded_ids().

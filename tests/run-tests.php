@@ -2663,6 +2663,58 @@ wp_delete_post( $tbM, true );
 wp_delete_post( $tbSv, true );
 update_option( Resandpay_Settings::OPTION, $tbSaved, false );
 
+echo "== 0.29.0: historie stažení v profilu a Moje materiály (#41)\n";
+$hsSaved = get_option( Resandpay_Settings::OPTION );
+$hsPage  = wp_insert_post( array( 'post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'Profil 41', 'post_content' => '[reserveandpay_my_reservations]' ) );
+Resandpay_Settings::update( array( 'profile_page' => $hsPage ) );
+rap_t( 5 === (int) Resandpay_Settings::defaults()['mat_history_count'], 'výchozí: posledních 5 stažení' );
+$hsU = wp_insert_user( array( 'user_login' => 'hs41', 'user_email' => 'hs41.zak@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
+$hsMk = function ( $aud, $title ) {
+	$id = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::MATERIAL, 'post_status' => 'publish', 'post_title' => $title ) );
+	Resandpay_Admin_Materials::save_meta( $id, array( 'rap_mat_audience' => $aud, 'rap_price' => '' ) );
+	Resandpay_Materials::save_files( $id, array( array( 'id' => 'h1', 'label' => 'Kniha PDF', 'name' => 'kniha.pdf', 'path' => 'm' . $id . '-abcdefghij/kniha.pdf', 'size' => 5, 'mime' => 'application/pdf', 'sample' => 0 ) ) );
+	return Resandpay_Materials::get( $id );
+};
+$hsFree  = $hsMk( 'logged', 'Historie zdarma pro přihlášené' );
+$hsEmail = $hsMk( 'email', 'Historie na e-mail' );
+$hsO = Resandpay_Materials::request_free( $hsEmail['id'], array( 'customer_name' => 'Hana Historie', 'email' => 'hs41.zak@example.cz', 'consent_gdpr' => 1 ) );
+for ( $hsI = 0; $hsI < 7; $hsI++ ) {
+	Resandpay_Materials::log_download( $hsU, $hsFree['id'], 'h1', 0 === $hsI % 3 ? 'play' : 'download', 'ok' );
+}
+Resandpay_Materials::log_download( $hsU, $hsFree['id'], 'h1', 'sample', 'ok' );
+Resandpay_Materials::log_download( $hsU, $hsFree['id'], 'h1', 'download', 'limit' );
+Resandpay_Materials::log_download( 0, $hsEmail['id'], 'h1', 'download', 'ok', 'hs41.zak@example.cz' );
+Resandpay_Materials::log_download( 0, $hsEmail['id'], 'h1', 'download', 'ok', 'cizi.zak41@example.cz' );
+$hsH = Resandpay_Materials::download_history( $hsFree['id'], 'hs41.zak@example.cz' );
+rap_t( 7 === $hsH['total'] && 5 === count( $hsH['rows'] ), 'historie: celkem 7 (bez ukázek a neúspěšných), zobrazeno posledních 5' );
+Resandpay_Settings::update( array( 'mat_history_count' => 2 ) );
+rap_t( 2 === count( Resandpay_Materials::download_history( $hsFree['id'], 'hs41.zak@example.cz' )['rows'] ), 'počet záznamů podle nastavení' );
+Resandpay_Settings::update( array( 'mat_history_count' => 5 ) );
+rap_t( 1 === Resandpay_Materials::download_history( $hsEmail['id'], 'hs41.zak@example.cz' )['total'], 'stažení přes e-mail podle e-mailu, cizí se nezapočítají' );
+$hsIds = Resandpay_Materials::downloaded_ids( 'hs41.zak@example.cz' );
+rap_t( in_array( $hsFree['id'], $hsIds, true ) && in_array( $hsEmail['id'], $hsIds, true ), 'stažené materiály podle logu (účet i e-mail)' );
+// Profil přes osobní odkaz.
+wp_set_current_user( 0 );
+$_REQUEST['rap_p'] = Resandpay_Profile::token_for( $hsO );
+$hsProf = Resandpay_Profile::shortcode();
+unset( $_REQUEST['rap_p'] );
+rap_t( false !== strpos( $hsProf, 'Historie na e-mail' ) && false !== strpos( $hsProf, 'Staženo 1×' ), 'profil: materiál z e-mailu s historií' );
+rap_t( false !== strpos( $hsProf, 'Historie zdarma pro přihlášené' ) && false !== strpos( $hsProf, 'Staženo 7×' ) && false !== strpos( $hsProf, 'Ke stažení po přihlášení' ), 'profil: i stažený materiál zdarma pro přihlášené (historie, stažení po přihlášení)' );
+rap_t( 1 === preg_match( '/<details class="rap-mat-history">.*?Kniha PDF \(přehrání\)/s', $hsProf ) && false !== strpos( $hsProf, '… a 2 starších' ), 'rozbalovací historie: datum, soubor, druh, počet starších' );
+// Profil po přihlášení a Moje materiály.
+wp_set_current_user( $hsU );
+$hsProfL = Resandpay_Profile::shortcode();
+$hsMy    = Resandpay_Materials_Views::shortcode_my();
+wp_set_current_user( 0 );
+rap_t( false !== strpos( $hsProfL, 'Staženo 7×' ) && false === strpos( $hsProfL, 'Ke stažení po přihlášení' ) && false !== strpos( $hsProfL, 'rap_dl=' ), 'profil po přihlášení: stažený materiál zdarma pro přihlášené i se stažením' );
+rap_t( false !== strpos( $hsMy, 'Staženo 7×' ) && false !== strpos( $hsMy, 'Staženo 1×' ), 'Moje materiály: historie stažení u materiálů' );
+Resandpay_Settings::update( array( 'mat_history_count' => 0 ) );
+rap_t( false === strpos( Resandpay_Materials_Views::render_history( $hsFree, 'hs41.zak@example.cz', $hsU ), '<details' ) && false !== strpos( Resandpay_Materials_Views::render_history( $hsFree, 'hs41.zak@example.cz', $hsU ), 'Staženo 7×' ), '0 = jen celkový počet, bez seznamu' );
+wp_delete_user( $hsU );
+wp_delete_post( $hsFree['id'], true );
+wp_delete_post( $hsEmail['id'], true );
+update_option( Resandpay_Settings::OPTION, $hsSaved, false );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );

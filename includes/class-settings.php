@@ -101,6 +101,7 @@ class Resandpay_Settings {
 			'mat_download_limit'   => 10,
 			'mat_link_minutes'     => 240,
 			'mat_log_days'         => 365,
+			'mat_history_count'    => 5, // Počet posledních stažení v historii zákazníka (profil, Moje materiály).
 			'mat_my_page'          => 0,
 			'mat_register_page'    => 0,
 			'mat_login_text'       => 'Materiály ke stažení jsou pro přihlášené. Přihlaste se, nebo si zdarma založte účet.',

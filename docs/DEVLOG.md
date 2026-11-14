@@ -4,6 +4,14 @@
 >
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
+## 0.29.0 – Historie stažení materiálů u zákazníka (14. 11. 2026)
+
+- **R27 – historie stažení** ([Issue #41](https://github.com/ludektelecky/resandpay/issues/41), schváleno a implementováno): v **profilu zákazníka** a v **Moje materiály** je u každého materiálu „**Staženo 3× · naposledy 12. 11. 2026 14:05**“ a rozbalovací historie (datum, soubor, stažení / přehrání).
+  - počet záznamů v Nastavení → Materiály ke stažení (výchozí **posledních 5**, k tomu celkový počet)
+  - profil ukazuje i materiály **zdarma pro přihlášené**, které si zákazník stáhl, a materiály **odeslané na jeho e-mail**
+  - počítá se stažení přes odkaz z e-mailu i po přihlášení účtem se stejným e-mailem; ukázky a neúspěšné pokusy ne
+- Bez změny databáze. Testy: 817 kontrol + souběh
+
 ## 0.28.0 – Přehlednější editor materiálu, akce a služby (14. 11. 2026)
 
 - **R26 – nastavení v záložkách** ([Issue #38](https://github.com/ludektelecky/resandpay/issues/38), schváleno a implementováno):

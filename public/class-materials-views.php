@@ -344,6 +344,33 @@ class Resandpay_Materials_Views {
 		return $out;
 	}
 
+	/** Historie stažení materiálu zákazníkem (#41) – „Staženo 3× · naposledy …“ a rozbalovací seznam. */
+	public static function render_history( array $mat, $email, $user_id = 0 ) {
+		$h = Resandpay_Materials::download_history( $mat['id'], $email, $user_id );
+		if ( ! $h['total'] ) {
+			return '<p class="rap-small rap-mat-history__none">' . esc_html__( 'Zatím nestaženo.', 'reserveandpay' ) . '</p>';
+		}
+		$files = array();
+		foreach ( $mat['files'] as $f ) {
+			$files[ $f['id'] ] = $f['label'] ?: $f['name'];
+		}
+		$last = $h['rows'] ? wp_date( 'j. n. Y G:i', Resandpay_Events::ts( $h['rows'][0]['created_at'] ) ) : '';
+		/* translators: 1: počet, 2: datum */
+		$sum  = $last ? sprintf( __( 'Staženo %1$d× · naposledy %2$s', 'reserveandpay' ), $h['total'], $last ) : sprintf( /* translators: %d: počet */ __( 'Staženo %d×', 'reserveandpay' ), $h['total'] );
+		if ( ! $h['rows'] ) {
+			return '<p class="rap-small rap-mat-history__sum">' . esc_html( $sum ) . '</p>';
+		}
+		$out = '<details class="rap-mat-history"><summary class="rap-small">' . esc_html( $sum ) . '</summary><ul>';
+		foreach ( $h['rows'] as $row ) {
+			$out .= '<li>' . esc_html( wp_date( 'j. n. Y G:i', Resandpay_Events::ts( $row['created_at'] ) ) . ' – ' . ( $files[ $row['file_id'] ] ?? $row['file_id'] ) . ' (' . ( 'play' === $row['kind'] ? __( 'přehrání', 'reserveandpay' ) : __( 'stažení', 'reserveandpay' ) ) . ')' ) . '</li>';
+		}
+		if ( $h['total'] > count( $h['rows'] ) ) {
+			/* translators: %d: počet */
+			$out .= '<li class="rap-small">' . esc_html( sprintf( __( '… a %d starších', 'reserveandpay' ), $h['total'] - count( $h['rows'] ) ) ) . '</li>';
+		}
+		return $out . '</ul></details>';
+	}
+
 	/** Formulář „Zdarma po zadání e-mailu“ (#33) – po odeslání přijde e-mail s odkazem. */
 	public static function render_email_form( array $mat, array $id ) {
 		if ( isset( $_GET['rap_sent'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
@@ -597,11 +624,12 @@ class Resandpay_Materials_Views {
 				/* translators: %s: datum */
 				$out .= '<p class="rap-small">' . esc_html( sprintf( __( 'Přístup do %s', 'reserveandpay' ), wp_date( 'j. n. Y', $it['access']['until'] ) ) ) . '</p>';
 			}
+			$hist = self::render_history( $m, wp_get_current_user()->user_email, $uid );
 			if ( ! empty( $it['access']['disabled'] ) ) {
-				$out .= '<p class="rap-notice">' . esc_html( (string) Resandpay_Settings::get( 'mat_disabled_text' ) ) . '</p></section>';
+				$out .= '<p class="rap-notice">' . esc_html( (string) Resandpay_Settings::get( 'mat_disabled_text' ) ) . '</p>' . $hist . '</section>';
 				continue;
 			}
-			$out .= self::render_files( $m, false ) . '</section>';
+			$out .= self::render_files( $m, false ) . $hist . '</section>';
 		}
 		$done = array_filter( $orders, fn( $o ) => ! in_array( $o['status'], array( Resandpay_Reservations::PENDING, Resandpay_Reservations::PARTIAL, Resandpay_Reservations::OVERDUE ), true ) );
 		if ( $done ) {

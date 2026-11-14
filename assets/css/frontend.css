@@ -507,3 +507,8 @@ audio.rap-mat-player { background: transparent; }
 .rap-checkin--front .rap-checkin__day .rap-button { padding: .45rem .8rem; font-size: 14px; }
 .rap-checkin__note { white-space: pre-line; }
 .rap-checkin--front .rap-checkin__days { display: flex; flex-wrap: wrap; gap: .5rem; }
+
+/* Historie stažení materiálu (#41) */
+.rap-mat-history { margin: .4rem 0 0; }
+.rap-mat-history summary { cursor: pointer; color: var(--rap-ink-soft); }
+.rap-mat-history ul { margin: .35rem 0 0 1.1rem; padding: 0; font-size: 14px; color: var(--rap-ink-soft); }

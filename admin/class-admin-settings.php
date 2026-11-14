@@ -164,6 +164,7 @@ class Resandpay_Admin_Settings {
 				'mat_download_limit'   => array( __( 'Limit stažení jednoho souboru za 24 h', 'reserveandpay' ), 'number', __( 'Na uživatele a soubor. Výchozí 10, 0 = bez limitu. Přehrávání videa / audia na webu se nepočítá.', 'reserveandpay' ) ),
 				'mat_link_minutes'     => array( __( 'Platnost odkazu ke stažení (minut)', 'reserveandpay' ), 'number', __( 'Odkaz se vytváří při zobrazení stránky a platí jen pro přihlášeného uživatele. Výchozí 240 min (stačí i na delší video).', 'reserveandpay' ) ),
 				'mat_log_days'         => array( __( 'Uchovávat záznamy o stažení (dní)', 'reserveandpay' ), 'number' ),
+				'mat_history_count'    => array( __( 'Historie stažení u zákazníka – počet záznamů', 'reserveandpay' ), 'number', __( 'Kolik posledních stažení zobrazit u materiálu v profilu zákazníka a v Moje materiály (vedle celkového počtu). Výchozí 5, 0 = historii nezobrazovat.', 'reserveandpay' ) ),
 				'mat_login_text'       => array( __( 'Text pro nepřihlášené', 'reserveandpay' ), 'text' ),
 				'mat_roles_text'       => array( __( 'Text u materiálu jen pro vybrané role', 'reserveandpay' ), 'text' ),
 				'mat_wm_default'       => array( __( 'Vodoznak v PDF – výchozí', 'reserveandpay' ), 'checkbox', __( 'Do staženého PDF se vloží údaje kupujícího a zapíší se i do metadat PDF. Výchozí pro materiály; u každého materiálu lze změnit (Parametry materiálu → Vodoznak v PDF). Ukázky (bez přihlášení) jsou bez vodoznaku.', 'reserveandpay' ) ),
