@@ -344,7 +344,9 @@ class Resandpay_Admin_Settings {
 		settings_fields( 'resandpay_settings_group' );
 		echo '<input type="hidden" name="' . esc_attr( Resandpay_Settings::OPTION ) . '[__form]" value="1">';
 		$tabs    = self::tabs();
-		$current = isset( $_GET['tab'] ) && isset( $tabs[ sanitize_key( wp_unslash( $_GET['tab'] ) ) ] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : (string) array_key_first( $tabs ); // phpcs:ignore WordPress.Security.NonceVerification
+		$req_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
+		$req_tab = self::TAB_ALIASES[ $req_tab ] ?? $req_tab;
+		$current = isset( $tabs[ $req_tab ] ) ? $req_tab : (string) array_key_first( $tabs );
 		$tab_of  = array();
 		foreach ( $tabs as $tk => $t ) {
 			foreach ( $t[1] as $sec ) {
@@ -481,6 +483,9 @@ class Resandpay_Admin_Settings {
 	 * Záložky nastavení: klíč => [název, sekce]. Všechna pole zůstávají v jednom formuláři – uloží se
 	 * vše najednou, záložky jen přepínají zobrazení.
 	 */
+	/** Staré klíče záložek → nové (odkazy a záložky v prohlížeči zůstávají funkční). */
+	const TAB_ALIASES = array( 'napojeni' => 'mailerlite' );
+
 	public static function tabs() {
 		return array(
 			'provozovatel' => array( __( 'Provozovatel', 'reserveandpay' ), array( __( 'Provozovatel', 'reserveandpay' ), __( 'Platební pokyn a QR platba', 'reserveandpay' ) ) ),
@@ -489,7 +494,8 @@ class Resandpay_Admin_Settings {
 			'emaily'       => array( __( 'E-maily', 'reserveandpay' ), array( __( 'E-maily', 'reserveandpay' ), __( 'Testovací režim', 'reserveandpay' ) ) ),
 			'platby'       => array( __( 'Kontrola plateb', 'reserveandpay' ), array( __( 'Kontrola plateb', 'reserveandpay' ) ) ),
 			'materialy'    => array( __( 'Materiály', 'reserveandpay' ), array( __( 'Materiály ke stažení', 'reserveandpay' ) ) ),
-			'napojeni'     => array( __( 'Napojení', 'reserveandpay' ), array( __( 'MailerLite', 'reserveandpay' ) ) ),
+			// Každý napojený systém má vlastní záložku (od 0.19.1; dříve společná „Napojení“ – ?tab=napojeni zůstává funkční).
+			'mailerlite'   => array( __( 'MailerLite', 'reserveandpay' ), array( __( 'MailerLite', 'reserveandpay' ) ) ),
 			'dalsi'        => array( __( 'Kódy a statistika', 'reserveandpay' ), array( __( 'Kódy akcí, služeb a termínů', 'reserveandpay' ), __( 'Statistika', 'reserveandpay' ) ) ),
 		);
 	}

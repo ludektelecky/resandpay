@@ -2,7 +2,7 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Administrace napojení na MailerLite (Issue #22): nástroje v Nastavení → Napojení,
+ * Administrace napojení na MailerLite (Issue #22): nástroje v Nastavení → záložka MailerLite,
  * boční panel „MailerLite“ u akce, služby a materiálu.
  */
 class Resandpay_Admin_MailerLite {
@@ -91,7 +91,7 @@ class Resandpay_Admin_MailerLite {
 		check_admin_referer( 'resandpay_ml_' . $do );
 		$msg = self::run( $do );
 		Resandpay_Admin::flash( $msg[0], $msg[1] );
-		wp_safe_redirect( admin_url( 'admin.php?page=reserveandpay-settings&tab=napojeni#rap-sec-mailerlite' ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=reserveandpay-settings&tab=mailerlite#rap-sec-mailerlite' ) );
 		exit;
 	}
 

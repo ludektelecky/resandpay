@@ -6,7 +6,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * Zákazník, který při rezervaci zaškrtl souhlas s novinkami, se zapíše do MailerLite (API
  * connect.mailerlite.com) do skupin zvolených administrátorem. Skupiny se vždy načítají z účtu
- * MailerLite daného webu. Výchozí skupiny jsou v Nastavení → Napojení, u akce, služby a materiálu
+ * MailerLite daného webu. Výchozí skupiny jsou v Nastavení → MailerLite, u akce, služby a materiálu
  * je lze změnit (termín služby přebírá nastavení služby).
  *
  * Odesílá se na pozadí (WP-Cron) – stav je u rezervace ve sloupcích ml_status, ml_groups, ml_at,
@@ -415,7 +415,7 @@ class Resandpay_MailerLite {
 			return new WP_Error( 'not_found', __( 'Rezervace nenalezena.', 'reserveandpay' ) );
 		}
 		if ( ! self::enabled() ) {
-			return new WP_Error( 'ml_off', __( 'Napojení na MailerLite je vypnuté (Nastavení → Napojení).', 'reserveandpay' ) );
+			return new WP_Error( 'ml_off', __( 'Napojení na MailerLite je vypnuté (Nastavení → MailerLite).', 'reserveandpay' ) );
 		}
 		self::set(
 			$r['id'],

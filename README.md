@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.19.0** · zadání: [`docs/zadani/`](docs/zadani/README.md) (odpovídá aktuální verzi pluginu) · rozvojové požadavky: [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) · změny: [DEVLOG](docs/DEVLOG.md)
+> **Aktuální verze pluginu: 0.19.1** · zadání: [`docs/zadani/`](docs/zadani/README.md) (odpovídá aktuální verzi pluginu) · rozvojové požadavky: [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) · změny: [DEVLOG](docs/DEVLOG.md)
 
 ### Název a označení
 
@@ -61,7 +61,7 @@ Technické identifikátory se nemění (slug a textdomain `reserveandpay`, před
 
 ### Napojení
 - **Ultimate Member** – po zaplacení založení účtu / přidání role
-- **MailerLite** (od 0.19.0, volitelné) – zákazníci se souhlasem s novinkami se zapíší do skupin načtených z účtu MailerLite (výchozí v Nastavení → Napojení, jiné u akce / služby / materiálu); po zaplacení nebo hned po rezervaci, na pozadí, se stavem u rezervace a v přehledu Zákazníci; import stávajících zákazníků
+- **MailerLite** (od 0.19.0, volitelné) – zákazníci se souhlasem s novinkami se zapíší do skupin načtených z účtu MailerLite (výchozí v Nastavení → záložka MailerLite, jiné u akce / služby / materiálu); po zaplacení nebo hned po rezervaci, na pozadí, se stavem u rezervace a v přehledu Zákazníci; import stávajících zákazníků
 - Transakční e-maily s upravitelnými texty
 
 ### Bezpečnost a provoz
@@ -168,7 +168,7 @@ Po etapách E1 a E2 lze rezervace spustit s ručním potvrzováním plateb.
 
 ## Nastavení
 
-ResAndPay → Nastavení je rozdělené do záložek (od 0.17.1): **Provozovatel** (provozovatel, platební pokyn a QR platba) · **Rezervace** (rezervace a platby, připomínky akcí, ochrana formuláře) · **Web a vzhled** (vzhled, detail akce, odpočet) · **E-maily** (šablony e-mailů, testovací režim) · **Kontrola plateb** · **Materiály** · **Napojení** (MailerLite, od 0.19.0) · **Kódy a statistika**. Všechny záložky jsou jeden formulář – „Uložit nastavení“ uloží vše a vrátí se na stejnou záložku. Přímý odkaz: `admin.php?page=reserveandpay-settings&tab=platby`.
+ResAndPay → Nastavení je rozdělené do záložek (od 0.17.1): **Provozovatel** (provozovatel, platební pokyn a QR platba) · **Rezervace** (rezervace a platby, připomínky akcí, ochrana formuláře) · **Web a vzhled** (vzhled, detail akce, odpočet) · **E-maily** (šablony e-mailů, testovací režim) · **Kontrola plateb** · **Materiály** · **MailerLite** (od 0.19.0; každý napojený systém má vlastní záložku) · **Kódy a statistika**. Všechny záložky jsou jeden formulář – „Uložit nastavení“ uloží vše a vrátí se na stejnou záložku. Přímý odkaz: `admin.php?page=reserveandpay-settings&tab=platby`.
 
 ## Vzhled a CSS
 

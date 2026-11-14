@@ -4,6 +4,11 @@
 >
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
+## 0.19.1 – Záložka MailerLite v Nastavení (14. 11. 2026)
+
+- Záložka **Nastavení → Napojení** přejmenována na **Nastavení → MailerLite** – každý napojený systém bude mít vlastní záložku. Starý odkaz `&tab=napojeni` dál otevře záložku MailerLite. Nastavení se nemění.
+- Testy: 634 kontrol + souběh
+
 ## 0.19.0 – Napojení na MailerLite (14. 11. 2026)
 
 - **R17 – napojení na MailerLite** (etapa E6b, [Issue #22](https://github.com/ludektelecky/resandpay/issues/22), schváleno a implementováno): zákazníci se **souhlasem s novinkami** se zapíší do MailerLite. Volitelné, ve výchozím stavu **vypnuto** – stávající weby se nemění.

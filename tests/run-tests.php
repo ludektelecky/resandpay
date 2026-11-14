@@ -2003,12 +2003,13 @@ $mlCsv = Resandpay_Customers::csv_rows( array( 'search' => 'ml1.zak22', 'newslet
 rap_t( 'MailerLite' === $mlCsv[0][10] && 'odesláno' === $mlCsv[1][10], 'export CSV zákazníků se stavem MailerLite' );
 // Administrace.
 wp_set_current_user( 1 );
-$_GET['tab'] = 'napojeni';
+$_GET['tab'] = 'napojeni'; // Starý klíč záložky → MailerLite.
 ob_start();
 Resandpay_Admin_Settings::page();
 $mlSet = ob_get_clean();
 unset( $_GET['tab'] );
-rap_t( false !== strpos( $mlSet, 'data-tab="napojeni">' ) && false !== strpos( $mlSet, 'value="222"' ) && false !== strpos( $mlSet, 'Jóga' ) && false !== strpos( $mlSet, 'Ověřit připojení' ) && false !== strpos( $mlSet, '(uloženo)' ) && false === strpos( $mlSet, 'ml-test-key' ), 'Nastavení → Napojení: skupiny z účtu, klíč se nezobrazí' );
+rap_t( 1 === preg_match( '/nav-tab-active" data-tab="mailerlite"[^>]*>MailerLite</', $mlSet ) && false === strpos( $mlSet, '>Napojení<' ), 'záložka MailerLite (samostatná), starý odkaz ?tab=napojeni na ni vede' );
+rap_t( false !== strpos( $mlSet, 'data-tab="mailerlite">' ) && false !== strpos( $mlSet, 'value="222"' ) && false !== strpos( $mlSet, 'Jóga' ) && false !== strpos( $mlSet, 'Ověřit připojení' ) && false !== strpos( $mlSet, '(uloženo)' ) && false === strpos( $mlSet, 'ml-test-key' ), 'Nastavení → MailerLite: skupiny z účtu, klíč se nezobrazí' );
 $_GET['id'] = $ml1['id'];
 ob_start();
 Resandpay_Admin_Reservations::page_detail();
