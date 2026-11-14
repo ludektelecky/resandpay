@@ -41,36 +41,37 @@ class Resandpay_Admin_Services {
 				'order'          => 'ASC',
 			)
 		);
+		echo Resandpay_Admin::tabs_open( 'service', self::tabs() ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
 		?>
 		<p class="rap-code"><?php esc_html_e( 'Kód:', 'reserveandpay' ); ?> <?php echo $svc['code'] ? '<code>' . esc_html( $svc['code'] ) . '</code>' : esc_html__( 'přidělí se při uložení', 'reserveandpay' ); ?></p>
 		<p class="description"><?php esc_html_e( 'Popis služby výše se zobrazí u každého termínu na webu. Délka, pauza a počet míst jsou pevné – zákaznice je nevolí. Jejich změna platí pro nově vygenerované termíny.', 'reserveandpay' ); ?></p>
 		<table class="form-table">
-			<tr><th><label for="rap_duration"><?php esc_html_e( 'Délka termínu', 'reserveandpay' ); ?></label></th>
+			<tr<?php echo Resandpay_Admin::tab( 'terminy' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><label for="rap_duration"><?php esc_html_e( 'Délka termínu', 'reserveandpay' ); ?></label></th>
 				<td><input type="number" min="5" step="5" id="rap_duration" name="rap_duration" value="<?php echo esc_attr( $svc['duration'] ); ?>" class="small-text"> <?php esc_html_e( 'minut', 'reserveandpay' ); ?></td></tr>
-			<tr><th><label for="rap_pause"><?php esc_html_e( 'Pauza mezi termíny', 'reserveandpay' ); ?></label></th>
+			<tr<?php echo Resandpay_Admin::tab( 'terminy' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><label for="rap_pause"><?php esc_html_e( 'Pauza mezi termíny', 'reserveandpay' ); ?></label></th>
 				<td><input type="number" min="0" step="5" id="rap_pause" name="rap_pause" value="<?php echo esc_attr( $svc['pause'] ); ?>" class="small-text"> <?php esc_html_e( 'minut', 'reserveandpay' ); ?></td></tr>
-			<tr><th><label for="rap_capacity"><?php esc_html_e( 'Počet míst na termín', 'reserveandpay' ); ?></label></th>
+			<tr<?php echo Resandpay_Admin::tab( 'terminy' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><label for="rap_capacity"><?php esc_html_e( 'Počet míst na termín', 'reserveandpay' ); ?></label></th>
 				<td><input type="number" min="1" max="500" step="1" id="rap_capacity" name="rap_capacity" value="<?php echo esc_attr( $svc['capacity'] ); ?>" class="small-text">
 					<p class="description"><?php esc_html_e( '1 = individuální služba (např. masáž). Více = skupinová lekce (např. Sound Healing 15) – termín zůstává volný, dokud se nezaplní.', 'reserveandpay' ); ?></p>
 					<?php if ( 'auto-draft' !== $post->post_status ) : ?>
 					<label><input type="checkbox" name="rap_capacity_apply" value="1"> <?php esc_html_e( 'Změnu promítnout i do nadcházejících termínů', 'reserveandpay' ); ?></label>
 					<?php endif; ?></td></tr>
-			<tr><th><label for="rap_price"><?php esc_html_e( 'Cena za místo', 'reserveandpay' ); ?></label></th>
+			<tr<?php echo Resandpay_Admin::tab( 'cena' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><label for="rap_price"><?php esc_html_e( 'Cena za místo', 'reserveandpay' ); ?></label></th>
 				<td><input type="number" min="0" step="any" id="rap_price" name="rap_price" value="<?php echo esc_attr( $svc['price'] ); ?>" class="regular-text" style="width:10em">
 					<input type="text" name="rap_currency" value="<?php echo esc_attr( $svc['currency'] ); ?>" class="small-text" maxlength="3" aria-label="<?php esc_attr_e( 'Měna', 'reserveandpay' ); ?>"></td></tr>
-			<tr><th><label for="rap_location"><?php esc_html_e( 'Místo konání', 'reserveandpay' ); ?></label></th>
+			<tr<?php echo Resandpay_Admin::tab( 'terminy' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><label for="rap_location"><?php esc_html_e( 'Místo konání', 'reserveandpay' ); ?></label></th>
 				<td><select id="rap_location" name="rap_location"><option value="0">— <?php esc_html_e( 'nevybráno', 'reserveandpay' ); ?> —</option>
 					<?php foreach ( $locations as $loc ) : ?>
 						<option value="<?php echo (int) $loc->ID; ?>" <?php selected( $svc['location_id'], $loc->ID ); ?>><?php echo esc_html( $loc->post_title ); ?></option>
 					<?php endforeach; ?></select></td></tr>
-			<tr><th><?php esc_html_e( 'Splatnost a platba', 'reserveandpay' ); ?></th>
+			<tr<?php echo Resandpay_Admin::tab( 'cena' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><?php esc_html_e( 'Splatnost a platba', 'reserveandpay' ); ?></th>
 				<td class="rap-box"><?php Resandpay_Admin_Events::payment_fields( $svc ); ?>
 					<p class="description"><?php esc_html_e( 'Platí pro nově generované termíny. Termín lze rezervovat až do začátku; nestihne-li platba dorazit, platí se na místě.', 'reserveandpay' ); ?></p></td></tr>
-			<tr><th><?php esc_html_e( 'Sleva', 'reserveandpay' ); ?></th>
+			<tr<?php echo Resandpay_Admin::tab( 'cena' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><?php esc_html_e( 'Sleva', 'reserveandpay' ); ?></th>
 				<td><?php Resandpay_Discounts::early_fields( $post->ID ); ?><p class="description"><?php esc_html_e( 'Platí pro všechny termíny služby (i již vypsané).', 'reserveandpay' ); ?></p></td></tr>
-			<tr><th><?php esc_html_e( 'Zobrazení', 'reserveandpay' ); ?></th>
+			<tr<?php echo Resandpay_Admin::tab( 'web' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><?php esc_html_e( 'Zobrazení', 'reserveandpay' ); ?></th>
 				<td><?php Resandpay_Events::time_display_field( get_post_meta( $post->ID, '_rap_time_display', true ), __( 'Platí pro všechny termíny služby (i již vypsané), pokud termín nemá vlastní volbu. Jen datum: na webu, v e-mailech a na platebním pokynu bez času; ve výběru volných termínů se pak u tlačítek místo času ukáže „Rezervovat“ – hodí se jen pro jeden termín denně.', 'reserveandpay' ) ); ?></td></tr>
-			<tr><th><label for="rap_desc_mode"><?php esc_html_e( 'Popis na webu', 'reserveandpay' ); ?></label></th>
+			<tr<?php echo Resandpay_Admin::tab( 'web' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><label for="rap_desc_mode"><?php esc_html_e( 'Popis na webu', 'reserveandpay' ); ?></label></th>
 				<td><?php $dm = (string) get_post_meta( $post->ID, '_rap_desc_mode', true ); ?>
 					<select id="rap_desc_mode" name="rap_desc_mode">
 						<option value=""><?php esc_html_e( 'Nezobrazovat', 'reserveandpay' ); ?></option>
@@ -78,17 +79,37 @@ class Resandpay_Admin_Services {
 						<option value="open" <?php selected( $dm, 'open' ); ?>><?php esc_html_e( 'Vždy zobrazit nad termíny', 'reserveandpay' ); ?></option>
 					</select>
 					<p class="description"><?php echo esc_html( sprintf( /* translators: %s: shortcode s kódem služby */ __( 'Popis = text v editoru služby výše. Platí ve výběru termínů; na konkrétní stránce ho přepíše parametr description, např. %s (viz řádek Shortcody).', 'reserveandpay' ), '[reserveandpay_slots service="' . Resandpay_Admin_Shortcodes::code_or_placeholder( $post->ID, 'SL-…' ) . '" description="toggle"]' ) ); ?></p></td></tr>
-			<tr><th><?php esc_html_e( 'Připomínka', 'reserveandpay' ); ?></th>
+			<tr<?php echo Resandpay_Admin::tab( 'rezervace' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><?php esc_html_e( 'Připomínka', 'reserveandpay' ); ?></th>
 				<td><?php Resandpay_Events::reminder_fields( $post->ID ); ?><p class="description"><?php esc_html_e( 'Platí pro všechny termíny služby, pokud termín nemá vlastní nastavení.', 'reserveandpay' ); ?></p></td></tr>
-			<tr><th><?php esc_html_e( 'Rezervace', 'reserveandpay' ); ?></th>
+			<tr<?php echo Resandpay_Admin::tab( 'rezervace' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><?php esc_html_e( 'Rezervace', 'reserveandpay' ); ?></th>
 				<td><?php Resandpay_Events::access_fields( $post->ID ); ?><?php Resandpay_Events::booking_fields( $post->ID ); ?><p class="description"><?php esc_html_e( 'Platí pro všechny termíny služby (i již vypsané). U jednotlivého termínu lze zadat vlastní adresu.', 'reserveandpay' ); ?></p></td></tr>
-			<tr><th><label for="rap_page"><?php esc_html_e( 'Stránka s volnými termíny', 'reserveandpay' ); ?></label></th>
+			<tr<?php echo Resandpay_Admin::tab( 'web' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><label for="rap_page"><?php esc_html_e( 'Stránka s volnými termíny', 'reserveandpay' ); ?></label></th>
 				<td><?php wp_dropdown_pages( array( 'name' => 'rap_page', 'id' => 'rap_page', 'selected' => $svc['page_id'], 'show_option_none' => '— ' . __( 'nevybráno', 'reserveandpay' ) . ' —', 'option_none_value' => 0 ) ); ?>
 					<p class="description"><?php esc_html_e( 'Stránka, na které je výběr termínů této služby (shortcode níže). Vede na ni tlačítko „Vybrat termín →“ na kartě služby a odkaz „← Jiný termín“ v detailu termínu.', 'reserveandpay' ); ?></p></td></tr>
-			<tr><th><?php esc_html_e( 'Shortcody', 'reserveandpay' ); ?></th>
+			<tr<?php echo Resandpay_Admin::tab( 'web' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><?php esc_html_e( 'Shortcody', 'reserveandpay' ); ?></th>
 				<td><?php echo Resandpay_Admin_Shortcodes::service_box( $post->ID ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř. ?></td></tr>
 		</table>
 		<?php
+		if ( Resandpay_MailerLite::enabled() ) {
+			echo '<div' . Resandpay_Admin::tab( 'mailerlite' ) . ' class="rap-tabs__ml">'; // phpcs:ignore WordPress.Security.EscapeOutput
+			Resandpay_Admin_MailerLite::box( $post );
+			echo '</div>';
+		}
+		echo '</div>';
+	}
+
+	/** Záložky Parametrů služby (#38). */
+	public static function tabs() {
+		$tabs = array(
+			'terminy'   => __( 'Termíny a místo', 'reserveandpay' ),
+			'cena'      => __( 'Cena a platba', 'reserveandpay' ),
+			'rezervace' => __( 'Rezervace a připomínka', 'reserveandpay' ),
+			'web'       => __( 'Web a shortcody', 'reserveandpay' ),
+		);
+		if ( Resandpay_MailerLite::enabled() ) {
+			$tabs['mailerlite'] = __( 'MailerLite', 'reserveandpay' );
+		}
+		return $tabs;
 	}
 
 	public static function box_slots( $post ) {

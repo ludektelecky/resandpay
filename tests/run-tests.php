@@ -2622,6 +2622,47 @@ foreach ( array( $auU, $auMem ) as $auX ) {
 }
 update_option( Resandpay_Settings::OPTION, $auSaved, false );
 
+echo "== 0.28.0: záložky v editoru materiálu, akce a služby (#38)\n";
+$tbSaved = get_option( Resandpay_Settings::OPTION );
+rap_t( false === use_block_editor_for_post_type( Resandpay_Post_Types::MATERIAL ) && use_block_editor_for_post_type( Resandpay_Post_Types::EVENT ), 'materiál v klasickém editoru, akce dál v blokovém' );
+$tbM = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::MATERIAL, 'post_status' => 'publish', 'post_title' => 'Záložky 38' ) );
+wp_set_current_user( 1 );
+Resandpay_Settings::update( array( 'ml_enabled' => 0 ) );
+ob_start();
+Resandpay_Admin_Materials::box_all( get_post( $tbM ) );
+$tbHtml = ob_get_clean();
+preg_match( '/data-rap-labels="([^"]+)"/', $tbHtml, $tbL );
+$tbLabels = json_decode( html_entity_decode( $tbL[1] ?? '' ), true );
+rap_t( array( 'zakladni', 'pristup', 'ucastnici', 'soubory', 'pristupy' ) === array_keys( (array) $tbLabels ) && 'Přístup a cena' === $tbLabels['pristup'], 'materiál: záložky Základní · Přístup a cena · Zdarma pro účastníky · Soubory · Přístupy a stažení' );
+foreach ( array( 'zakladni' => 'rap_mat_kind', 'pristup' => 'rap_mat_audience', 'ucastnici' => 'rap_mat_links', 'soubory' => 'rap_mat_wm' ) as $tbK => $tbF ) {
+	$tbPos = strpos( $tbHtml, 'name="' . $tbF );
+	$tbTr  = strrpos( substr( $tbHtml, 0, (int) $tbPos ), '<tr' );
+	rap_t( false !== $tbPos && false !== strpos( substr( $tbHtml, $tbTr, 60 ), 'data-rap-tab="' . $tbK . '"' ), "pole {$tbF} je v záložce {$tbK}" );
+}
+rap_t( 1 === preg_match( '/id="rap_material_files" data-rap-tab="soubory"/', $tbHtml ) && 1 === preg_match( '/id="rap_material_access" data-rap-tab="pristupy"/', $tbHtml ) && false === strpos( $tbHtml, 'data-rap-tab="mailerlite"' ), 'soubory a přístupy jako záložky; bez MailerLite bez jeho záložky' );
+Resandpay_Settings::update( array( 'ml_enabled' => 1 ) );
+ob_start();
+Resandpay_Admin_MailerLite::meta_boxes();
+Resandpay_Admin_Materials::box_all( get_post( $tbM ) );
+$tbHtml2 = ob_get_clean();
+global $wp_meta_boxes;
+rap_t( false !== strpos( $tbHtml2, 'data-rap-tab="mailerlite"' ) && false !== strpos( $tbHtml2, 'name="rap_ml_mode"' ) && empty( $wp_meta_boxes[ Resandpay_Post_Types::MATERIAL ]['side']['default']['rap_mailerlite'] ), 'MailerLite: záložka v nastavení materiálu místo bočního panelu' );
+$tbEv = rap_event( 'Záložky akce', $now + 80 * $day, $now + 80 * $day + HOUR_IN_SECONDS, 5 );
+ob_start();
+Resandpay_Admin_Events::box_event( get_post( $tbEv ) );
+$tbEvH = ob_get_clean();
+rap_t( false !== strpos( $tbEvH, 'data-rap-tabs="event"' ) && 4 <= substr_count( $tbEvH, 'data-rap-tab="' ) && false !== strpos( $tbEvH, 'data-rap-tab="mailerlite"' ) && false !== strpos( $tbEvH, 'data-rap-tab="cena"' ), 'akce: parametry v záložkách (vč. MailerLite)' );
+$tbSv = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::SERVICE, 'post_status' => 'publish', 'post_title' => 'Záložky služba' ) );
+ob_start();
+Resandpay_Admin_Services::box_service( get_post( $tbSv ) );
+$tbSvH = ob_get_clean();
+rap_t( false !== strpos( $tbSvH, 'data-rap-tabs="service"' ) && false !== strpos( $tbSvH, 'data-rap-tab="web"' ) && false !== strpos( $tbSvH, 'data-rap-tab="terminy"' ) && false !== strpos( $tbSvH, 'data-rap-tab="mailerlite"' ), 'služba: parametry v záložkách (vč. MailerLite)' );
+rap_t( false !== strpos( Resandpay_Admin::tabs_script(), 'data-rap-tab' ) && false !== strpos( Resandpay_Admin::tabs_script(), 'invalid' ), 'skript záložek (otevře záložku s chybou nebo s kotvou)' );
+wp_set_current_user( 0 );
+wp_delete_post( $tbM, true );
+wp_delete_post( $tbSv, true );
+update_option( Resandpay_Settings::OPTION, $tbSaved, false );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );

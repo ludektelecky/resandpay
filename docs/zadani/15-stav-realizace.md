@@ -19,7 +19,7 @@ Vývoj probíhá na webu slehkouhlavou.cz (WordPress 7.1, PHP 8.5, MySQL 8.4, Ac
 
 ## 15.1 Kniha rozvoje
 
-> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R25 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
+> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R26 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
 
 Funkce navržené k dalšímu rozvoji pluginu. Položka se po schválení podrobného zadání přesune do příslušné kapitoly a do tabulky stavu realizace.
 
@@ -388,3 +388,11 @@ Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, po
 - „Odeslat na e-mail“ **nelze uložit bez stránky profilu zákazníka** (volba je v editoru zakázaná; při pokusu se ponechá dosavadní přístup a zobrazí hláška).
 - **Akční cena do data**: v Parametrech materiálu sleva (pevná částka nebo procento) a datum, do kdy platí, a popis – stejný mechanismus jako sleva za včasnou rezervaci u akcí (meta _rap_early_*): na webu „300 Kč → 200 Kč (při objednávce do 31. 12. a platbě ve splatnosti)“, sleva zaniká při platbě po splatnosti, slevový kupón s ní nelze kombinovat.
 - **Převod (DB 16)** beze změny chování: Zdarma pro přihlášené → Jen přihlášení (dosud nepoužitá cena se vynuluje), Placený → Odeslat na e-mail (bez stránky profilu Jen přihlášení), Odeslat na e-mail → Odeslat na e-mail, Jen vybrané role → Role (cena se vynuluje). Meta _rap_mat_access zůstává kvůli kompatibilitě.
+
+### R26 – Přehlednější editor: nastavení v záložkách
+
+**Pozn.: Navrženo a schváleno 14. 11. 2026 ([Issue #38](https://github.com/ludektelecky/resandpay/issues/38)), implementováno ve verzi pluginu 0.28.0.**
+
+- **Materiál** se edituje v **klasickém editoru** (popis nahoře, nastavení hned pod ním na celé šířce; filtr resandpay_material_block_editor vrátí blokový editor). Dosavadní rámečky Parametry materiálu, Soubory ke stažení a Přístupy jsou sloučené do jednoho rámečku **„Nastavení materiálu“** se záložkami: **Základní** (kód, druh, dostupnost) · **Přístup a cena** (přístup, role, cena, akční cena, splatnost, doba přístupu) · **Zdarma pro účastníky** · **Soubory** (soubory, vodoznak v PDF) · **Přístupy a stažení** (objednávky, ruční zpřístupnění, poslední stažení) · **MailerLite** (jen při zapnutém napojení – přesunuto z pravého panelu).
+- **Akce** (Parametry akce) – záložky **Termín a místo** · **Cena a platba** · **Rezervace** · **Připomínka a odpočet** · **MailerLite**; **služba** (Parametry služby) – **Termíny a místo** · **Cena a platba** · **Rezervace a připomínka** · **Web a shortcody** · **MailerLite**. MailerLite už není v bočním panelu akce, služby ani materiálu. Ostatní rámečky akce (fotky, FAQ, program, obsazenost) beze změny.
+- Záložky přepínají zobrazení bez přenačtení, ukládá se vše najednou (Aktualizovat); poslední záložka se pamatuje, odkaz s kotvou (např. #rap_material_access po zpřístupnění) a neplatné pole otevřou příslušnou záložku; bez JavaScriptu je vidět vše jako dřív. Obecné pomocné funkce Resandpay_Admin::tabs_open() / tab() / tabs_script() (atributy data-rap-tabs, data-rap-tab).

@@ -14,6 +14,18 @@ class Resandpay_Post_Types {
 
 	public static function init() {
 		add_action( 'init', array( __CLASS__, 'register' ) );
+		add_filter( 'use_block_editor_for_post_type', array( __CLASS__, 'block_editor' ), 10, 2 );
+	}
+
+	/**
+	 * Materiál se edituje v klasickém editoru (#38) – nastavení v záložkách je hned pod popisem.
+	 * Filtr resandpay_material_block_editor (true) vrátí blokový editor.
+	 */
+	public static function block_editor( $use, $post_type ) {
+		if ( self::MATERIAL === $post_type ) {
+			return (bool) apply_filters( 'resandpay_material_block_editor', false );
+		}
+		return $use;
 	}
 
 	public static function register() {

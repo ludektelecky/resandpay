@@ -50,9 +50,40 @@ class Resandpay_Admin_Materials {
 	}
 
 	public static function meta_boxes() {
-		add_meta_box( 'rap_material', __( 'Parametry materiálu', 'reserveandpay' ), array( __CLASS__, 'box_params' ), Resandpay_Post_Types::MATERIAL, 'normal', 'high' );
-		add_meta_box( 'rap_material_files', __( 'Soubory ke stažení', 'reserveandpay' ), array( __CLASS__, 'box_files' ), Resandpay_Post_Types::MATERIAL, 'normal', 'high' );
-		add_meta_box( 'rap_material_access', __( 'Přístupy', 'reserveandpay' ), array( __CLASS__, 'box_access' ), Resandpay_Post_Types::MATERIAL, 'normal', 'default' );
+		// Jeden rámeček se záložkami (#38): Základní · Přístup a cena · Zdarma pro účastníky · Soubory · Přístupy a stažení · MailerLite.
+		add_meta_box( 'rap_material', __( 'Nastavení materiálu', 'reserveandpay' ), array( __CLASS__, 'box_all' ), Resandpay_Post_Types::MATERIAL, 'normal', 'high' );
+	}
+
+	/** Záložky nastavení materiálu (#38). */
+	public static function tabs() {
+		$tabs = array(
+			'zakladni'  => __( 'Základní', 'reserveandpay' ),
+			'pristup'   => __( 'Přístup a cena', 'reserveandpay' ),
+			'ucastnici' => __( 'Zdarma pro účastníky', 'reserveandpay' ),
+			'soubory'   => __( 'Soubory', 'reserveandpay' ),
+			'pristupy'  => __( 'Přístupy a stažení', 'reserveandpay' ),
+		);
+		if ( Resandpay_MailerLite::enabled() ) {
+			$tabs['mailerlite'] = __( 'MailerLite', 'reserveandpay' );
+		}
+		return $tabs;
+	}
+
+	/** Rámeček „Nastavení materiálu“ se záložkami (#38). */
+	public static function box_all( $post ) {
+		echo Resandpay_Admin::tabs_open( 'material', self::tabs() ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
+		self::box_params( $post );
+		echo '<div id="rap_material_files"' . Resandpay_Admin::tab( 'soubory' ) . '><h3 class="rap-tabs__h">' . esc_html__( 'Soubory ke stažení', 'reserveandpay' ) . '</h3>'; // phpcs:ignore WordPress.Security.EscapeOutput
+		self::box_files( $post );
+		echo '</div><div id="rap_material_access"' . Resandpay_Admin::tab( 'pristupy' ) . '>'; // phpcs:ignore WordPress.Security.EscapeOutput
+		self::box_access( $post );
+		echo '</div>';
+		if ( Resandpay_MailerLite::enabled() ) {
+			echo '<div' . Resandpay_Admin::tab( 'mailerlite' ) . ' class="rap-tabs__ml">'; // phpcs:ignore WordPress.Security.EscapeOutput
+			Resandpay_Admin_MailerLite::box( $post );
+			echo '</div>';
+		}
+		echo '</div>';
 	}
 
 	public static function box_params( $post ) {
@@ -83,13 +114,13 @@ class Resandpay_Admin_Materials {
 		<p class="rap-code"><?php esc_html_e( 'Kód:', 'reserveandpay' ); ?> <?php echo $mat['code'] ? '<code>' . esc_html( $mat['code'] ) . '</code> · <code>[reserveandpay_material id="' . esc_html( $mat['code'] ) . '"]</code>' : esc_html__( 'přidělí se při uložení', 'reserveandpay' ); ?></p>
 		<p class="description"><?php esc_html_e( 'Text v editoru výše je popis materiálu na webu. Náhledový obrázek (poměr 3:4) se zobrazí v katalogu; bez obrázku se použije zástupný motiv.', 'reserveandpay' ); ?></p>
 		<table class="form-table">
-			<tr><th><label for="rap_mat_kind"><?php esc_html_e( 'Druh', 'reserveandpay' ); ?></label></th>
+			<tr<?php echo Resandpay_Admin::tab( 'zakladni' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><label for="rap_mat_kind"><?php esc_html_e( 'Druh', 'reserveandpay' ); ?></label></th>
 				<td><select id="rap_mat_kind" name="rap_mat_kind">
 					<?php foreach ( Resandpay_Materials::kinds() as $k => $l ) : ?>
 						<option value="<?php echo esc_attr( $k ); ?>" <?php selected( $mat['kind'], $k ); ?>><?php echo esc_html( $l ); ?></option>
 					<?php endforeach; ?></select>
 					<p class="description"><?php esc_html_e( 'Seznam druhů je v ResAndPay → Nastavení → Materiály ke stažení.', 'reserveandpay' ); ?></p></td></tr>
-			<tr><th><?php esc_html_e( 'Přístup', 'reserveandpay' ); ?></th>
+			<tr<?php echo Resandpay_Admin::tab( 'pristup' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><?php esc_html_e( 'Přístup', 'reserveandpay' ); ?></th>
 				<td><?php foreach ( Resandpay_Materials::audience_labels() as $k => $l ) : ?>
 					<label style="display:block;margin:.15em 0"><input type="radio" name="rap_mat_audience" value="<?php echo esc_attr( $k ); ?>" <?php checked( $mat['audience'], $k ); ?><?php disabled( Resandpay_Materials::AUD_EMAIL === $k && ! Resandpay_Profile::page_id() && Resandpay_Materials::AUD_EMAIL !== $mat['audience'] ); ?>> <?php echo esc_html( $l ); ?></label>
 				<?php endforeach; ?>
@@ -101,19 +132,19 @@ class Resandpay_Admin_Materials {
 					<?php foreach ( wp_roles()->get_names() as $rk => $rl ) : ?>
 						<label style="margin-right:1.2em"><input type="checkbox" name="rap_mat_roles[]" value="<?php echo esc_attr( $rk ); ?>" <?php checked( in_array( $rk, $roles, true ) ); ?>> <?php echo esc_html( translate_user_role( $rl ) ); ?></label>
 					<?php endforeach; ?></div></td></tr>
-			<tr><th><label for="rap_price"><?php esc_html_e( 'Cena', 'reserveandpay' ); ?></label></th>
+			<tr<?php echo Resandpay_Admin::tab( 'pristup' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><label for="rap_price"><?php esc_html_e( 'Cena', 'reserveandpay' ); ?></label></th>
 				<td><input type="number" min="0" step="any" id="rap_price" name="rap_price" value="<?php echo esc_attr( $raw( 'price' ) ); ?>" class="regular-text" style="width:10em">
 					<input type="text" name="rap_currency" value="<?php echo esc_attr( $mat['currency'] ); ?>" class="small-text" maxlength="3" aria-label="<?php esc_attr_e( 'Měna', 'reserveandpay' ); ?>">
 					<p class="description"><?php esc_html_e( 'Prázdná nebo 0 = zdarma, vyšší = placený materiál (objednávka, QR platba). Platí slevové kupóny (rozsah „všechny“, kategorie nebo konkrétní materiál) a akční cena do data níže.', 'reserveandpay' ); ?></p></td></tr>
-			<tr><th><?php esc_html_e( 'Akční cena', 'reserveandpay' ); ?></th>
+			<tr<?php echo Resandpay_Admin::tab( 'pristup' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><?php esc_html_e( 'Akční cena', 'reserveandpay' ); ?></th>
 				<td><?php Resandpay_Discounts::early_fields( $post->ID ); ?><p class="description"><?php esc_html_e( 'Jen u placeného materiálu. Na webu se ukáže původní cena, akční cena a do kdy platí; slevový kupón s ní nelze kombinovat (jako u akcí).', 'reserveandpay' ); ?></p></td></tr>
-			<tr><th><label for="rap_mat_due"><?php esc_html_e( 'Splatnost objednávky', 'reserveandpay' ); ?></label></th>
+			<tr<?php echo Resandpay_Admin::tab( 'pristup' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><label for="rap_mat_due"><?php esc_html_e( 'Splatnost objednávky', 'reserveandpay' ); ?></label></th>
 				<td><input type="number" min="0" max="90" id="rap_mat_due" name="rap_mat_due" value="<?php echo esc_attr( $raw( 'mat_due' ) ); ?>" class="small-text" placeholder="<?php echo esc_attr( (string) Resandpay_Settings::get( 'mat_due_days' ) ); ?>"> <?php esc_html_e( 'dní', 'reserveandpay' ); ?>
 					<p class="description"><?php esc_html_e( 'Prázdné = výchozí z nastavení. Nezaplacená objednávka po splatnosti vyprší; pozdní platba ji obnoví.', 'reserveandpay' ); ?></p></td></tr>
-			<tr><th><label for="rap_mat_days"><?php esc_html_e( 'Doba přístupu', 'reserveandpay' ); ?></label></th>
+			<tr<?php echo Resandpay_Admin::tab( 'pristup' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><label for="rap_mat_days"><?php esc_html_e( 'Doba přístupu', 'reserveandpay' ); ?></label></th>
 				<td><input type="number" min="0" id="rap_mat_days" name="rap_mat_days" value="<?php echo esc_attr( $raw( 'mat_days' ) ); ?>" class="small-text" placeholder="<?php echo esc_attr( (string) Resandpay_Settings::get( 'mat_access_days' ) ); ?>"> <?php esc_html_e( 'dní', 'reserveandpay' ); ?>
 					<p class="description"><?php esc_html_e( '0 = natrvalo, prázdné = výchozí z nastavení. Počítá se od zaplacení objednávky (u účastnic akce od zaplacení rezervace, u ručního zpřístupnění od jeho data).', 'reserveandpay' ); ?></p></td></tr>
-			<tr><th><label for="rap_mat_links"><?php esc_html_e( 'Zdarma pro účastnice', 'reserveandpay' ); ?></label></th>
+			<tr<?php echo Resandpay_Admin::tab( 'ucastnici' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><label for="rap_mat_links"><?php esc_html_e( 'Zdarma pro účastnice', 'reserveandpay' ); ?></label></th>
 				<td><select id="rap_mat_links" name="rap_mat_links[]" multiple size="8" style="min-width:28em;max-width:100%">
 					<optgroup label="<?php esc_attr_e( 'Služby (všechny termíny)', 'reserveandpay' ); ?>">
 					<?php foreach ( $svcs as $sv ) : ?>
@@ -126,7 +157,7 @@ class Resandpay_Admin_Materials {
 				</select>
 					<p class="description"><?php esc_html_e( 'Kdo má zaplacenou rezervaci vybrané akce nebo termínu služby, má materiál zdarma (podle účtu nebo stejného e-mailu). Výběr více položek s Ctrl / Cmd.', 'reserveandpay' ); ?></p></td></tr>
 			<?php $wm = (string) get_post_meta( $post->ID, '_rap_mat_wm', true ); ?>
-			<tr><th><label for="rap_mat_wm"><?php esc_html_e( 'Vodoznak v PDF', 'reserveandpay' ); ?></label></th>
+			<tr<?php echo Resandpay_Admin::tab( 'soubory' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><label for="rap_mat_wm"><?php esc_html_e( 'Vodoznak v PDF', 'reserveandpay' ); ?></label></th>
 				<td><select id="rap_mat_wm" name="rap_mat_wm">
 					<option value="" <?php selected( $wm, '' ); ?>><?php echo esc_html( Resandpay_Settings::get( 'mat_wm_default' ) ? __( 'výchozí (ano)', 'reserveandpay' ) : __( 'výchozí (ne)', 'reserveandpay' ) ); ?></option>
 					<option value="1" <?php selected( $wm, '1' ); ?>><?php esc_html_e( 'ano', 'reserveandpay' ); ?></option>
@@ -143,7 +174,7 @@ class Resandpay_Admin_Materials {
 					?>
 				</td></tr>
 			<?php $avail = $mat['disabled'] ? 'disabled' : ( $mat['withdrawn'] ? 'withdrawn' : 'offer' ); ?>
-			<tr><th><?php esc_html_e( 'Dostupnost', 'reserveandpay' ); ?></th>
+			<tr<?php echo Resandpay_Admin::tab( 'zakladni' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><?php esc_html_e( 'Dostupnost', 'reserveandpay' ); ?></th>
 				<td><label class="rap-inline"><input type="radio" name="rap_mat_availability" value="offer" <?php checked( $avail, 'offer' ); ?>> <?php esc_html_e( 'V nabídce', 'reserveandpay' ); ?></label><br>
 					<label class="rap-inline"><input type="radio" name="rap_mat_availability" value="withdrawn" <?php checked( $avail, 'withdrawn' ); ?>> <?php esc_html_e( 'Staženo z nabídky', 'reserveandpay' ); ?></label> – <span class="description"><?php esc_html_e( 'zmizí z katalogu a nelze ho objednat; kdo už ho má, stahuje dál.', 'reserveandpay' ); ?></span><br>
 					<label class="rap-inline"><input type="radio" name="rap_mat_availability" value="disabled" <?php checked( $avail, 'disabled' ); ?>> <?php esc_html_e( 'Znepřístupněno', 'reserveandpay' ); ?></label> – <span class="description"><?php esc_html_e( 'zmizí z katalogu a nikdo ho nestáhne, ani kdo ho už má (správci ano). Nároky zůstávají – po vrácení do nabídky se obnoví. Zákazníkům se nic neposílá.', 'reserveandpay' ); ?></span>

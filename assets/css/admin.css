@@ -175,3 +175,9 @@ td.rap-box .rap-payfields { max-width: 520px; }
 .rap-checkin__qr figcaption { color: #646970; max-width: 420px; }
 .rap-checkin__note { white-space: pre-line; }
 .rap-checkin__day .rap-checkin__act { display: inline-flex; }
+
+/* Záložky v rámečcích editoru – materiál, akce, služba (#38) */
+.rap-tabs__nav { margin: 0 0 12px; padding-top: 4px; }
+.rap-tabs__nav .nav-tab { cursor: pointer; font-size: 13px; }
+.rap-tabs__h { margin: 1em 0 .5em; font-size: 14px; }
+.rap-tabs__ml { padding: 8px 0; }
