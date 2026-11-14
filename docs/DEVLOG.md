@@ -4,6 +4,15 @@
 >
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
+## 0.26.0 – Materiál zdarma po zadání e-mailu (14. 11. 2026)
+
+- **R24 – materiál zdarma po zadání e-mailu** ([Issue #33](https://github.com/ludektelecky/resandpay/issues/33), schváleno a implementováno): nový přístup u materiálu **„Zdarma po zadání e-mailu“**.
+  - zákazník bez účtu vyplní **jméno a e-mail** (+ souhlas se zpracováním údajů, nepovinně **novinky**) a přijde mu e-mail s **odkazem na materiál a na svůj profil**, kde si ho stáhne
+  - soubory se zpřístupní až z odkazu v e-mailu; stejný e-mail podruhé jen znovu pošle odkaz
+  - zákazník je v přehledu **Zákazníci**, ve **statistice materiálů** a se souhlasem v **MailerLite**; přihlášený uživatel má materiál hned
+  - nový text e-mailu **Materiál zdarma po zadání e-mailu** (Nastavení → E-maily); funguje jen s vybranou stránkou profilu zákazníka
+- Bez změny databáze. Testy: 768 kontrol + souběh
+
 ## 0.25.0 – Odbavení na místě na webu (14. 11. 2026)
 
 - **R23 – odbavení na webu** ([Issue #30](https://github.com/ludektelecky/resandpay/issues/30), schváleno a implementováno): shortcode **`[reserveandpay_checkin]`** – odbavení na samostatné webové stránce, pro telefon přímo na lekci.

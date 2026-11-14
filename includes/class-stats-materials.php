@@ -337,7 +337,7 @@ class Resandpay_Stats_Materials {
 			$out .= '<td>' . esc_html( $r['kind_label'] ) . '</td>';
 			$out .= '<td class="is-num">' . (int) $r['paid'] . '</td><td class="is-num">' . (int) $r['open'] . '</td>';
 			$out .= '<td class="is-num">' . esc_html( self::money( $r['revenue'], $r['currency'] ) ) . ( $r['discount'] > 0 ? '<small>' . esc_html( sprintf( /* translators: %s: sleva */ __( 'slevy −%s', 'reserveandpay' ), self::money( $r['discount'], $r['currency'] ) ) ) . '</small>' : '' ) . '</td>';
-			$out .= '<td class="is-num" title="' . esc_attr( sprintf( /* translators: 1: kupón 100 %, 2: ručně, 3: účastníci */ __( 'kupón 100 %%: %1$d, ručně: %2$d, účastníci: %3$d', 'reserveandpay' ), $r['free_orders'], $r['grants'], $r['participants'] ) ) . '">' . (int) $r['free'] . '</td>';
+			$out .= '<td class="is-num" title="' . esc_attr( sprintf( /* translators: 1: kupón 100 %, 2: ručně, 3: účastníci */ __( 'zdarma objednávky (kupón 100 %% / po zadání e-mailu): %1$d, ručně: %2$d, účastníci: %3$d', 'reserveandpay' ), $r['free_orders'], $r['grants'], $r['participants'] ) ) . '">' . (int) $r['free'] . '</td>';
 			$out .= '<td class="is-num">' . (int) $r['downloads'] . '</td><td class="is-num">' . (int) $r['plays'] . '</td><td class="is-num">' . (int) $r['users'] . '</td></tr>';
 		}
 		$out .= '</tbody><tfoot><tr><th colspan="3">' . esc_html( sprintf( /* translators: %d: počet */ __( 'Celkem: %d materiálů', 'reserveandpay' ), $tot['materials'] ) ) . '</th>';

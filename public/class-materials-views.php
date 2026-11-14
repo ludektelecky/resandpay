@@ -49,7 +49,46 @@ class Resandpay_Materials_Views {
 	 * Objednávka (PRG)
 	 * ------------------------------------------------------------------- */
 
+	/** Odeslaný formulář „Zdarma po zadání e-mailu“ (#33). */
+	public static function handle_free() {
+		$mid    = absint( $_POST['rap_material_id'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification
+		$values = array(
+			'customer_name' => sanitize_text_field( wp_unslash( $_POST['rap_name'] ?? '' ) ), // phpcs:ignore WordPress.Security.NonceVerification
+			'email'         => sanitize_email( wp_unslash( $_POST['rap_email'] ?? '' ) ), // phpcs:ignore WordPress.Security.NonceVerification
+			'consent_gdpr'  => ! empty( $_POST['rap_gdpr'] ), // phpcs:ignore WordPress.Security.NonceVerification
+			'newsletter'    => ! empty( $_POST['rap_newsletter'] ), // phpcs:ignore WordPress.Security.NonceVerification
+		);
+		$errors = array();
+		if ( ! isset( $_POST['_rapnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_rapnonce'] ) ), 'resandpay_mat_free_' . $mid ) ) {
+			$errors[] = __( 'Platnost formuláře vypršela. Načtěte prosím stránku znovu a odešlete formulář ještě jednou.', 'reserveandpay' );
+		}
+		if ( ! $errors ) {
+			$guard = Resandpay_Antibot::check( wp_unslash( $_POST ), $mid, $values['email'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+			if ( is_wp_error( $guard ) ) {
+				$errors[] = $guard->get_error_message();
+			}
+		}
+		if ( ! $errors ) {
+			$values['ip_hash'] = Resandpay_Antibot::ip_hash();
+			$res               = Resandpay_Materials::request_free( $mid, $values );
+			if ( is_wp_error( $res ) ) {
+				$errors[] = $res->get_error_message();
+			} else {
+				wp_safe_redirect( add_query_arg( 'rap_sent', 1, get_permalink( $mid ) ) . '#rap-material' );
+				exit;
+			}
+		}
+		self::$state[ $mid ] = array(
+			'errors' => $errors,
+			'values' => $values,
+		);
+	}
+
 	public static function handle_post() {
+		if ( 'POST' === ( $_SERVER['REQUEST_METHOD'] ?? '' ) && 'mat_free' === ( $_POST['resandpay_action'] ?? '' ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			self::handle_free();
+			return;
+		}
 		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || 'mat_order' !== ( $_POST['resandpay_action'] ?? '' ) ) { // phpcs:ignore WordPress.Security.NonceVerification
 			return;
 		}
@@ -155,6 +194,9 @@ class Resandpay_Materials_Views {
 		if ( Resandpay_Materials::ACCESS_ROLES === $mat['access'] ) {
 			return (string) Resandpay_Settings::get( 'access_tag' );
 		}
+		if ( Resandpay_Materials::ACCESS_EMAIL === $mat['access'] ) {
+			return __( 'Zdarma po zadání e-mailu', 'reserveandpay' );
+		}
 		return __( 'Zdarma pro přihlášené', 'reserveandpay' );
 	}
 
@@ -196,11 +238,17 @@ class Resandpay_Materials_Views {
 			}
 			$out .= self::render_files( $mat, false, $id['email'] );
 		} else {
+			if ( 'login' === $acc['reason'] && ! $id['user'] && Resandpay_Materials::ACCESS_EMAIL === $mat['access'] && Resandpay_Profile::page_id() && empty( $mat['withdrawn'] ) ) {
+				$acc['reason'] = 'email_form'; // Zdarma po zadání e-mailu (#33).
+			}
 			if ( 'login' === $acc['reason'] && ! $id['user'] && self::guest_order_on( $mat ) ) {
 				$acc['reason'] = 'buy'; // Objednávka bez účtu (#29); přihlášení zůstává jako možnost.
 				$out          .= '<p class="rap-small">' . esc_html__( 'Máte účet?', 'reserveandpay' ) . ' <a href="' . esc_url( Resandpay_Materials::login_url( $url ) ) . '">' . esc_html__( 'Přihlaste se', 'reserveandpay' ) . '</a></p>';
 			}
 			switch ( $acc['reason'] ) {
+				case 'email_form':
+					$out .= self::render_email_form( $mat, $id );
+					break;
 				case 'login':
 					$out .= '<p>' . esc_html( (string) Resandpay_Settings::get( 'mat_login_text' ) ) . '</p>';
 					$out .= '<p class="rap-mat-box__actions"><a class="rap-button" href="' . esc_url( Resandpay_Materials::login_url( $url ) ) . '">' . esc_html__( 'Přihlásit se', 'reserveandpay' ) . '</a>';
@@ -289,6 +337,35 @@ class Resandpay_Materials_Views {
 		$out .= '<dt>' . esc_html__( 'Splatnost', 'reserveandpay' ) . '</dt><dd>' . esc_html( wp_date( 'j. n. Y', Resandpay_Events::ts( Resandpay_Reservations::due_now( $r ) ) ) ) . '</dd>';
 		$out .= '</dl></div>';
 		$out .= '<p><a class="rap-button rap-button--ghost" href="' . esc_url( Resandpay_PDF::url( $r ) ) . '" target="_blank" rel="noopener">' . esc_html__( 'Platební pokyn (PDF) →', 'reserveandpay' ) . '</a></p>';
+		return $out;
+	}
+
+	/** Formulář „Zdarma po zadání e-mailu“ (#33) – po odeslání přijde e-mail s odkazem. */
+	public static function render_email_form( array $mat, array $id ) {
+		if ( isset( $_GET['rap_sent'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			return '<div class="rap-success" role="status"><p><strong>' . esc_html__( 'Odkaz jsme poslali na váš e-mail.', 'reserveandpay' ) . '</strong> ' . esc_html__( 'Otevřete ho a materiál si stáhněte. Pokud e-mail nevidíte, podívejte se i do hromadné pošty.', 'reserveandpay' ) . '</p></div>';
+		}
+		$state  = self::$state[ $mat['id'] ] ?? array();
+		$values = $state['values'] ?? array( 'email' => $id['email'], 'customer_name' => '' !== $id['email'] ? Resandpay_Materials::name_for_email( $id['email'] ) : '' );
+		$v      = fn( $k ) => esc_attr( (string) ( $values[ $k ] ?? '' ) );
+		$gdpr   = (int) Resandpay_Settings::get( 'gdpr_page' );
+		$out    = '';
+		if ( ! empty( $state['errors'] ) ) {
+			$out .= '<div class="rap-errors" role="alert"><ul>';
+			foreach ( $state['errors'] as $e ) {
+				$out .= '<li>' . esc_html( $e ) . '</li>';
+			}
+			$out .= '</ul></div>';
+		}
+		$out .= '<p>' . esc_html__( 'Materiál je zdarma. Vyplňte jméno a e-mail – pošleme vám odkaz ke stažení.', 'reserveandpay' ) . '</p>';
+		$out .= '<form class="rap-form" method="post" action="' . esc_url( get_permalink( $mat['id'] ) ) . '#rap-material" novalidate>';
+		$out .= '<input type="hidden" name="resandpay_action" value="mat_free"><input type="hidden" name="rap_material_id" value="' . (int) $mat['id'] . '">';
+		$out .= wp_nonce_field( 'resandpay_mat_free_' . $mat['id'], '_rapnonce', true, false ) . Resandpay_Antibot::form_fields();
+		$out .= '<p class="rap-field"><label for="rap_name">' . esc_html__( 'Jméno a příjmení', 'reserveandpay' ) . ' *</label><input id="rap_name" type="text" name="rap_name" value="' . $v( 'customer_name' ) . '" required autocomplete="name"></p>';
+		$out .= '<p class="rap-field"><label for="rap_email">' . esc_html__( 'E-mail', 'reserveandpay' ) . ' *</label><input id="rap_email" type="email" name="rap_email" value="' . $v( 'email' ) . '" required autocomplete="email"></p>';
+		$out .= '<p class="rap-check"><label><input type="checkbox" name="rap_gdpr" value="1" ' . checked( ! empty( $values['consent_gdpr'] ), true, false ) . ' required> ' . wp_kses_post( sprintf( /* translators: %s: odkaz */ __( 'Souhlasím se %s *', 'reserveandpay' ), $gdpr ? '<a href="' . esc_url( get_permalink( $gdpr ) ) . '" target="_blank" rel="noopener">' . esc_html__( 'zpracováním osobních údajů', 'reserveandpay' ) . '</a>' : esc_html__( 'zpracováním osobních údajů', 'reserveandpay' ) ) ) . '</label></p>';
+		$out .= '<p class="rap-check"><label><input type="checkbox" name="rap_newsletter" value="1" ' . checked( ! empty( $values['newsletter'] ), true, false ) . '> ' . esc_html__( 'Chci dostávat novinky e-mailem', 'reserveandpay' ) . '</label></p>';
+		$out .= '<p><button type="submit" class="rap-button">' . esc_html__( 'Poslat odkaz ke stažení →', 'reserveandpay' ) . '</button></p></form>';
 		return $out;
 	}
 

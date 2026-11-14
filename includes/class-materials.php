@@ -17,6 +17,7 @@ defined( 'ABSPATH' ) || exit;
 class Resandpay_Materials {
 
 	const ACCESS_FREE  = 'free';
+	const ACCESS_EMAIL = 'email'; // Zdarma po zadání e-mailu (#33).
 	const ACCESS_PAID  = 'paid';
 	const ACCESS_ROLES = 'roles';
 
@@ -47,6 +48,7 @@ class Resandpay_Materials {
 			self::ACCESS_FREE  => __( 'Zdarma pro přihlášené', 'reserveandpay' ),
 			self::ACCESS_PAID  => __( 'Placený', 'reserveandpay' ),
 			self::ACCESS_ROLES => __( 'Jen vybrané role', 'reserveandpay' ),
+			self::ACCESS_EMAIL => __( 'Zdarma po zadání e-mailu', 'reserveandpay' ),
 		);
 	}
 
@@ -546,8 +548,8 @@ class Resandpay_Materials {
 		if ( ! $user_id && self::ACCESS_PAID !== $mat['access'] ) {
 			return $res; // Zdarma pro přihlášené / jen pro role: bez účtu jen s nárokem výše.
 		}
-		if ( self::ACCESS_FREE === $mat['access'] ) {
-			return $grant( 'free', 0 );
+		if ( self::ACCESS_FREE === $mat['access'] || self::ACCESS_EMAIL === $mat['access'] ) {
+			return $grant( 'free', 0 ); // Přihlášený má materiál „zdarma po zadání e-mailu“ hned, bez formuláře.
 		}
 		if ( self::ACCESS_ROLES === $mat['access'] ) {
 			if ( self::user_has_role( $user_id, $mat['roles'] ) ) {
@@ -833,6 +835,86 @@ class Resandpay_Materials {
 			remove_filter( 'resandpay_mail_placeholders', $f, 10 );
 		}
 		return $id;
+	}
+
+	/**
+	 * Materiál „zdarma po zadání e-mailu“ (#33): zákazník vyplní jméno a e-mail, vznikne zaplacená
+	 * objednávka zdarma (kvůli přehledu Zákazníci, statistice a MailerLite) a přijde e-mail s odkazem
+	 * na materiál a na profil. Stejný e-mail podruhé: jen znovu pošle odkaz (nejvýš 1× za 5 min).
+	 *
+	 * @param array $data customer_name, email, consent_gdpr, newsletter, ip_hash.
+	 * @return array|WP_Error Objednávka.
+	 */
+	public static function request_free( $material_id, array $data, array $opts = array() ) {
+		global $wpdb;
+		$opts  = wp_parse_args( $opts, array( 'now' => time() ) );
+		$mat   = self::get( $material_id );
+		$email = Resandpay_Customers::key( sanitize_email( (string) ( $data['email'] ?? '' ) ) );
+		$name  = mb_substr( sanitize_text_field( (string) ( $data['customer_name'] ?? '' ) ), 0, 190 );
+		if ( ! $mat || self::ACCESS_EMAIL !== $mat['access'] || 'publish' !== $mat['status'] || $mat['withdrawn'] ) {
+			return new WP_Error( 'not_available', __( 'Materiál teď nelze získat.', 'reserveandpay' ) );
+		}
+		if ( ! is_email( $email ) ) {
+			return new WP_Error( 'email', __( 'Vyplňte platný e-mail.', 'reserveandpay' ) );
+		}
+		if ( '' === $name ) {
+			return new WP_Error( 'name', __( 'Vyplňte jméno a příjmení.', 'reserveandpay' ) );
+		}
+		if ( empty( $data['consent_gdpr'] ) ) {
+			return new WP_Error( 'consent', __( 'Je nutný souhlas se zpracováním osobních údajů.', 'reserveandpay' ) );
+		}
+		$existing = self::orders_for( $material_id, 0, null, $email );
+		if ( $existing ) {
+			$o   = $existing[0];
+			$key = 'rap_mfree_' . md5( $email . '|' . $material_id );
+			if ( ! get_transient( $key ) ) {
+				set_transient( $key, 1, 5 * MINUTE_IN_SECONDS );
+				Resandpay_Mailer::send_template( $o['email'], 'email_link', $o );
+			}
+			return $o;
+		}
+		$seq = Resandpay_Reservations::next_sequence();
+		if ( is_wp_error( $seq ) ) {
+			return $seq;
+		}
+		$now_ts = (int) $opts['now'];
+		$local  = wp_date( 'Y-m-d H:i:s', $now_ts );
+		$user   = get_user_by( 'email', $email );
+		$row    = array(
+			'event_id'         => (int) $material_id,
+			'item_type'        => 'material',
+			'status'           => Resandpay_Reservations::PAID,
+			'pay_choice'       => 'transfer',
+			'vs'               => Resandpay_Reservations::format_vs( $seq, $now_ts ),
+			'proforma_no'      => Resandpay_Reservations::format_proforma( $seq, $now_ts ),
+			'token'            => wp_generate_password( 40, false, false ),
+			'customer_name'    => $name,
+			'email'            => $email,
+			'phone'            => '',
+			'note'             => '',
+			'amount'           => 0,
+			'price_full'       => 0,
+			'currency'         => $mat['currency'],
+			'paid_at'          => $local,
+			'paid_method'      => 'free',
+			'due_at'           => $local,
+			'consent_gdpr_at'  => $local,
+			'newsletter'       => ! empty( $data['newsletter'] ) ? 1 : 0,
+			'user_id'          => $user ? (int) $user->ID : 0,
+			'ip_hash'          => (string) ( $data['ip_hash'] ?? '' ),
+			'source'           => 'web',
+			'created_at'       => $local,
+			'updated_at'       => $local,
+		);
+		if ( ! $wpdb->insert( Resandpay_Reservations::table(), $row ) ) {
+			return new WP_Error( 'db', __( 'Žádost se nepodařilo uložit.', 'reserveandpay' ) );
+		}
+		$order = Resandpay_Reservations::get( (int) $wpdb->insert_id );
+		do_action( 'resandpay_reservation_created', $order, array( 'source' => 'web' ) ); // MailerLite (se souhlasem).
+		do_action( 'resandpay_material_requested', $order, $mat );
+		set_transient( 'rap_mfree_' . md5( $email . '|' . $material_id ), 1, 5 * MINUTE_IN_SECONDS );
+		Resandpay_Mailer::send_template( $order['email'], 'email_link', $order );
+		return $order;
 	}
 
 	/**

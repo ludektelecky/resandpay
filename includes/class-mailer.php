@@ -495,6 +495,7 @@ class Resandpay_Mailer {
 			'mat_grant'      => __( 'Materiál zpřístupněn', 'reserveandpay' ),
 			'profile_link'   => __( 'Odkaz na profil zákazníka', 'reserveandpay' ),
 			'mat_grant_guest' => __( 'Materiál zpřístupněn (bez účtu)', 'reserveandpay' ),
+			'email_link'      => __( 'Materiál zdarma – odkaz ke stažení', 'reserveandpay' ),
 		);
 	}
 

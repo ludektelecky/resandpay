@@ -93,7 +93,10 @@ class Resandpay_Admin_Materials {
 				<td><?php foreach ( Resandpay_Materials::access_labels() as $k => $l ) : ?>
 					<label style="margin-right:1.4em"><input type="radio" name="rap_mat_access" value="<?php echo esc_attr( $k ); ?>" <?php checked( $mat['access'], $k ); ?>> <?php echo esc_html( $l ); ?></label>
 				<?php endforeach; ?>
-					<p class="description"><?php esc_html_e( 'Stažení je vždy jen pro přihlášené (kromě souborů označených jako ukázka). Placený: materiál se odemkne po zaplacení objednávky (QR platba, kontrola plateb).', 'reserveandpay' ); ?></p>
+					<p class="description"><?php esc_html_e( 'Zdarma pro přihlášené: stažení po přihlášení. Placený: materiál se odemkne po zaplacení objednávky (QR platba, kontrola plateb; i bez účtu). Zdarma po zadání e-mailu: zákazník vyplní jméno a e-mail a přijde mu odkaz ke stažení (bez účtu; se souhlasem s novinkami i do MailerLite). Ukázky lze stáhnout vždy.', 'reserveandpay' ); ?></p>
+					<?php if ( Resandpay_Materials::ACCESS_EMAIL === $mat['access'] && ! Resandpay_Profile::page_id() ) : ?>
+						<p class="rap-err"><?php esc_html_e( 'Pro „Zdarma po zadání e-mailu“ vyberte stránku profilu zákazníka (Nastavení → Rezervace → Profil zákazníka) – bez ní se formulář nezobrazí.', 'reserveandpay' ); ?></p>
+					<?php endif; ?>
 					<div style="margin-top:.6em"><strong><?php esc_html_e( 'Role (pro „Jen vybrané role“):', 'reserveandpay' ); ?></strong><br>
 					<?php foreach ( wp_roles()->get_names() as $rk => $rl ) : ?>
 						<label style="margin-right:1.2em"><input type="checkbox" name="rap_mat_roles[]" value="<?php echo esc_attr( $rk ); ?>" <?php checked( in_array( $rk, $roles, true ) ); ?>> <?php echo esc_html( translate_user_role( $rl ) ); ?></label>
