@@ -322,6 +322,7 @@ class Resandpay_Stats {
 				array(
 					'action'       => 'resandpay_stats_csv',
 					'type'         => $type,
+					'rap_st_view'  => 'materials' === $type ? 'materials' : 'terms',
 					'rap_st_from'  => $args['from'],
 					'rap_st_to'    => $args['to'],
 					'rap_st_scope' => $args['scope'],
@@ -341,6 +342,32 @@ class Resandpay_Stats {
 	 * @param array  $args Filtr (výchozí z požadavku).
 	 */
 	public static function render( $ctx = 'front', ?array $args = null ) {
+		$view = isset( $_GET['rap_st_view'] ) && 'materials' === $_GET['rap_st_view'] ? 'materials' : 'terms'; // phpcs:ignore WordPress.Security.NonceVerification
+		if ( null !== $args ) {
+			$view = 'materials' === ( $args['view'] ?? '' ) ? 'materials' : 'terms';
+		}
+		if ( 'materials' === $view ) {
+			return '<div class="rap-stats' . ( 'admin' === $ctx ? ' rap-stats--admin' : '' ) . '" id="rap-stats">' . self::view_nav( $ctx, 'materials' ) . Resandpay_Stats_Materials::render( $ctx, $args ) . '</div>';
+		}
+		return self::render_terms( $ctx, $args );
+	}
+
+	/** Přepínač Termíny / Materiály (#28). */
+	public static function view_nav( $ctx, $view ) {
+		$base = 'admin' === $ctx ? admin_url( 'admin.php?page=reserveandpay-stats' ) : get_permalink();
+		$out  = '<nav class="rap-stats__views" aria-label="' . esc_attr__( 'Část statistiky', 'reserveandpay' ) . '">';
+		foreach ( array(
+			'terms'     => __( 'Termíny akcí a služeb', 'reserveandpay' ),
+			'materials' => __( 'Materiály', 'reserveandpay' ),
+		) as $k => $l ) {
+			$url  = 'terms' === $k ? $base : add_query_arg( 'rap_st_view', 'materials', $base );
+			$out .= '<a href="' . esc_url( $url ) . '" class="rap-chip' . ( 'admin' === $ctx ? ' nav-tab' : '' ) . ( $view === $k ? ' is-active nav-tab-active' : '' ) . '"' . ( $view === $k ? ' aria-current="page"' : '' ) . '>' . esc_html( $l ) . '</a> ';
+		}
+		return $out . '</nav>';
+	}
+
+	/** Část „Termíny akcí a služeb“. */
+	private static function render_terms( $ctx, ?array $args ) {
 		$args  = $args ?? self::args_from_request();
 		$rows  = self::rows( $args );
 		$tot   = self::totals( $rows );
@@ -349,6 +376,7 @@ class Resandpay_Stats {
 		$cur   = Resandpay_Settings::get( 'currency' );
 		ob_start();
 		echo '<div class="rap-stats' . ( $admin ? ' rap-stats--admin' : '' ) . '" id="rap-stats">';
+		echo self::view_nav( $ctx, 'terms' ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
 
 		// Filtr.
 		echo '<form class="rap-stats__filter" method="get" action="' . esc_url( $base ) . '">';
@@ -515,6 +543,9 @@ class Resandpay_Stats {
 
 	/** Data CSV (bez odeslání) – kvůli testům oddělené od výstupu. */
 	public static function csv_rows( array $args, $type ) {
+		if ( 'materials' === $type ) {
+			return Resandpay_Stats_Materials::csv_rows( $args );
+		}
 		$rows = self::rows( $args );
 		if ( 'reservations' === $type ) {
 			$out = array( array( 'Kód termínu', 'Název', 'Druh', 'Datum', 'Pořadí', 'Jméno', 'VS', 'Stav', 'Zaplaceno', 'Předepsáno' ) );
@@ -551,9 +582,9 @@ class Resandpay_Stats {
 			wp_die( esc_html__( 'Nemáte oprávnění.', 'reserveandpay' ), '', array( 'response' => 403 ) );
 		}
 		check_admin_referer( 'resandpay_stats_csv' );
-		$args = self::args_from_request();
-		$type = isset( $_GET['type'] ) && 'reservations' === $_GET['type'] ? 'reservations' : 'terms'; // phpcs:ignore WordPress.Security.NonceVerification -- ověřeno výše.
-		$name = sanitize_file_name( 'statistika-' . ( 'reservations' === $type ? 'rezervace' : 'terminy' ) . '-' . $args['from'] . '-' . $args['to'] . '.csv' );
+		$type = isset( $_GET['type'] ) && in_array( $_GET['type'], array( 'reservations', 'materials' ), true ) ? sanitize_key( $_GET['type'] ) : 'terms'; // phpcs:ignore WordPress.Security.NonceVerification -- ověřeno výše.
+		$args = 'materials' === $type ? Resandpay_Stats_Materials::args_from_request() : self::args_from_request();
+		$name = sanitize_file_name( 'statistika-' . array( 'reservations' => 'rezervace', 'materials' => 'materialy', 'terms' => 'terminy' )[ $type ] . '-' . $args['from'] . '-' . $args['to'] . '.csv' );
 		nocache_headers();
 		header( 'Content-Type: text/csv; charset=UTF-8' );
 		header( 'Content-Disposition: attachment; filename="' . $name . '"' );

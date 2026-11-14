@@ -19,7 +19,7 @@ Vývoj probíhá na webu slehkouhlavou.cz (WordPress 7.1, PHP 8.5, MySQL 8.4, Ac
 
 ## 15.1 Kniha rozvoje
 
-> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R18 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
+> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R23 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
 
 Funkce navržené k dalšímu rozvoji pluginu. Položka se po schválení podrobného zadání přesune do příslušné kapitoly a do tabulky stavu realizace.
 
@@ -141,11 +141,11 @@ Sekce webu pro stahování eBooků, videí a dalších elektronických instrukt�
 | **Otázka** | **Rozhodnutí (31. 10. 2026)** |
 |---|---|
 | R11-a Videa | Soubory přímo na webu (chráněná složka). Na stránce materiálu se video i audio přehrává v prohlížeči a lze ho stáhnout; externí přehrávače (Vimeo, YouTube) se nezavádějí. |
-| R11-b Kdo může objednat | Jen přihlášený uživatel – objednávka i nárok jsou vázané na účet (jméno a e-mail z účtu). |
+| R11-b Kdo může objednat | Přihlášený uživatel (jméno a e-mail z účtu); od 0.24.0 (R22) i zákazník bez účtu podle e-mailu. |
 | R11-c Doba přístupu | Nastavitelná u každého materiálu: počet dní, 0 = natrvalo; výchozí hodnota v nastavení (0). |
 | R11-d Materiály pro účastnice | Ano – u materiálu lze vybrat akce a služby; zaplacená rezervace dává materiál zdarma. |
 | R11-h Právní a daňová stránka | Znění souhlasu se ztrátou práva na odstoupení ověří vlastník s právníkem, daně s účetní. Text souhlasu je v nastavení. |
-| R11-e Vodoznak v PDF | Zatím neřešeno – kandidát do knihy rozvoje. |
+| R11-e Vodoznak v PDF | Hotovo v 0.23.0 (R21). |
 | R11-f Limity hostingu | Obejito nahráváním po částech (2 MB), takže limit velikosti souboru je dán jen místem na disku. Ochranu složky (.htaccess) ověřuje plugin sám a v editoru materiálu upozorní, pokud nefunguje. |
 | R11-g První materiály | Doplní vlastník při naplnění knihovny. |
 
@@ -168,7 +168,7 @@ Typ obsahu „Materiál“ (resandpay_material) s adresou /materialy/…/, bloko
 | Splatnost objednávky | Dní od objednání; prázdné = nastavení (výchozí 7) |
 | Doba přístupu | Dní od zaplacení (u účastnic od zaplacení rezervace, u ručního zpřístupnění od jeho data); 0 = natrvalo; prázdné = nastavení |
 | Zdarma pro účastnice | Výběr akcí a služeb (všechny termíny služby); rezervace se páruje podle účtu nebo stejného e-mailu |
-| Staženo z nabídky | Zmizí z katalogu a nelze ho objednat; kdo ho má, stahuje dál |
+| Dostupnost | V nabídce / **Staženo z nabídky** – zmizí z katalogu a nelze ho objednat, kdo ho má, stahuje dál / **Znepřístupněno** (od 0.21.0, R19) – zmizí z katalogu a nikdo ho nestáhne |
 | Soubory | 1 až N: popisek na webu, původní název, velikost, typ, „ukázka (bez přihlášení)“, pořadí |
 
 Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, poznámka, odebrání s důvodem) a resandpay_downloads (log stažení). Tabulka rezervací má nové sloupce item_type (event / material) a consent_digital_at.
@@ -208,7 +208,7 @@ Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, po
 - Editor materiálu: Parametry materiálu, Soubory ke stažení (nahrávání s průběhem), Přístupy – počty objednávek a stažení, ruční zpřístupnění podle e-mailu účtu (dní: 0 = doba materiálu, −1 = natrvalo, volitelně e-mail), odebrání s důvodem, posledních 20 stažení.
 - Seznam materiálů: kód, druh, přístup / cena, počet souborů, objednávky (zaplaceno / celkem), stažení za 30 dní. Objednávky jsou v ResAndPay → Rezervace (filtr „Materiály (objednávky)“).
 - Nastavení → Materiály ke stažení: stránka „Moje materiály“, stránka s registrací, druhy materiálů, splatnost, výchozí doba přístupu, limit stažení, platnost odkazu, uchování logu, texty pro nepřihlášené a pro role, text souhlasu s digitálním obsahem. Kódy: předpona a číslice materiálu.
-- Mimo rozsah 0.13.0: zápis do MailerLite (spolu s E6b), vodoznak v PDF (R11-e), rozšíření stránky Statistika (R1) o materiály – počty jsou zatím v seznamu materiálů a v Přístupech.
+- Mimo rozsah 0.13.0: zápis do MailerLite (spolu s E6b – hotovo v 0.19.0), vodoznak v PDF (R11-e – hotovo v 0.23.0), rozšíření stránky Statistika (R1) o materiály – hotovo v 0.22.0 (R20).
 
 ### R11.8 Nasazení
 
@@ -306,6 +306,56 @@ Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, po
 - Shortcode **[reserveandpay_my_reservations]** (třída Resandpay_Profile); stránka se vybírá v Nastavení → Rezervace → **Profil zákazníka** (nevybráno = profil vypnutý). Tamtéž **Platnost osobního odkazu** (dní, výchozí 30, 1–365).
 - Přístup: **přihlášený uživatel** vidí rezervace podle e-mailu účtu; **kdokoli s osobním odkazem** (`?rap_p=`) vidí rezervace e-mailu, na který odkaz patří. Odkaz = token rezervace, čas vypršení a podpis HMAC (nic se neukládá, e-mail v odkazu není). Po vypršení nebo bez odkazu stránka nabídne **„Pošlete mi odkaz“** – po zadání e-mailu přijde e-mail „Odkaz na profil zákazníka“ (šablona v Nastavení → E-maily), jen pokud k e-mailu existuje rezervace; odpověď je vždy stejná, limit 1× za 5 min na e-mail a 10× za hodinu z IP.
 - **Odkaz v každém e-mailu zákazníkovi:** na konec se připojí text „Odkaz na profil v e-mailech“ (Nastavení → E-maily, výchozí „Své rezervace a platby najdete v profilu: {profile_url}“; prázdné = nepřipojovat). Proměnné {profile_url} a {profile_days} lze použít v textech e-mailů. E-maily správci odkaz nemají.
-- **Obsah profilu:** všechny rezervace zákazníka – **Nadcházející** (platné rezervace akcí a termínů, které ještě neskončily, podle data), **Proběhlé a zrušené** (proběhlé, zrušené a expirované), **Objednávky materiálů**. U každé: název s odkazem, termín, místo, datum rezervace, stav, částka, uhrazeno a zbývá, splatnost, VS; u nezaplacených QR platba a **Platební pokyn (PDF)**; u zaplacených materiálů odkaz do Moje materiály. Poznámka zákazníka se nezobrazuje.
+- **Obsah profilu:** všechny rezervace zákazníka – **Nadcházející** (platné rezervace akcí a termínů, které ještě neskončily, podle data), **Proběhlé nebo zrušené** (proběhlé, zrušené a expirované), **Objednávky materiálů**. U každé: název s odkazem, termín, místo, datum rezervace, stav, částka, uhrazeno a zbývá, splatnost, VS; u nezaplacených QR platba a **Platební pokyn (PDF)**; u zaplacených materiálů odkaz do Moje materiály. Poznámka zákazníka se nezobrazuje.
 - **Novinky e-mailem:** zaškrtávací pole „Chci dostávat novinky e-mailem“ – změna se zapíše ke všem rezervacím zákazníka s datem a způsobem (sloupce newsletter_at, newsletter_src; DB 14; v detailu rezervace „změněno zákazníkem v profilu“). Udělení souhlasu → zařazení do MailerLite; odvolání → odhlášení v MailerLite (stav „odhlášeno (souhlas odvolán)“, filtr v přehledu Zákazníci; import ho nenabízí) – je-li napojení zapnuté. Hook resandpay_newsletter_changed.
 - Stránka profilu se neukládá do cache, neindexuje (noindex) a posílá Referrer-Policy: no-referrer.
+
+### R19 – Znepřístupnění materiálu
+
+**Pozn.: Navrženo a schváleno 14. 11. 2026 ([Issue #26](https://github.com/ludektelecky/resandpay/issues/26)), implementováno ve verzi pluginu 0.21.0.**
+
+- Parametry materiálu → **Dostupnost**: V nabídce / Staženo z nabídky (beze změny: zmizí z katalogu, nelze objednat, kdo ho má, stahuje dál) / **Znepřístupněno**.
+- Znepřístupněný materiál zmizí z katalogu i z karty `[reserveandpay_material]` a **nikdo ho nestáhne** – ani se zaplacenou objednávkou, ručním zpřístupněním nebo jako účastník; nestáhne se ani ukázka a už vydané odkazy ke stažení přestanou platit (nárok se ověřuje při každém stažení). Správci (oprávnění k rezervacím) mají přístup dál.
+- Na stránce materiálu, v Moje materiály (u toho, kdo měl nárok) a v profilu zákazníka se místo souborů zobrazí text z Nastavení → Materiály ke stažení („Text u znepřístupněného materiálu“, výchozí „Materiál už není k dispozici.“).
+- Nároky se nemažou – po vrácení do nabídky se obnoví. Zákazníkům se nic neposílá, správce se na vrácení peněz neupozorňuje (rozhodnutí 14. 11. 2026).
+- Záznam, kdo a kdy materiál znepřístupnil (meta _rap_mat_disabled_at / _by, zobrazeno v Parametrech materiálu); v seznamu materiálů štítek „znepřístupněno“. Meta _rap_mat_withdrawn zůstává (znepřístupněný materiál je zároveň stažený z nabídky).
+
+### R20 – Statistika materiálů
+
+**Pozn.: Navrženo a schváleno 14. 11. 2026 ([Issue #28](https://github.com/ludektelecky/resandpay/issues/28)), implementováno ve verzi pluginu 0.22.0.**
+
+- Stránka Statistika (administrace i web se shortcodem [reserveandpay_stats], stejná oprávnění) má přepínač **Termíny akcí a služeb / Materiály** (parametr rap_st_view=materials). Třída Resandpay_Stats_Materials.
+- Filtr období Od–Do (výchozí poslední 3 měsíce). Souhrn: zaplacené objednávky, tržby, zdarma, stažení a přehrání, uživatelů stahovalo (různí uživatelé přes všechny materiály).
+- **Graf** vývoje v čase (inline SVG, bez knihoven): sloupce stažení a přehrání a zaplacených objednávek po dnech (do 62 dní), týdnech (do ~1 roku) nebo měsících; hodnota po najetí myší, popis pro čtečky.
+- **Tabulka po materiálech** (zveřejněné a materiály s aktivitou v období; štítek staženo z nabídky / znepřístupněno): kód, název, druh a přístup / cena, zaplacené a čekající objednávky, tržby (s informací o slevách), zdarma (kupón 100 % + ruční zpřístupnění + účastníci navázaných akcí a služeb – rozpad v nápovědě), stažení, přehrání, různí uživatelé; součty; řazení podle sloupců (výchozí stažení sestupně).
+- Období: objednávky podle data objednání, tržby = přijaté platby těchto objednávek, ruční zpřístupnění podle data zpřístupnění, účastníci podle data zaplacení rezervace, stažení podle logu (jen úspěšná, ukázky zvlášť). Materiály „zdarma pro přihlášené“ jsou vidět jen ve staženích.
+- **Export CSV** (UTF-8 se středníkem) se všemi ukazateli včetně rozpadu zdarma, expirovaných a zrušených objednávek, slev, kupónů a ukázek.
+
+### R21 – Vodoznak v PDF materiálů (R11-e)
+
+**Pozn.: Navrženo a schváleno 14. 11. 2026 ([Issue #27](https://github.com/ludektelecky/resandpay/issues/27)), implementováno ve verzi pluginu 0.23.0.**
+
+- Nastavení → Materiály ke stažení: **Vodoznak v PDF – výchozí** (vypnuto), **Text vodoznaku** (proměnné {name}, {email}, {date}, {code}, {site}; výchozí „{name} · {email} · {date}“), **Umístění** – zápatí stránky / šikmo přes stránku / obojí (výchozí zápatí). U materiálu Parametry → **Vodoznak v PDF**: výchozí / ano / ne.
+- Při stažení i zobrazení PDF v prohlížeči (ne u ukázky) se vytvoří kopie, do každé stránky se vloží text (zápatí: malý šedý text dole; šikmo: velký světlý text přes střed, průhlednost 14 %) a údaje se zapíší do **metadat PDF** (předmět a klíčová slova „Licencováno pro: …“). Soubor na disku se nemění; kopie je v chráněné mezipaměti (resandpay-protected/wm-cache, 24 h, úklid automaticky) a odesílá se stejně jako originál včetně HTTP Range.
+- Třída Resandpay_Watermark, knihovna FPDI 2.6.4 (MIT, lib/fpdi) nad TCPDF. Omezení: bezplatný parser FPDI nezpracuje PDF s komprimovanými křížovými odkazy (PDF 1.5+) ani zašifrované PDF – takový soubor se stáhne **bez vodoznaku**, do logu stažení se zapíše záznam (druh wm, výsledek unsupported) a editor materiálu u souboru zobrazí upozornění s postupem (uložit jako PDF kompatibilní s 1.4). Odkazy, záložky a formuláře původního PDF se do kopie nepřenášejí.
+
+### R22 – Materiál podle e-mailu bez účtu
+
+**Pozn.: Navrženo a schváleno 14. 11. 2026 ([Issue #29](https://github.com/ludektelecky/resandpay/issues/29)), implementováno ve verzi pluginu 0.24.0.**
+
+- **Zpřístupnění podle e-mailu** (editor materiálu → Přístupy): jeden nebo více e-mailů najednou (řádek „e-mail“, „Jméno <e-mail>“ nebo „e-mail;Jméno“; duplicity a neplatné řádky se přeskočí), doba přístupu, poznámka, „poslat e-mail“. Účet na webu není potřeba. Zákazník bez účtu dostane e-mail „Materiál – zpřístupněn bez účtu“ (šablona v Nastavení → E-maily) s **odkazem na materiál** s osobním tokenem a s **odkazem na profil zákazníka**; zákazník s účtem stávající e-mail „Materiál – ručně zpřístupněn“. Odebrání přístupu s důvodem jako dosud.
+- **Objednávka placeného materiálu bez účtu**: nepřihlášený zákazník na stránce materiálu vyplní jméno a e-mail (+ souhlasy, firma, kupón, newsletter) – jen je-li vybraná stránka profilu zákazníka; možnost „Přihlaste se“ zůstává. Ochrana formuláře proti robotům jako u rezervací. Po odeslání se stránka otevře s osobním odkazem a platebními údaji; e-mail o zaplacení obsahuje odkaz na materiál s osobním tokenem. Druhá objednávka téhož e-mailu nevznikne, dokud se čeká na platbu.
+- **Stahování bez přihlášení**: osobní odkaz (?rap_p=, profil R18 – token objednávky / rezervace nebo nově token zpřístupnění) otevře stránku materiálu se soubory a **profil zákazníka** s novou částí **Materiály ke stažení** (zpřístupněné podle e-mailu, zaplacené objednávky, účastníci navázaných akcí). Odkaz ke stažení je podepsaný, časově omezený a vázaný na e-mail; platí limity stažení (počítané podle e-mailu), log stažení (sloupec email) a vodoznak (jméno z objednávky / zpřístupnění). Materiály „zdarma pro přihlášené“ a „jen pro role“ dál vyžadují přihlášení.
+- **Účet se stejným e-mailem**: objednávky a zpřístupnění podle e-mailu platí i po přihlášení – materiál se zobrazí v Moje materiály (rozhodnutí 14. 11. 2026).
+- „Pošlete mi odkaz“ na stránce profilu funguje i pro zákazníka, který má jen zpřístupnění (bez rezervace).
+- Databáze 15: tabulka resandpay_grants – sloupce email, name, token; resandpay_downloads – sloupec email. Funkce Resandpay_Materials::access_email(), grant_email(), grant_bulk(), for_email().
+
+### R23 – Odbavení na místě na webu a přístup podle rolí
+
+**Pozn.: Navrženo a schváleno 14. 11. 2026 ([Issue #30](https://github.com/ludektelecky/resandpay/issues/30)), implementováno ve verzi pluginu 0.25.0.**
+
+- Shortcode **[reserveandpay_checkin]** pro samostatnou webovou stránku (např. /odbaveni) – stejné odbavení jako ResAndPay → Odbavení, ve vzhledu webu a pro telefon (velká tlačítka). Logika i výpis jsou sdílené (třída Resandpay_Checkin, administrace Resandpay_Admin_Checkin jen obaluje).
+- **Nastavení → Rezervace → Odbavení na místě → Odbavení vidí role** (role webu včetně Ultimate Member), výchozí **Administrátor, Šéfredaktor**; platí pro webovou stránku i administraci (oprávnění resandpay_checkin, správce webu vždy). Nepřihlášený dostane výzvu k přihlášení, bez oprávnění hlášku „K odbavení nemáte oprávnění“.
+- Uživatel odbavení smí jen platbu na místě (nic nerušit ani nevracet): najít rezervaci podle **VS** nebo **QR kódu** (kamera), **Zaplaceno hotově** (volitelně potvrzení e-mailem), **Zobrazit QR kód k zaplacení** (QR platba na zbývající částku – platba převodem se spáruje automaticky z bankovního avíza) **Zkontrolovat platbu v bance** (spustí kontrolu plateb – načtení avíz a spárování – a ukáže výsledek pro rezervaci; znovu nejvýš 1× za nastavený počet sekund, Nastavení → Odbavení na místě, výchozí 30 s, 5–600) a **Znovu poslat platební údaje** (e-mail zákazníkovi s aktuálním nedoplatkem, QR a PDF – stejně jako v detailu rezervace; jen u nezaplacené rezervace). Ruční „Zaplaceno převodem“ a odkaz na detail rezervace jen v administraci pro role s oprávněním k rezervacím.
+- Karta rezervace i přehled dne zobrazují **telefon a poznámku** zákazníka (rozhodnutí 14. 11. 2026).
+- Stránka se neukládá do cache a neindexuje (osobní údaje); akce s nonce a kontrolou oprávnění, zpráva po akci (PRG).

@@ -105,6 +105,11 @@ class Resandpay_Settings {
 			'mat_register_page'    => 0,
 			'mat_login_text'       => 'Materiály ke stažení jsou pro přihlášené. Přihlaste se, nebo si zdarma založte účet.',
 			'mat_roles_text'       => 'Tento materiál je jen pro členy.',
+			'mat_disabled_text'    => 'Materiál už není k dispozici.',
+			// Vodoznak v PDF (kap. 15.1 R21) – ve výchozím stavu vypnuto.
+			'mat_wm_default'       => 0,
+			'mat_wm_text'          => '{name} · {email} · {date}',
+			'mat_wm_position'      => 'footer',
 			'mat_digital_consent'  => 'Souhlasím s poskytnutím digitálního obsahu před uplynutím lhůty pro odstoupení od smlouvy a beru na vědomí, že tím právo na odstoupení zaniká.',
 			// Kontrola plateb (SWD kap. 6.4).
 			'payment_mode'         => 'auto',
@@ -134,6 +139,9 @@ class Resandpay_Settings {
 			'access_tag'             => 'jen pro členy',
 			'priority_text'          => 'pro členy od %s',
 			'stats_roles'            => 'administrator,editor,contributor', // Kdo vidí statistiku (SWD kap. 15.1, R1).
+			// Odbavení na místě (kap. 15.1 R23): kdo vidí odbavení v administraci i na webu.
+			'checkin_roles'          => 'administrator,editor',
+			'checkin_bank_pause'     => 30, // Sekund mezi kontrolami plateb v bance z odbavení.
 			// Profil zákazníka „Moje rezervace“ (kap. 15.1 R18) – zapne se výběrem stránky.
 			'profile_page'           => 0,
 			'profile_link_days'      => 30,
@@ -209,6 +217,8 @@ class Resandpay_Settings {
 			'tpl_mat_admin_subject'    => 'Nová objednávka materiálu: {event} – {name}',
 			'tpl_mat_admin_body'       => "Nová objednávka materiálu\n\nMateriál: {event} ({event_code})\nJméno: {name}\nE-mail: {email}\nČástka: {amount}\nVS: {vs}",
 			'tpl_mat_grant_subject'    => 'Materiál je pro Vás připraven: {event}',
+			'tpl_mat_grant_guest_subject' => 'Materiál je pro Vás připraven: {event}',
+			'tpl_mat_grant_guest_body'    => "Dobrý den, {name},\n\nzpřístupnili jsme Vám materiál {event}.\n\nStáhnout (bez přihlášení): {material_url}\n{access_until}\n\nS pozdravem\n{company}",
 			'tpl_mat_grant_body'       => "Dobrý den, {name},\n\nzpřístupnili jsme Vám materiál {event}.\n\nStáhnout (po přihlášení): {material_url}\nVšechny Vaše materiály: {my_materials_url}\n{access_until}\n\nS pozdravem\n{company}",
 			'tpl_admin_body'        => "Nová rezervace\n\nAkce: {event}\nTermín: {date}\nJméno: {name}\nE-mail: {email}\nTelefon: {phone}\nČástka: {amount}\nVS: {vs}\nPoznámka: {note}\n\nVolná místa po rezervaci: {free}",
 		);

@@ -120,9 +120,37 @@ class Resandpay_Admin_Materials {
 					<?php endforeach; ?></optgroup>
 				</select>
 					<p class="description"><?php esc_html_e( 'Kdo má zaplacenou rezervaci vybrané akce nebo termínu služby, má materiál zdarma (podle účtu nebo stejného e-mailu). Výběr více položek s Ctrl / Cmd.', 'reserveandpay' ); ?></p></td></tr>
-			<tr><th><?php esc_html_e( 'Nabídka', 'reserveandpay' ); ?></th>
-				<td><label><input type="checkbox" name="rap_mat_withdrawn" value="1" <?php checked( $mat['withdrawn'] ); ?>> <?php esc_html_e( 'Staženo z nabídky', 'reserveandpay' ); ?></label>
-					<p class="description"><?php esc_html_e( 'Materiál zmizí z katalogu a nelze ho objednat; kdo už ho má, stahuje dál.', 'reserveandpay' ); ?></p></td></tr>
+			<?php $wm = (string) get_post_meta( $post->ID, '_rap_mat_wm', true ); ?>
+			<tr><th><label for="rap_mat_wm"><?php esc_html_e( 'Vodoznak v PDF', 'reserveandpay' ); ?></label></th>
+				<td><select id="rap_mat_wm" name="rap_mat_wm">
+					<option value="" <?php selected( $wm, '' ); ?>><?php echo esc_html( Resandpay_Settings::get( 'mat_wm_default' ) ? __( 'výchozí (ano)', 'reserveandpay' ) : __( 'výchozí (ne)', 'reserveandpay' ) ); ?></option>
+					<option value="1" <?php selected( $wm, '1' ); ?>><?php esc_html_e( 'ano', 'reserveandpay' ); ?></option>
+					<option value="0" <?php selected( $wm, '0' ); ?>><?php esc_html_e( 'ne', 'reserveandpay' ); ?></option>
+				</select>
+					<p class="description"><?php esc_html_e( 'Do staženého PDF se vloží údaje kupujícího (text a umístění v Nastavení → Materiály ke stažení) a zapíší se do metadat. Soubor na disku se nemění.', 'reserveandpay' ); ?></p>
+					<?php
+					if ( Resandpay_Watermark::enabled_for( $mat ) ) {
+						foreach ( Resandpay_Watermark::problems( $mat ) as $fname => $why ) {
+							/* translators: 1: soubor, 2: důvod */
+							echo '<p class="rap-err">' . esc_html( sprintf( __( '„%1$s“ se stáhne bez vodoznaku: %2$s', 'reserveandpay' ), $fname, $why ) ) . '</p>';
+						}
+					}
+					?>
+				</td></tr>
+			<?php $avail = $mat['disabled'] ? 'disabled' : ( $mat['withdrawn'] ? 'withdrawn' : 'offer' ); ?>
+			<tr><th><?php esc_html_e( 'Dostupnost', 'reserveandpay' ); ?></th>
+				<td><label class="rap-inline"><input type="radio" name="rap_mat_availability" value="offer" <?php checked( $avail, 'offer' ); ?>> <?php esc_html_e( 'V nabídce', 'reserveandpay' ); ?></label><br>
+					<label class="rap-inline"><input type="radio" name="rap_mat_availability" value="withdrawn" <?php checked( $avail, 'withdrawn' ); ?>> <?php esc_html_e( 'Staženo z nabídky', 'reserveandpay' ); ?></label> – <span class="description"><?php esc_html_e( 'zmizí z katalogu a nelze ho objednat; kdo už ho má, stahuje dál.', 'reserveandpay' ); ?></span><br>
+					<label class="rap-inline"><input type="radio" name="rap_mat_availability" value="disabled" <?php checked( $avail, 'disabled' ); ?>> <?php esc_html_e( 'Znepřístupněno', 'reserveandpay' ); ?></label> – <span class="description"><?php esc_html_e( 'zmizí z katalogu a nikdo ho nestáhne, ani kdo ho už má (správci ano). Nároky zůstávají – po vrácení do nabídky se obnoví. Zákazníkům se nic neposílá.', 'reserveandpay' ); ?></span>
+					<?php
+					$dis_at = get_post_meta( $post->ID, '_rap_mat_disabled_at', true );
+					if ( $mat['disabled'] && $dis_at ) {
+						$by = get_userdata( (int) get_post_meta( $post->ID, '_rap_mat_disabled_by', true ) );
+						/* translators: 1: datum, 2: uživatel */
+						echo '<p class="description">' . esc_html( sprintf( __( 'Znepřístupněno %1$s (%2$s).', 'reserveandpay' ), wp_date( 'j. n. Y G:i', Resandpay_Events::ts( $dis_at ) ), $by ? $by->display_name : '—' ) ) . '</p>';
+					}
+					?>
+				</td></tr>
 		</table>
 		<?php
 	}
@@ -173,8 +201,9 @@ class Resandpay_Admin_Materials {
 		if ( $grants ) {
 			echo '<table class="widefat striped"><thead><tr><th>' . esc_html__( 'Uživatel', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Od', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Do', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Poznámka', 'reserveandpay' ) . '</th><th></th></tr></thead><tbody>';
 			foreach ( $grants as $g ) {
-				$u = get_userdata( $g['user_id'] );
-				echo '<tr><td>' . esc_html( $u ? $u->display_name . ' <' . $u->user_email . '>' : '#' . $g['user_id'] ) . '</td><td>' . esc_html( wp_date( 'j. n. Y', Resandpay_Events::ts( $g['granted_at'] ) ) ) . '</td><td>' . esc_html( $g['expires_at'] ? wp_date( 'j. n. Y', Resandpay_Events::ts( $g['expires_at'] ) ) : __( 'natrvalo', 'reserveandpay' ) ) . '</td><td>' . esc_html( $g['note'] ) . '</td><td>';
+				$u   = get_userdata( $g['user_id'] );
+				$who = $u ? $u->display_name . ' <' . $u->user_email . '>' : trim( ( $g['name'] ?? '' ) . ' <' . ( $g['email'] ?? '' ) . '>' ) . ' – ' . __( 'bez účtu', 'reserveandpay' );
+				echo '<tr><td>' . esc_html( $who ) . '</td><td>' . esc_html( wp_date( 'j. n. Y', Resandpay_Events::ts( $g['granted_at'] ) ) ) . '</td><td>' . esc_html( $g['expires_at'] ? wp_date( 'j. n. Y', Resandpay_Events::ts( $g['expires_at'] ) ) : __( 'natrvalo', 'reserveandpay' ) ) . '</td><td>' . esc_html( $g['note'] ) . '</td><td>';
 				if ( $g['revoked_at'] ) {
 					/* translators: %s: datum */
 					echo '<em>' . esc_html( sprintf( __( 'odebráno %s', 'reserveandpay' ), wp_date( 'j. n. Y', Resandpay_Events::ts( $g['revoked_at'] ) ) ) . ( $g['revoke_reason'] ? ' – ' . $g['revoke_reason'] : '' ) ) . '</em>';
@@ -188,13 +217,16 @@ class Resandpay_Admin_Materials {
 		} else {
 			echo '<p class="description">' . esc_html__( 'Nikomu.', 'reserveandpay' ) . '</p>';
 		}
-		echo '<p style="margin-top:.8em"><label>' . esc_html__( 'E-mail uživatele', 'reserveandpay' ) . ' <input type="email" name="rap_grant_email" class="regular-text"></label> ';
+		echo '<p style="margin-top:.8em"><label>' . esc_html__( 'E-maily zákazníků', 'reserveandpay' ) . '<br><textarea name="rap_grant_emails" rows="3" class="large-text" placeholder="jana@example.cz&#10;Petr Novák &lt;petr@example.cz&gt;"></textarea></label><br>';
 		echo '<label>' . esc_html__( 'dní', 'reserveandpay' ) . ' <input type="number" name="rap_grant_days" min="-1" class="small-text" placeholder="0"></label> ';
 		echo '<label>' . esc_html__( 'poznámka', 'reserveandpay' ) . ' <input type="text" name="rap_grant_note" class="regular-text" style="width:14em"></label> ';
 		echo '<label><input type="checkbox" name="rap_grant_notify" value="1" checked> ' . esc_html__( 'poslat e-mail', 'reserveandpay' ) . '</label> ';
 		echo '<input type="hidden" name="rap_grant_nonce" value="' . esc_attr( wp_create_nonce( 'rap_mat_grant_' . $post->ID ) ) . '">';
 		echo '<button type="submit" class="button" formaction="' . esc_url( admin_url( 'admin-post.php?action=resandpay_mat_grant&material=' . (int) $post->ID ) ) . '" formnovalidate>' . esc_html__( 'Zpřístupnit', 'reserveandpay' ) . '</button></p>';
-		echo '<p class="description">' . esc_html__( 'Uživatel musí mít na webu účet. Dní: 0 / prázdné = doba přístupu materiálu, −1 = natrvalo. Pozor: tlačítko neuloží ostatní změny materiálu.', 'reserveandpay' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'Jeden nebo více e-mailů – každý na řádek (případně „Jméno <e-mail>“ nebo „e-mail;Jméno“). Účet na webu není potřeba: zákazník dostane e-mail s odkazem na materiál a na svůj profil, kde si ho stáhne bez přihlášení (má-li účet se stejným e-mailem, uvidí materiál i v Moje materiály). Dní: 0 / prázdné = doba přístupu materiálu, −1 = natrvalo. Pozor: tlačítko neuloží ostatní změny materiálu.', 'reserveandpay' ) . '</p>';
+		if ( ! Resandpay_Profile::page_id() ) {
+			echo '<p class="description rap-err">' . esc_html__( 'Tip: vyberte stránku profilu zákazníka (Nastavení → Rezervace → Profil zákazníka) – zákazník bez účtu si na ní po vypršení odkazu nechá poslat nový.', 'reserveandpay' ) . '</p>';
+		}
 
 		$rows = Resandpay_Materials::recent_downloads( $post->ID, 20 );
 		echo '<h4>' . esc_html__( 'Poslední stažení', 'reserveandpay' ) . '</h4>';
@@ -255,7 +287,17 @@ class Resandpay_Admin_Materials {
 			update_post_meta( $post_id, $meta, '' === $v ? '' : max( 0, (int) $v ) );
 		}
 		update_post_meta( $post_id, '_rap_mat_links', implode( ',', array_filter( array_map( 'absint', (array) ( $in['rap_mat_links'] ?? array() ) ) ) ) );
-		update_post_meta( $post_id, '_rap_mat_withdrawn', empty( $in['rap_mat_withdrawn'] ) ? 0 : 1 );
+		$wm = (string) ( $in['rap_mat_wm'] ?? '' );
+		update_post_meta( $post_id, '_rap_mat_wm', in_array( $wm, array( '1', '0' ), true ) ? $wm : '' );
+		// Dostupnost (#26): v nabídce / staženo z nabídky / znepřístupněno (starší formulář: zaškrtávátko rap_mat_withdrawn).
+		$avail = isset( $in['rap_mat_availability'] ) ? sanitize_key( $in['rap_mat_availability'] ) : ( empty( $in['rap_mat_withdrawn'] ) ? 'offer' : 'withdrawn' );
+		$was   = (bool) get_post_meta( $post_id, '_rap_mat_disabled', true );
+		update_post_meta( $post_id, '_rap_mat_withdrawn', in_array( $avail, array( 'withdrawn', 'disabled' ), true ) ? 1 : 0 );
+		update_post_meta( $post_id, '_rap_mat_disabled', 'disabled' === $avail ? 1 : 0 );
+		if ( 'disabled' === $avail && ! $was ) {
+			update_post_meta( $post_id, '_rap_mat_disabled_at', current_time( 'mysql' ) );
+			update_post_meta( $post_id, '_rap_mat_disabled_by', get_current_user_id() );
+		}
 
 		// Soubory: popisky, ukázka, pořadí, odstranění; nově nahrané (JS) mají data v hidden poli.
 		if ( isset( $in['rap_files'] ) || isset( $in['rap_files_present'] ) ) {
@@ -336,14 +378,17 @@ class Resandpay_Admin_Materials {
 		if ( ! $mid || ! isset( $_POST['rap_grant_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['rap_grant_nonce'] ) ), 'rap_mat_grant_' . $mid ) || ! current_user_can( resandpay_cap_reservations() ) ) {
 			wp_die( esc_html__( 'Nemáte oprávnění.', 'reserveandpay' ) );
 		}
-		$email = sanitize_email( wp_unslash( $_POST['rap_grant_email'] ?? '' ) );
-		$user  = $email ? get_user_by( 'email', $email ) : null;
-		$msg   = 'grant_nouser';
-		if ( $user ) {
-			$res = Resandpay_Materials::grant( $mid, $user->ID, (int) ( $_POST['rap_grant_days'] ?? 0 ), sanitize_text_field( wp_unslash( $_POST['rap_grant_note'] ?? '' ) ), ! empty( $_POST['rap_grant_notify'] ) );
-			$msg = is_wp_error( $res ) ? 'grant_error' : 'granted';
+		// Jeden i více e-mailů, i bez účtu (#29); starší formulář posílal jeden e-mail v rap_grant_email.
+		$lines = sanitize_textarea_field( wp_unslash( $_POST['rap_grant_emails'] ?? ( $_POST['rap_grant_email'] ?? '' ) ) );
+		$res   = Resandpay_Materials::grant_bulk( $mid, $lines, (int) ( $_POST['rap_grant_days'] ?? 0 ), sanitize_text_field( wp_unslash( $_POST['rap_grant_note'] ?? '' ) ), ! empty( $_POST['rap_grant_notify'] ) );
+		$args  = array(
+			'rap_msg' => $res['ok'] ? 'granted_n' : 'grant_error',
+			'rap_n'   => $res['ok'],
+		);
+		if ( $res['invalid'] ) {
+			$args['rap_bad'] = rawurlencode( mb_substr( implode( ', ', $res['invalid'] ), 0, 300 ) );
 		}
-		wp_safe_redirect( add_query_arg( 'rap_msg', $msg, get_edit_post_link( $mid, 'url' ) ) . '#rap_material_access' );
+		wp_safe_redirect( add_query_arg( $args, get_edit_post_link( $mid, 'url' ) ) . '#rap_material_access' );
 		exit;
 	}
 
@@ -365,10 +410,16 @@ class Resandpay_Admin_Materials {
 			'granted'      => array( 'success', __( 'Materiál byl zpřístupněn.', 'reserveandpay' ) ),
 			'revoked'      => array( 'success', __( 'Přístup byl odebrán.', 'reserveandpay' ) ),
 			'grant_nouser' => array( 'error', __( 'Uživatel s tímto e-mailem na webu nemá účet.', 'reserveandpay' ) ),
-			'grant_error'  => array( 'error', __( 'Materiál se nepodařilo zpřístupnit.', 'reserveandpay' ) ),
+			'grant_error'  => array( 'error', __( 'Materiál se nepodařilo zpřístupnit – zkontrolujte e-maily.', 'reserveandpay' ) ),
+			/* translators: %d: počet */
+			'granted_n'    => array( 'success', sprintf( __( 'Materiál byl zpřístupněn (%d).', 'reserveandpay' ), absint( $_GET['rap_n'] ?? 0 ) ) ), // phpcs:ignore WordPress.Security.NonceVerification
 		);
 		if ( isset( $map[ $msg ] ) ) {
 			echo '<div class="notice notice-' . esc_attr( $map[ $msg ][0] ) . ' is-dismissible"><p>' . esc_html( $map[ $msg ][1] ) . '</p></div>';
+		}
+		if ( ! empty( $_GET['rap_bad'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			/* translators: %s: neplatné řádky */
+			echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html( sprintf( __( 'Přeskočeno (neplatný e-mail): %s', 'reserveandpay' ), sanitize_text_field( rawurldecode( wp_unslash( $_GET['rap_bad'] ) ) ) ) ) . '</p></div>'; // phpcs:ignore WordPress.Security.NonceVerification
 		}
 	}
 
@@ -407,7 +458,9 @@ class Resandpay_Admin_Materials {
 				break;
 			case 'rap_access':
 				echo esc_html( Resandpay_Materials::ACCESS_PAID === $mat['access'] ? Resandpay_Events::format_price( $mat['price'], $mat['currency'] ) : Resandpay_Materials::access_labels()[ $mat['access'] ] );
-				if ( $mat['withdrawn'] ) {
+				if ( $mat['disabled'] ) {
+					echo '<br><strong class="rap-err">' . esc_html__( 'znepřístupněno', 'reserveandpay' ) . '</strong>';
+				} elseif ( $mat['withdrawn'] ) {
 					echo '<br><em>' . esc_html__( 'staženo z nabídky', 'reserveandpay' ) . '</em>';
 				}
 				break;

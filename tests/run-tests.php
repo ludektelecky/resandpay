@@ -58,7 +58,7 @@ function rap_person( $n ) {
 }
 
 require_once ABSPATH . 'wp-admin/includes/template.php';
-foreach ( array( 'class-admin.php', 'class-admin-events.php', 'class-admin-settings.php', 'class-admin-services.php', 'class-admin-shortcodes.php', 'class-admin-checkin.php', 'class-admin-payments.php', 'class-customers-table.php', 'class-admin-customers.php', 'class-admin-mailerlite.php' ) as $f ) {
+foreach ( array( 'class-admin.php', 'class-admin-events.php', 'class-admin-settings.php', 'class-admin-services.php', 'class-admin-shortcodes.php', 'class-admin-checkin.php', 'class-admin-payments.php', 'class-customers-table.php', 'class-admin-customers.php', 'class-admin-mailerlite.php', 'class-admin-materials.php' ) as $f ) {
 	require_once RESANDPAY_DIR . 'admin/' . $f;
 }
 
@@ -2027,7 +2027,7 @@ update_option( Resandpay_Settings::OPTION, $mlSaved, false );
 
 echo "== 0.20.0: profil zákazníka Moje rezervace (#24)\n";
 $pfSaved = get_option( Resandpay_Settings::OPTION );
-rap_t( '14' === RESANDPAY_DB_VERSION && array_key_exists( 'newsletter_src', Resandpay_Reservations::query( array( 'per_page' => 1 ) )['items'][0] ?? array() ), 'migrace DB 14: záznam změny souhlasu u rezervací' );
+rap_t( (int) RESANDPAY_DB_VERSION >= 14 && array_key_exists( 'newsletter_src', Resandpay_Reservations::query( array( 'per_page' => 1 ) )['items'][0] ?? array() ), 'migrace DB 14: záznam změny souhlasu u rezervací' );
 rap_t( 0 === (int) Resandpay_Settings::defaults()['profile_page'] && 30 === (int) Resandpay_Settings::defaults()['profile_link_days'], 'výchozí stav: profil bez stránky, odkaz 30 dní' );
 $pfEvA = rap_event( 'Profil nadcházející', $now + 60 * $day, $now + 60 * $day + HOUR_IN_SECONDS, 10 );
 $pfEvB = rap_event( 'Profil proběhlá', $now + 61 * $day, $now + 61 * $day + HOUR_IN_SECONDS, 10 );
@@ -2073,9 +2073,9 @@ $pfForm = Resandpay_Profile::shortcode();
 rap_t( false !== strpos( $pfForm, 'name="rap_email"' ) && false !== strpos( $pfForm, 'Pošlete mi odkaz' ) && false === strpos( $pfForm, 'Profil nadcházející' ), 'bez odkazu a přihlášení: jen formulář „Pošlete mi odkaz“' );
 $_REQUEST['rap_p'] = $pfTok;
 $pfHtml = Resandpay_Profile::shortcode();
-rap_t( false !== strpos( $pfHtml, 'Nadcházející' ) && false !== strpos( $pfHtml, 'Proběhlé a zrušené' ) && false !== strpos( $pfHtml, 'Profil nadcházející' ) && false !== strpos( $pfHtml, 'Profil proběhlá' ), 'profil: nadcházející i proběhlé rezervace' );
+rap_t( false !== strpos( $pfHtml, 'Nadcházející' ) && false !== strpos( $pfHtml, 'Proběhlé nebo zrušené' ) && false !== strpos( $pfHtml, 'Profil nadcházející' ) && false !== strpos( $pfHtml, 'Profil proběhlá' ), 'profil: nadcházející i proběhlé rezervace' );
 rap_t( 3 === substr_count( $pfHtml, 'rap-profile__item ' ) && false !== strpos( $pfHtml, 'rap-status--cancelled' ) && false !== strpos( $pfHtml, 'rap-status--paid' ), 'profil: všechny rezervace zákazníka včetně zrušených' );
-rap_t( strpos( $pfHtml, 'rap-status--cancelled' ) > strpos( $pfHtml, 'Proběhlé a zrušené' ) && strpos( $pfHtml, 'rap-status--pending' ) < strpos( $pfHtml, 'Proběhlé a zrušené' ), 'zrušená rezervace nadcházející akce je mezi zrušenými' );
+rap_t( strpos( $pfHtml, 'rap-status--cancelled' ) > strpos( $pfHtml, 'Proběhlé nebo zrušené' ) && strpos( $pfHtml, 'rap-status--pending' ) < strpos( $pfHtml, 'Proběhlé nebo zrušené' ), 'zrušená rezervace nadcházející akce je mezi zrušenými' );
 rap_t( false !== strpos( $pfHtml, 'Platební pokyn (PDF)' ) && false !== strpos( $pfHtml, 'zbývá' ) && false !== strpos( $pfHtml, 'splatnost' ) && false !== strpos( $pfHtml, 'VS ' . $pf1['vs'] ), 'profil: stav platby, zbývá, splatnost, platební pokyn' );
 rap_t( false === strpos( $pfHtml, 'Tajná poznámka' ) && false === strpos( $pfHtml, 'Cizí Zákazník' ) && false === strpos( $pfHtml, $pfX['vs'] ), 'profil: bez poznámky a bez cizích rezervací' );
 rap_t( false !== strpos( $pfHtml, 'name="rap_newsletter"' ) && false !== strpos( $pfHtml, 'name="rap_p" value="' . $pfTok . '"' ), 'profil: nastavení novinek e-mailem' );
@@ -2133,6 +2133,337 @@ remove_filter( 'pre_http_request', $pfMock, 10 );
 wp_clear_scheduled_hook( Resandpay_MailerLite::CRON );
 wp_delete_user( $pfUser );
 update_option( Resandpay_Settings::OPTION, $pfSaved, false );
+
+echo "== 0.21.0: znepřístupnění materiálu (#26)\n";
+require_once RESANDPAY_DIR . 'public/class-materials-views.php';
+$mdUser  = wp_insert_user( array( 'user_login' => 'mat26', 'user_email' => 'mat26.zak@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
+$mdOther = wp_insert_user( array( 'user_login' => 'mat26b', 'user_email' => 'mat26b.zak@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
+$mdId    = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::MATERIAL, 'post_status' => 'publish', 'post_title' => 'Znepřístupněný eBook' ) );
+Resandpay_Admin_Materials::save_meta( $mdId, array( 'rap_mat_access' => 'paid', 'rap_price' => '200', 'rap_mat_days' => '0' ) );
+Resandpay_Materials::save_files( $mdId, array( array( 'id' => 'f26', 'label' => 'eBook PDF', 'name' => 'ebook.pdf', 'path' => 'm26/ebook.pdf', 'size' => 10, 'mime' => 'application/pdf', 'sample' => 1 ) ) );
+Resandpay_Materials::grant( $mdId, $mdUser, -1, 'test' );
+$mdMat = Resandpay_Materials::get( $mdId );
+rap_t( ! $mdMat['disabled'] && ! $mdMat['withdrawn'] && Resandpay_Materials::access( $mdMat, $mdUser )['ok'] && ! Resandpay_Materials::access( $mdMat, $mdOther )['ok'] && Resandpay_Materials::purchasable( $mdMat ), 'v nabídce: nárok funguje, ostatní mohou koupit' );
+// Staženo z nabídky – kdo má, stahuje dál.
+Resandpay_Admin_Materials::save_meta( $mdId, array( 'rap_mat_access' => 'paid', 'rap_price' => '200', 'rap_mat_availability' => 'withdrawn' ) );
+$mdMat = Resandpay_Materials::get( $mdId );
+rap_t( $mdMat['withdrawn'] && ! $mdMat['disabled'] && Resandpay_Materials::access( $mdMat, $mdUser )['ok'] && ! Resandpay_Materials::purchasable( $mdMat ), 'staženo z nabídky: kdo ho má, stahuje dál; nelze koupit' );
+// Znepřístupněno – nikdo kromě správců.
+wp_set_current_user( 1 );
+Resandpay_Admin_Materials::save_meta( $mdId, array( 'rap_mat_access' => 'paid', 'rap_price' => '200', 'rap_mat_availability' => 'disabled' ) );
+wp_set_current_user( 0 );
+$mdMat = Resandpay_Materials::get( $mdId );
+$mdAcc = Resandpay_Materials::access( $mdMat, $mdUser );
+rap_t( $mdMat['disabled'] && $mdMat['withdrawn'] && ! $mdAcc['ok'] && 'disabled' === $mdAcc['reason'] && ! Resandpay_Materials::purchasable( $mdMat ), 'znepřístupněno: ani kdo ho má, nestáhne; nelze koupit' );
+rap_t( Resandpay_Materials::access( $mdMat, 1 )['ok'], 'znepřístupněno: správce má přístup dál' );
+rap_t( get_post_meta( $mdId, '_rap_mat_disabled_at', true ) && 1 === (int) get_post_meta( $mdId, '_rap_mat_disabled_by', true ), 'záznam kdo a kdy materiál znepřístupnil' );
+$mdTok = wp_parse_url( Resandpay_Materials::download_url( $mdId, 'f26', false, $mdUser ), PHP_URL_QUERY );
+parse_str( $mdTok, $mdQ );
+$mdAuth = Resandpay_Materials::authorize( $mdQ['rap_dl'], $mdUser );
+rap_t( is_wp_error( $mdAuth ) && 'disabled' === $mdAuth->get_error_code() && 403 === $mdAuth->get_error_data()['status'], 'už vydaný odkaz ke stažení přestane platit' );
+$mdTok0 = wp_parse_url( Resandpay_Materials::download_url( $mdId, 'f26', false, 0 ), PHP_URL_QUERY );
+parse_str( $mdTok0, $mdQ0 );
+rap_t( is_wp_error( Resandpay_Materials::authorize( $mdQ0['rap_dl'], 0 ) ), 'ani ukázka se nestáhne' );
+$mdMy = Resandpay_Materials::for_user( $mdUser );
+$mdIt = wp_list_filter( wp_list_pluck( $mdMy, 'mat' ), array( 'id' => $mdId ) );
+rap_t( $mdIt && ! empty( array_values( array_filter( $mdMy, fn( $x ) => $x['mat']['id'] === $mdId ) )[0]['access']['disabled'] ) && ! wp_list_filter( wp_list_pluck( Resandpay_Materials::for_user( $mdOther ), 'mat' ), array( 'id' => $mdId ) ), 'Moje materiály: u toho, kdo měl nárok, jako nedostupný; u ostatních vůbec' );
+wp_set_current_user( $mdUser );
+$mdMyHtml  = Resandpay_Materials_Views::shortcode_my();
+$mdBox     = Resandpay_Materials_Views::shortcode_card( array( 'id' => (string) $mdId ) );
+wp_set_current_user( 0 );
+rap_t( false !== strpos( $mdMyHtml, 'Materiál už není k dispozici.' ) && false === strpos( $mdMyHtml, 'rap_dl=' ) && '' === $mdBox, 'Moje materiály: text z nastavení, bez odkazů; karta materiálu se nezobrazí' );
+// Vrácení do nabídky obnoví nárok.
+Resandpay_Admin_Materials::save_meta( $mdId, array( 'rap_mat_access' => 'paid', 'rap_price' => '200', 'rap_mat_availability' => 'offer' ) );
+rap_t( Resandpay_Materials::access( Resandpay_Materials::get( $mdId ), $mdUser )['ok'], 'po vrácení do nabídky se nárok obnoví' );
+Resandpay_Admin_Materials::save_meta( $mdId, array( 'rap_mat_access' => 'paid', 'rap_price' => '200', 'rap_mat_withdrawn' => '1' ) );
+rap_t( Resandpay_Materials::get( $mdId )['withdrawn'] && ! Resandpay_Materials::get( $mdId )['disabled'], 'starší formulář (zaškrtávátko) dál funguje' );
+wp_delete_user( $mdUser );
+wp_delete_user( $mdOther );
+wp_delete_post( $mdId, true );
+
+echo "== 0.22.0: statistika materiálů (#28)\n";
+$smU1 = wp_insert_user( array( 'user_login' => 'stat28a', 'user_email' => 'stat28a.zak@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
+$smU2 = wp_insert_user( array( 'user_login' => 'stat28b', 'user_email' => 'stat28b.zak@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
+$smEv = rap_event( 'Statistika akce', $now + 70 * $day, $now + 70 * $day + HOUR_IN_SECONDS, 10 );
+$smM  = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::MATERIAL, 'post_status' => 'publish', 'post_title' => 'Statistika eBook' ) );
+Resandpay_Admin_Materials::save_meta( $smM, array( 'rap_mat_access' => 'paid', 'rap_price' => '300', 'rap_mat_links' => array( $smEv ) ) );
+$smF  = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::MATERIAL, 'post_status' => 'publish', 'post_title' => 'Statistika video zdarma' ) );
+Resandpay_Admin_Materials::save_meta( $smF, array( 'rap_mat_access' => 'free' ) );
+$smO1 = Resandpay_Materials::order( $smM, $smU1, array( 'customer_name' => 'Stat Jedna', 'consent_gdpr' => 1, 'consent_terms' => 1, 'consent_digital' => 1 ) );
+$smO2 = Resandpay_Materials::order( $smM, $smU2, array( 'customer_name' => 'Stat Dva', 'consent_gdpr' => 1, 'consent_terms' => 1, 'consent_digital' => 1 ) );
+rap_t( ! is_wp_error( $smO1 ) && ! is_wp_error( $smO2 ), 'statistika: testovací objednávky materiálu' );
+Resandpay_Reservations::set_status( $smO1['id'], Resandpay_Reservations::PAID, array( 'method' => 'transfer_manual' ) );
+Resandpay_Materials::grant( $smM, $smU2, -1 );
+$smR = Resandpay_Reservations::create( $smEv, array_merge( rap_person( 28 ), array( 'email' => 'stat28c.zak@example.cz' ) ) );
+Resandpay_Reservations::set_status( $smR['id'], Resandpay_Reservations::PAID, array( 'method' => 'transfer_manual' ) );
+foreach ( array( array( $smU1, $smM, 'download' ), array( $smU1, $smM, 'download' ), array( $smU2, $smM, 'play' ), array( 0, $smM, 'sample' ), array( $smU2, $smF, 'download' ) ) as $smD ) {
+	Resandpay_Materials::log_download( $smD[0], $smD[1], 'f1', $smD[2], 'ok' );
+}
+Resandpay_Materials::log_download( $smU1, $smM, 'f1', 'download', 'limit' );
+$smArgs = Resandpay_Stats_Materials::args_from_request( array( 'rap_st_from' => wp_date( 'Y-m-d', $now - $day ), 'rap_st_to' => wp_date( 'Y-m-d', $now + $day ) ) );
+$smRows = Resandpay_Stats_Materials::rows( $smArgs );
+$smA    = wp_list_filter( $smRows, array( 'id' => $smM ) );
+$smA    = $smA ? reset( $smA ) : array();
+$smB    = wp_list_filter( $smRows, array( 'id' => $smF ) );
+$smB    = $smB ? reset( $smB ) : array();
+rap_t( $smA && 1 === $smA['paid'] && 1 === $smA['open'] && abs( $smA['revenue'] - 300 ) < 0.01, 'materiál: zaplacené a čekající objednávky, tržby' );
+rap_t( $smA && 1 === $smA['grants'] && 1 === $smA['participants'] && 2 === $smA['free'], 'zdarma: ruční zpřístupnění + účastníci navázané akce' );
+rap_t( $smA && 2 === $smA['downloads'] && 1 === $smA['plays'] && 1 === $smA['samples'] && 2 === $smA['users'], 'stažení, přehrání, ukázky a různí uživatelé (neúspěšné nezapočteny)' );
+rap_t( $smB && 1 === $smB['downloads'] && 0 === $smB['paid'], 'materiál zdarma pro přihlášené: jen stažení' );
+$smPast = Resandpay_Stats_Materials::rows( Resandpay_Stats_Materials::args_from_request( array( 'rap_st_from' => '2020-01-01', 'rap_st_to' => '2020-01-31' ) ) );
+$smPA   = wp_list_filter( $smPast, array( 'id' => $smM ) );
+rap_t( $smPA && 0 === reset( $smPA )['paid'] && 0 === reset( $smPA )['downloads'], 'mimo období se nic nezapočítá' );
+rap_t( Resandpay_Stats_Materials::distinct_users( $smArgs ) >= 2, 'uživatelé celkem bez dvojího počítání' );
+$smSorted = Resandpay_Stats_Materials::rows( array_merge( $smArgs, array( 'sort' => 'downloads', 'dir' => 'desc' ) ) );
+rap_t( $smSorted[0]['downloads'] >= end( $smSorted )['downloads'], 'řazení podle stažení' );
+$smSer = Resandpay_Stats_Materials::series( $smArgs );
+rap_t( 'day' === $smSer['step'] && 3 === count( $smSer['buckets'] ) && array_sum( array_column( $smSer['buckets'], 'downloads' ) ) >= 4 && array_sum( array_column( $smSer['buckets'], 'orders' ) ) >= 1, 'graf: časová řada stažení a objednávek po dnech' );
+rap_t( 'month' === Resandpay_Stats_Materials::series( Resandpay_Stats_Materials::args_from_request( array( 'rap_st_from' => '2024-01-01', 'rap_st_to' => '2025-06-30' ) ) )['step'] && 'week' === Resandpay_Stats_Materials::series( Resandpay_Stats_Materials::args_from_request( array( 'rap_st_from' => '2025-01-01', 'rap_st_to' => '2025-05-01' ) ) )['step'], 'graf: delší období po týdnech a měsících' );
+$smCsv = Resandpay_Stats::csv_rows( $smArgs, 'materials' );
+rap_t( 'Zaplacené objednávky' === $smCsv[0][5] && 'Celkem' === end( $smCsv )[0] && in_array( 'Statistika eBook', array_column( $smCsv, 1 ), true ), 'export CSV materiálů' );
+rap_t( false !== strpos( Resandpay_Stats::csv_url( $smArgs, 'materials' ), 'type=materials' ), 'odkaz na export CSV materiálů' );
+wp_set_current_user( 1 );
+$smHtml = Resandpay_Stats::render( 'admin', $smArgs );
+$smTerm = Resandpay_Stats::render( 'admin', Resandpay_Stats::args_from_request( array() ) );
+wp_set_current_user( 0 );
+rap_t( false !== strpos( $smHtml, 'rap-stats__chart' ) && false !== strpos( $smHtml, '<svg' ) && false !== strpos( $smHtml, 'Statistika eBook' ) && false !== strpos( $smHtml, 'Uživatelů stahovalo' ), 'Statistika → Materiály: souhrn, graf a tabulka' );
+rap_t( false !== strpos( $smTerm, 'rap_st_view=materials' ) && false !== strpos( $smTerm, 'Termíny akcí a služeb' ), 'přepínač Termíny / Materiály' );
+wp_set_current_user( $smU1 );
+$_GET['rap_st_view'] = 'materials';
+$smFront = Resandpay_Stats::shortcode();
+unset( $_GET['rap_st_view'] );
+wp_set_current_user( 0 );
+rap_t( false !== strpos( $smFront, 'nemáte oprávnění' ) && false === strpos( $smFront, 'Statistika eBook' ), 'web: bez oprávnění se statistika materiálů nezobrazí' );
+foreach ( array( $smU1, $smU2 ) as $smX ) {
+	wp_delete_user( $smX );
+}
+wp_delete_post( $smM, true );
+wp_delete_post( $smF, true );
+
+echo "== 0.23.0: vodoznak v PDF (#27)\n";
+$wmSaved = get_option( Resandpay_Settings::OPTION );
+$wmUser  = wp_insert_user( array( 'user_login' => 'wm27', 'user_email' => 'wm27.zak@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'subscriber', 'first_name' => 'Wm', 'last_name' => 'Tester' ) );
+$wmM     = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::MATERIAL, 'post_status' => 'publish', 'post_title' => 'Vodoznak eBook' ) );
+Resandpay_Admin_Materials::save_meta( $wmM, array( 'rap_mat_access' => 'free' ) );
+Resandpay_Materials::ensure_dir();
+$wmSub = Resandpay_Materials::material_subdir( $wmM );
+wp_mkdir_p( Resandpay_Materials::base_dir() . '/' . $wmSub );
+require_once RESANDPAY_DIR . 'lib/tcpdf/tcpdf.php';
+$wmSrc = new TCPDF();
+$wmSrc->setPrintHeader( false );
+$wmSrc->setPrintFooter( false );
+foreach ( array( 'Strana jedna', 'Strana dva' ) as $wmT ) {
+	$wmSrc->AddPage();
+	$wmSrc->SetFont( 'dejavusans', '', 14 );
+	$wmSrc->Write( 10, $wmT );
+}
+$wmAbs = Resandpay_Materials::base_dir() . '/' . $wmSub . '/kniha.pdf';
+$wmSrc->Output( $wmAbs, 'F' );
+copy( RESANDPAY_DIR . 'tests/fixtures/pdf-compressed-xref.pdf', Resandpay_Materials::base_dir() . '/' . $wmSub . '/nova.pdf' );
+Resandpay_Materials::save_files(
+	$wmM,
+	array(
+		array( 'id' => 'wa', 'label' => 'Kniha', 'name' => 'kniha.pdf', 'path' => $wmSub . '/kniha.pdf', 'size' => filesize( $wmAbs ), 'mime' => 'application/pdf', 'sample' => 0 ),
+		array( 'id' => 'wb', 'label' => 'Nová', 'name' => 'nova.pdf', 'path' => $wmSub . '/nova.pdf', 'size' => 9234, 'mime' => 'application/pdf', 'sample' => 0 ),
+		array( 'id' => 'wc', 'label' => 'Ukázka', 'name' => 'ukazka.pdf', 'path' => $wmSub . '/kniha.pdf', 'size' => 1, 'mime' => 'application/pdf', 'sample' => 1 ),
+	)
+);
+$wmMat = Resandpay_Materials::get( $wmM );
+rap_t( 0 === (int) Resandpay_Settings::defaults()['mat_wm_default'] && ! Resandpay_Watermark::enabled_for( $wmMat ), 'výchozí stav: vodoznak vypnutý' );
+$wmTok = function ( $file ) use ( $wmM, $wmUser ) {
+	parse_str( (string) wp_parse_url( Resandpay_Materials::download_url( $wmM, $file, false, $wmUser ), PHP_URL_QUERY ), $q );
+	return $q['rap_dl'];
+};
+$wmA0 = Resandpay_Materials::authorize( $wmTok( 'wa' ), $wmUser );
+rap_t( ! is_wp_error( $wmA0 ) && $wmA0['abs'] === $wmAbs, 'bez vodoznaku: stáhne se originál' );
+Resandpay_Admin_Materials::save_meta( $wmM, array( 'rap_mat_access' => 'free', 'rap_mat_wm' => '1' ) );
+Resandpay_Settings::update( array( 'mat_wm_text' => 'Pro {email} {code}', 'mat_wm_position' => 'both' ) );
+$wmMat = Resandpay_Materials::get( $wmM );
+rap_t( Resandpay_Watermark::enabled_for( $wmMat ) && 'Pro wm27.zak@example.cz ' . $wmMat['code'] === Resandpay_Watermark::text( $wmMat, $wmUser ), 'zapnuto u materiálu; text z nastavení s proměnnými' );
+rap_t( true === Resandpay_Watermark::supported( $wmAbs ), 'běžné PDF: vodoznak lze vložit' );
+$wmA = Resandpay_Materials::authorize( $wmTok( 'wa' ), $wmUser );
+$wmOut = is_wp_error( $wmA ) ? '' : $wmA['abs'];
+rap_t( $wmOut && $wmOut !== $wmAbs && false !== strpos( $wmOut, Resandpay_Watermark::CACHE_DIR ) && '' === $wmA['wm_error'] && 0 === strpos( (string) file_get_contents( $wmOut ), '%PDF-' ), 'stažení: kopie s vodoznakem v chráněné mezipaměti' );
+$wmRaw = (string) file_get_contents( $wmOut );
+rap_t( false !== strpos( $wmRaw, mb_convert_encoding( 'wm27.zak@example.cz', 'UTF-16BE', 'UTF-8' ) ) || false !== strpos( $wmRaw, 'wm27.zak@example.cz' ), 'údaje kupujícího v metadatech PDF' );
+require_once RESANDPAY_DIR . 'lib/fpdi/src/autoload.php';
+$wmChk = new \setasign\Fpdi\Tcpdf\Fpdi();
+rap_t( 2 === $wmChk->setSourceFile( $wmOut ), 'kopie má stejný počet stran' );
+rap_t( filesize( $wmOut ) > 0 && file_get_contents( $wmAbs ) === file_get_contents( Resandpay_Materials::base_dir() . '/' . $wmSub . '/kniha.pdf' ), 'originál na disku se nemění' );
+$wmA2 = Resandpay_Materials::authorize( $wmTok( 'wa' ), $wmUser );
+rap_t( ! is_wp_error( $wmA2 ) && $wmA2['abs'] === $wmOut, 'opakované stažení (i pokračování) z mezipaměti' );
+$wmSup = Resandpay_Watermark::supported( Resandpay_Materials::base_dir() . '/' . $wmSub . '/nova.pdf' );
+rap_t( is_wp_error( $wmSup ) && false !== strpos( $wmSup->get_error_message(), 'komprimované' ), 'PDF 1.5+ s komprimovanými odkazy: rozpoznáno se srozumitelným vysvětlením' );
+$wmB = Resandpay_Materials::authorize( $wmTok( 'wb' ), $wmUser );
+rap_t( ! is_wp_error( $wmB ) && false !== strpos( $wmB['abs'], 'nova.pdf' ) && 'wm_unsupported' === $wmB['wm_error'], 'nepodporované PDF se stáhne bez vodoznaku (zapíše se do logu)' );
+rap_t( array( 'Nová' ) === array_keys( Resandpay_Watermark::problems( $wmMat ) ), 'editor materiálu upozorní na soubor bez vodoznaku' );
+$wmS = Resandpay_Materials::authorize( $wmTok( 'wc' ), $wmUser );
+rap_t( ! is_wp_error( $wmS ) && 'sample' === $wmS['kind'] && $wmS['abs'] === $wmAbs, 'ukázka bez vodoznaku' );
+Resandpay_Settings::update( array( 'mat_wm_position' => 'footer' ) );
+$wmF = Resandpay_Materials::authorize( $wmTok( 'wa' ), $wmUser );
+rap_t( ! is_wp_error( $wmF ) && $wmF['abs'] !== $wmOut, 'změna umístění = nová kopie' );
+touch( $wmOut, time() - 2 * DAY_IN_SECONDS );
+Resandpay_Watermark::prune();
+rap_t( ! file_exists( $wmOut ) && file_exists( $wmF['abs'] ), 'úklid mezipaměti po 24 h' );
+$wmSan = Resandpay_Admin_Settings::sanitize( array( 'mat_wm_position' => 'nesmysl' ) );
+rap_t( 'footer' === $wmSan['mat_wm_position'], 'nastavení umístění ošetřené' );
+Resandpay_Admin_Materials::save_meta( $wmM, array( 'rap_mat_access' => 'free', 'rap_mat_wm' => 'x' ) );
+rap_t( '' === get_post_meta( $wmM, '_rap_mat_wm', true ), 'neplatná volba u materiálu = výchozí' );
+wp_delete_post( $wmM, true );
+wp_delete_user( $wmUser );
+update_option( Resandpay_Settings::OPTION, $wmSaved, false );
+
+echo "== 0.24.0: materiál podle e-mailu bez účtu (#29)\n";
+$geSaved = get_option( Resandpay_Settings::OPTION );
+$gePage  = wp_insert_post( array( 'post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'Profil 29', 'post_content' => '[reserveandpay_my_reservations]' ) );
+Resandpay_Settings::update( array( 'profile_page' => $gePage, 'antibot_min_seconds' => 0 ) );
+$geM = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::MATERIAL, 'post_status' => 'publish', 'post_title' => 'Kniha bez účtu' ) );
+Resandpay_Admin_Materials::save_meta( $geM, array( 'rap_mat_access' => 'paid', 'rap_price' => '150' ) );
+Resandpay_Materials::save_files( $geM, array( array( 'id' => 'g1', 'label' => 'Kniha', 'name' => 'kniha.epub', 'path' => 'm' . $geM . '-abcdefghij/kniha.epub', 'size' => 5, 'mime' => 'application/epub+zip', 'sample' => 0 ) ) );
+$geF = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::MATERIAL, 'post_status' => 'publish', 'post_title' => 'Zdarma pro přihlášené 29' ) );
+Resandpay_Admin_Materials::save_meta( $geF, array( 'rap_mat_access' => 'free' ) );
+// Hromadné zpřístupnění podle e-mailu.
+$GLOBALS['rap_mails'] = array();
+$geB = Resandpay_Materials::grant_bulk( $geM, "anna.zak29@example.cz\nBohdan Bez Účtu <Bohdan.Zak29@Example.cz>\nnesmysl\nanna.zak29@example.cz", 0, 'workshop', true );
+rap_t( 2 === $geB['ok'] && array( 'nesmysl' ) === $geB['invalid'] && 2 === count( $GLOBALS['rap_mails'] ), 'hromadné zpřístupnění: platné e-maily (bez duplicit), neplatné přeskočeny, e-maily odeslány' );
+$geG = Resandpay_Materials::grants( $geM, 0, true, 'bohdan.zak29@example.cz' );
+rap_t( 1 === count( $geG ) && 0 === (int) $geG[0]['user_id'] && 'Bohdan Bez Účtu' === $geG[0]['name'] && strlen( $geG[0]['token'] ) >= 40, 'zpřístupnění bez účtu: e-mail, jméno, token' );
+$geMail = $GLOBALS['rap_mails'][1]['message'] ?? '';
+rap_t( false !== strpos( $geMail, 'rap_p=' ) && false !== strpos( $geMail, get_permalink( $geM ) ) && false !== strpos( $geMail, get_permalink( $gePage ) ), 'e-mail: odkaz na materiál i na profil s osobním tokenem' );
+$geMat = Resandpay_Materials::get( $geM );
+rap_t( Resandpay_Materials::access_email( $geMat, 'BOHDAN.zak29@example.cz' )['ok'] && ! Resandpay_Materials::access_email( $geMat, 'cizi.zak29@example.cz' )['ok'], 'přístup podle e-mailu bez přihlášení' );
+rap_t( 'login' === Resandpay_Materials::access_email( Resandpay_Materials::get( $geF ), 'bohdan.zak29@example.cz' )['reason'], 'materiál zdarma pro přihlášené bez účtu nezpřístupní' );
+$geTok = Resandpay_Profile::token_for( $geG[0] );
+rap_t( 'bohdan.zak29@example.cz' === Resandpay_Profile::verify( $geTok ), 'osobní odkaz ze zpřístupnění platí pro profil' );
+// Profil bez přihlášení: materiál ke stažení.
+wp_set_current_user( 0 );
+$_REQUEST['rap_p'] = $geTok;
+$geProf = Resandpay_Profile::shortcode();
+rap_t( false !== strpos( $geProf, 'Materiály ke stažení' ) && false !== strpos( $geProf, 'Kniha bez účtu' ) && false !== strpos( $geProf, 'rap_dl=' ), 'profil: materiál ke stažení bez přihlášení' );
+preg_match( '/rap_dl=([^"&]+)/', $geProf, $geDl );
+$geAuth = Resandpay_Materials::authorize( rawurldecode( $geDl[1] ?? '' ), 0 );
+rap_t( is_wp_error( $geAuth ) && 'not_found' === $geAuth->get_error_code(), 'odkaz ke stažení vázaný na e-mail projde ověřením nároku' );
+$geBad = Resandpay_Materials::download_url( $geM, 'g1', false, 0, null, 'cizi.zak29@example.cz' );
+parse_str( (string) wp_parse_url( $geBad, PHP_URL_QUERY ), $geQ );
+$geAuth2 = Resandpay_Materials::authorize( $geQ['rap_dl'], 0 );
+rap_t( is_wp_error( $geAuth2 ) && 'denied' === $geAuth2->get_error_code(), 'odkaz na cizí e-mail bez nároku se odmítne' );
+$geBox = Resandpay_Materials_Views::render_box( $geMat );
+rap_t( false !== strpos( $geBox, 'rap_dl=' ) && false === strpos( $geBox, 'Přihlásit se' ), 'stránka materiálu s osobním odkazem: soubory ke stažení bez přihlášení' );
+unset( $_REQUEST['rap_p'] );
+// Objednávka bez účtu.
+$geBox0 = Resandpay_Materials_Views::render_box( $geMat );
+rap_t( false !== strpos( $geBox0, 'name="rap_email"' ) && false !== strpos( $geBox0, 'Přihlaste se' ), 'nepřihlášený: objednávkový formulář s e-mailem (a možnost přihlášení)' );
+$geO = Resandpay_Materials::order( $geM, 0, array( 'customer_name' => 'Cyril Bez Účtu', 'email' => 'Cyril.Zak29@example.cz', 'consent_gdpr' => 1, 'consent_terms' => 1, 'consent_digital' => 1, 'newsletter' => 1 ) );
+rap_t( ! is_wp_error( $geO ) && 0 === (int) $geO['user_id'] && 'cyril.zak29@example.cz' === $geO['email'] && Resandpay_Reservations::PENDING === $geO['status'], 'objednávka bez účtu: e-mail, čeká na platbu' );
+rap_t( is_wp_error( Resandpay_Materials::order( $geM, 0, array( 'customer_name' => 'X', 'email' => 'nesmysl', 'consent_gdpr' => 1, 'consent_terms' => 1, 'consent_digital' => 1 ) ) ), 'objednávka bez účtu vyžaduje platný e-mail' );
+$geDup = Resandpay_Materials::order( $geM, 0, array( 'customer_name' => 'Cyril', 'email' => 'cyril.zak29@example.cz', 'consent_gdpr' => 1, 'consent_terms' => 1, 'consent_digital' => 1 ) );
+rap_t( is_wp_error( $geDup ) && 'pending' === $geDup->get_error_code(), 'druhá objednávka téhož e-mailu nevznikne, dokud se čeká na platbu' );
+rap_t( 'pending' === Resandpay_Materials::access_email( $geMat, 'cyril.zak29@example.cz' )['reason'], 'bez účtu: čeká na platbu' );
+Resandpay_Reservations::set_status( $geO['id'], Resandpay_Reservations::PAID, array( 'method' => 'transfer_manual' ) );
+rap_t( Resandpay_Materials::access_email( $geMat, 'cyril.zak29@example.cz' )['ok'], 'po zaplacení přístup podle e-mailu' );
+$gePaid = Resandpay_Mailer::build( 'paid', Resandpay_Reservations::get( $geO['id'] ) );
+rap_t( 1 <= substr_count( $gePaid['text'], 'rap_p=' ), 'e-mail o zaplacení: odkaz ke stažení bez přihlášení' );
+// Účet se stejným e-mailem později – Moje materiály.
+$geUser = wp_insert_user( array( 'user_login' => 'cyril29', 'user_email' => 'cyril.zak29@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
+$geBohUser = wp_insert_user( array( 'user_login' => 'bohdan29', 'user_email' => 'bohdan.zak29@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
+rap_t( Resandpay_Materials::access( $geMat, $geUser )['ok'] && Resandpay_Materials::access( $geMat, $geBohUser )['ok'], 'účet se stejným e-mailem: objednávka i zpřístupnění bez účtu platí' );
+rap_t( (bool) wp_list_filter( wp_list_pluck( Resandpay_Materials::for_user( $geBohUser ), 'mat' ), array( 'id' => $geM ) ), 'Moje materiály po přihlášení zobrazí materiál zpřístupněný přes e-mail' );
+// Pošlete mi odkaz – jen zpřístupnění, bez rezervace.
+$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '\\_transient\\_%rap\\_pl\\_%'" );
+wp_cache_flush();
+$GLOBALS['rap_mails'] = array();
+Resandpay_Profile::send_link( 'anna.zak29@example.cz' );
+rap_t( 1 === count( $GLOBALS['rap_mails'] ) && false !== strpos( $GLOBALS['rap_mails'][0]['message'], 'rap_p=' ), 'Pošlete mi odkaz funguje i jen se zpřístupněním (bez rezervace)' );
+// Odebrání a log stažení podle e-mailu.
+Resandpay_Materials::revoke( $geG[0]['id'], 'test' );
+rap_t( ! Resandpay_Materials::access_email( $geMat, 'bohdan.zak29@example.cz' )['ok'], 'odebrání přístupu platí i bez účtu' );
+$wpdb->delete( Resandpay_Materials::downloads_table(), array( 'email' => 'anna.zak29@example.cz' ) );
+Resandpay_Materials::log_download( 0, $geM, 'g1', 'download', 'ok', 'anna.zak29@example.cz' );
+rap_t( 1 === Resandpay_Materials::downloads_24h( 0, 'g1', null, 'anna.zak29@example.cz' ) && 0 === Resandpay_Materials::downloads_24h( 0, 'g1', null, 'jina.zak29@example.cz' ), 'limit stažení počítá podle e-mailu' );
+foreach ( array( $geUser, $geBohUser ) as $geX ) {
+	wp_delete_user( $geX );
+}
+wp_delete_post( $geM, true );
+wp_delete_post( $geF, true );
+update_option( Resandpay_Settings::OPTION, $geSaved, false );
+
+echo "== 0.25.0: odbavení na webu a role (#30)\n";
+$ckSaved = get_option( Resandpay_Settings::OPTION );
+rap_t( 'administrator,editor' === Resandpay_Settings::defaults()['checkin_roles'], 'výchozí role odbavení: Administrátor a Šéfredaktor' );
+Resandpay_Settings::update( array( 'checkin_roles' => Resandpay_Settings::defaults()['checkin_roles'] ) ); // Dřívější testy odeslaly formulář bez rolí.
+$ckEd  = wp_insert_user( array( 'user_login' => 'ck30ed', 'user_email' => 'ck30ed@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'editor' ) );
+$ckSub = wp_insert_user( array( 'user_login' => 'ck30sub', 'user_email' => 'ck30sub@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
+rap_t( user_can( 1, Resandpay_Checkin::CAP ) && user_can( $ckEd, Resandpay_Checkin::CAP ) && ! user_can( $ckSub, Resandpay_Checkin::CAP ), 'oprávnění podle rolí (správce vždy)' );
+Resandpay_Settings::update( array( 'checkin_roles' => 'subscriber' ) );
+rap_t( user_can( $ckSub, Resandpay_Checkin::CAP ) && ! user_can( $ckEd, Resandpay_Checkin::CAP ) && user_can( 1, Resandpay_Checkin::CAP ), 'role z nastavení (např. role Ultimate Member)' );
+Resandpay_Settings::update( array( 'checkin_roles' => 'administrator,editor' ) );
+$ckEv = rap_event( 'Odbavení 30', $now + 2 * HOUR_IN_SECONDS, $now + 3 * HOUR_IN_SECONDS, 10 );
+$ckR  = Resandpay_Reservations::create( $ckEv, array_merge( rap_person( 30 ), array( 'customer_name' => 'Olga Odbavená', 'phone' => '777303030', 'note' => 'Bolí ji záda' ) ), array( 'notify' => false ) );
+$ckR2 = Resandpay_Reservations::create( $ckEv, array_merge( rap_person( 31 ), array( 'customer_name' => 'Radek Převodem' ) ), array( 'notify' => false ) );
+// Web – přístup.
+wp_set_current_user( 0 );
+rap_t( false !== strpos( Resandpay_Checkin::shortcode(), 'Přihlásit se' ), 'web: nepřihlášený – výzva k přihlášení' );
+wp_set_current_user( $ckSub );
+rap_t( false !== strpos( Resandpay_Checkin::shortcode(), 'nemáte oprávnění' ), 'web: bez oprávnění se odbavení nezobrazí' );
+wp_set_current_user( $ckEd );
+$_GET = array( 'rap_vs' => $ckR['vs'], 'rap_day' => wp_date( 'Y-m-d', $now + 2 * HOUR_IN_SECONDS ) );
+$ckHtml = Resandpay_Checkin::shortcode();
+$_GET   = array();
+rap_t( false !== strpos( $ckHtml, 'Olga Odbavená' ) && false !== strpos( $ckHtml, 'id="rap-scan-btn"' ) && false !== strpos( $ckHtml, 'name="rap_vs"' ), 'web: karta rezervace podle VS a čtečka QR' );
+rap_t( false !== strpos( $ckHtml, 'Zaplaceno hotově' ) && false !== strpos( $ckHtml, 'Zobrazit QR kód k zaplacení' ) && false !== strpos( $ckHtml, 'Zkontrolovat platbu v bance' ) && false !== strpos( $ckHtml, 'Znovu poslat platební údaje' ) && false === strpos( $ckHtml, 'Zaplaceno převodem' ), 'web: hotově, QR kód k zaplacení, kontrola v bance – bez ručního „převodem“' );
+rap_t( false !== strpos( $ckHtml, 'Bolí ji záda' ) && false !== strpos( $ckHtml, '777303030' ) && false !== strpos( $ckHtml, 'data:image/png;base64,' ), 'web: poznámka, telefon a QR kód k zaplacení' );
+rap_t( false !== strpos( $ckHtml, 'Radek Převodem' ) && false !== strpos( $ckHtml, 'k vybrání na místě' ), 'web: přehled dne' );
+// Akce.
+rap_t( 'error' === Resandpay_Checkin::process( 'transfer', $ckR2['id'], false, 'front' )[1] && Resandpay_Reservations::PAID !== Resandpay_Reservations::get( $ckR2['id'] )['status'], 'web: ruční „zaplaceno převodem“ se odmítne' );
+$ckCash = Resandpay_Checkin::process( 'cash', $ckR['id'], false, 'front' );
+rap_t( 'success' === $ckCash[1] && 'cash' === Resandpay_Reservations::get( $ckR['id'] )['paid_method'], 'web: zaplaceno hotově' );
+wp_set_current_user( $ckSub );
+rap_t( 'error' === Resandpay_Checkin::process( 'cash', $ckR2['id'], false, 'front' )[1], 'bez oprávnění akce neprojde' );
+wp_set_current_user( 1 );
+$_GET = array( 'rap_vs' => $ckR2['vs'] );
+ob_start();
+Resandpay_Admin_Checkin::page();
+$ckAdm = ob_get_clean();
+$_GET  = array();
+rap_t( false !== strpos( $ckAdm, 'Zaplaceno převodem' ) && false !== strpos( $ckAdm, 'Zkontrolovat platbu v bance' ), 'administrace: správce má i „Zaplaceno převodem“' );
+// Kontrola v bance (podvržená schránka s avízem).
+$ckImap = new class() {
+	public $error = '';
+	public $mails = array();
+	public function connect( $h, $p, $s ) { return true; }
+	public function login( $u, $p ) { return true; }
+	public function select( $f ) { return count( $this->mails ); }
+	public function search_from( $from ) { return array_keys( $this->mails ); }
+	public function fetch( $uid ) { return $this->mails[ $uid ] ?? ''; }
+	public function ensure_folder( $f ) { return ''; }
+	public function move( $uid, $f ) { return true; }
+	public function logout() { return true; }
+};
+Resandpay_Settings::update( array( 'bank_account' => '1234567890/5500', 'imap_folder_done' => '' ) );
+delete_transient( 'rap_checkin_bank' );
+$ckB0 = Resandpay_Checkin::check_bank( $ckR2['id'], $ckImap );
+rap_t( 'warning' === $ckB0[1] && false !== strpos( $ckB0[0], 'zatím v bance není' ), 'kontrola v bance: platba ještě nedorazila' );
+$ckB1 = Resandpay_Checkin::check_bank( $ckR2['id'], $ckImap );
+rap_t( 'warning' === $ckB1[1] && false !== strpos( $ckB1[0], 'znovu za' ) && 30 === Resandpay_Checkin::bank_pause(), 'kontrola v bance nejvýš 1× za 30 s (výchozí)' );
+Resandpay_Settings::update( array( 'checkin_bank_pause' => 90 ) );
+rap_t( 90 === Resandpay_Checkin::bank_pause() && 5 === Resandpay_Admin_Settings::sanitize( array( 'checkin_bank_pause' => '1' ) )['checkin_bank_pause'] && 600 === Resandpay_Admin_Settings::sanitize( array( 'checkin_bank_pause' => '9999' ) )['checkin_bank_pause'], 'prodleva kontroly v bance z nastavení (5–600 s)' );
+Resandpay_Settings::update( array( 'checkin_bank_pause' => 30 ) );
+$GLOBALS['rap_mails'] = array();
+wp_set_current_user( $ckEd );
+$ckRs = Resandpay_Checkin::process( 'resend', $ckR2['id'], false, 'front' );
+wp_set_current_user( 1 );
+rap_t( 'success' === $ckRs[1] && 1 === count( $GLOBALS['rap_mails'] ) && false !== strpos( $ckRs[0], '500' ), 'web: Znovu poslat platební údaje (aktuální nedoplatek)' );
+rap_t( 'warning' === Resandpay_Checkin::resend( $ckR['id'] )[1], 'zaplacená rezervace: platební údaje se neposílají' );
+delete_transient( 'rap_checkin_bank' );
+$ckImap->mails = array( 1 => rap_avizo( $eml, $ckR2['vs'], '+500,00 CZK', 'ck30' . wp_generate_password( 6, false ) ) );
+$ckB2 = Resandpay_Checkin::check_bank( $ckR2['id'], $ckImap );
+rap_t( 'success' === $ckB2[1] && Resandpay_Reservations::PAID === Resandpay_Reservations::get( $ckR2['id'] )['status'], 'kontrola v bance: platba nalezena, rezervace zaplacená (' . $ckB2[0] . ')' );
+wp_set_current_user( 0 );
+delete_transient( 'rap_checkin_bank' );
+foreach ( array( $ckEd, $ckSub ) as $ckX ) {
+	wp_delete_user( $ckX );
+}
+update_option( Resandpay_Settings::OPTION, $ckSaved, false );
 
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 

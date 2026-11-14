@@ -52,6 +52,11 @@ class Resandpay_Profile {
 		return add_query_arg( self::QUERY, self::token_for( $r ), get_permalink( $page ) );
 	}
 
+	/** Odkaz na stránku (např. materiálu) s osobním tokenem – zákazník bez účtu ho otevře bez přihlášení. */
+	public static function link_with_token( $url, array $r ) {
+		return empty( $r['token'] ) ? $url : add_query_arg( self::QUERY, self::token_for( $r ), $url );
+	}
+
 	/**
 	 * Ověří osobní token.
 	 *
@@ -66,6 +71,9 @@ class Resandpay_Profile {
 			return new WP_Error( 'expired', __( 'Platnost odkazu vypršela. Pošleme vám nový.', 'reserveandpay' ) );
 		}
 		$r = Resandpay_Reservations::get_by_token( $parts[0] );
+		if ( ! $r ) {
+			$r = Resandpay_Materials::grant_by_token( $parts[0] ); // Zpřístupnění materiálu podle e-mailu (#29).
+		}
 		if ( ! $r || '' === Resandpay_Customers::key( $r['email'] ) ) {
 			return new WP_Error( 'invalid', __( 'Odkaz na profil není platný.', 'reserveandpay' ) );
 		}
@@ -215,6 +223,11 @@ class Resandpay_Profile {
 		set_transient( $ip, $count + 1, HOUR_IN_SECONDS );
 		set_transient( $em, 1, 5 * MINUTE_IN_SECONDS );
 		$r = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . Resandpay_Reservations::table() . ' WHERE LOWER(TRIM(email)) = %s ORDER BY id DESC LIMIT 1', $key ), ARRAY_A );
+		if ( ! $r ) {
+			$g = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . Resandpay_Materials::grants_table() . " WHERE email = %s AND token <> '' AND revoked_at IS NULL ORDER BY id DESC LIMIT 1", $key ), ARRAY_A );
+			$m = $g ? Resandpay_Materials::get( $g['material_id'] ) : null;
+			$r = $m ? Resandpay_Materials::pseudo_grant( $m, $g ) : null;
+		}
 		if ( $r ) {
 			Resandpay_Mailer::send_template( $r['email'], 'profile_link', $r );
 		}
@@ -262,7 +275,7 @@ class Resandpay_Profile {
 	}
 
 	/** Karta jedné rezervace. */
-	public static function card( array $r ) {
+	public static function card( array $r, $via_link = false ) {
 		$ev      = Resandpay_Events::get( $r['event_id'] );
 		$labels  = Resandpay_Reservations::status_labels();
 		$mat     = 'material' === ( $r['item_type'] ?? '' );
@@ -302,7 +315,12 @@ class Resandpay_Profile {
 			}
 			$out .= '<p><a class="rap-button" href="' . esc_url( Resandpay_PDF::url( $r ) ) . '" target="_blank" rel="noopener">' . esc_html__( 'Platební pokyn (PDF)', 'reserveandpay' ) . '</a></p></div>';
 		}
-		if ( $mat && Resandpay_Reservations::PAID === $r['status'] && class_exists( 'Resandpay_Materials' ) && Resandpay_Materials::my_url() ) {
+		$mobj = $mat ? Resandpay_Materials::get( $r['event_id'] ) : null;
+		if ( $mobj && $mobj['disabled'] && Resandpay_Reservations::PAID === $r['status'] ) {
+			$out .= '<p class="rap-notice">' . esc_html( (string) Resandpay_Settings::get( 'mat_disabled_text' ) ) . '</p>';
+		} elseif ( $mat && Resandpay_Reservations::PAID === $r['status'] && $via_link ) {
+			$out .= '<p><a href="#rap-profile-materials">' . esc_html__( 'Stáhnout níže v Materiály ke stažení ↓', 'reserveandpay' ) . '</a></p>';
+		} elseif ( $mat && Resandpay_Reservations::PAID === $r['status'] && class_exists( 'Resandpay_Materials' ) && Resandpay_Materials::my_url() ) {
 			$out .= '<p><a href="' . esc_url( Resandpay_Materials::my_url() ) . '">' . esc_html__( 'Stáhnout v Moje materiály →', 'reserveandpay' ) . '</a></p>';
 		}
 		return $out . '</li>';
@@ -332,14 +350,16 @@ class Resandpay_Profile {
 			}
 		}
 		usort( $up, fn( $a, $b ) => strcmp( (string) ( Resandpay_Events::get( $a['event_id'] )['start'] ?? '' ), (string) ( Resandpay_Events::get( $b['event_id'] )['start'] ?? '' ) ) );
+		// Materiály ke stažení (#29): zpřístupněné podle e-mailu, zaplacené objednávky a účastníci akcí.
+		$items = Resandpay_Materials::for_email( $email );
 		/* translators: %s: e-mail */
 		$out = '<p class="rap-profile__who">' . esc_html( sprintf( __( 'Rezervace na e-mail %s', 'reserveandpay' ), $email ) ) . '</p>';
-		if ( ! $rows ) {
+		if ( ! $rows && ! $items ) {
 			$out .= '<p class="rap-notice">' . esc_html__( 'Na tento e-mail zatím nemáte žádné rezervace.', 'reserveandpay' ) . '</p>';
 		}
 		foreach ( array(
 			array( __( 'Nadcházející', 'reserveandpay' ), $up ),
-			array( __( 'Proběhlé a zrušené', 'reserveandpay' ), $past ),
+			array( __( 'Proběhlé nebo zrušené', 'reserveandpay' ), $past ),
 			array( __( 'Objednávky materiálů', 'reserveandpay' ), $mats ),
 		) as $sec ) {
 			if ( ! $sec[1] ) {
@@ -347,9 +367,26 @@ class Resandpay_Profile {
 			}
 			$out .= '<h2 class="rap-profile__title">' . esc_html( $sec[0] ) . '</h2><ul class="rap-profile__list">';
 			foreach ( $sec[1] as $r ) {
-				$out .= self::card( $r );
+				$out .= self::card( $r, '' !== $token );
 			}
 			$out .= '</ul>';
+		}
+		if ( $items ) {
+			$out .= '<h2 class="rap-profile__title" id="rap-profile-materials">' . esc_html__( 'Materiály ke stažení', 'reserveandpay' ) . '</h2><div class="rap-materials rap-my">';
+			foreach ( $items as $it ) {
+				$m    = $it['mat'];
+				$out .= '<section class="rap-my__item"><h3><a href="' . esc_url( '' !== $token ? add_query_arg( self::QUERY, $token, $m['url'] ) : $m['url'] ) . '">' . esc_html( $m['title'] ) . '</a> <small>' . esc_html( $m['kind_label'] ) . '</small></h3>';
+				if ( ! empty( $it['access']['disabled'] ) ) {
+					$out .= '<p class="rap-notice">' . esc_html( (string) Resandpay_Settings::get( 'mat_disabled_text' ) ) . '</p></section>';
+					continue;
+				}
+				if ( $it['access']['until'] ) {
+					/* translators: %s: datum */
+					$out .= '<p class="rap-small">' . esc_html( sprintf( __( 'Přístup do %s', 'reserveandpay' ), wp_date( 'j. n. Y', $it['access']['until'] ) ) ) . '</p>';
+				}
+				$out .= Resandpay_Materials_Views::render_files( $m, false, '' !== $token ? $email : '' ) . '</section>';
+			}
+			$out .= '</div>';
 		}
 		if ( $rows ) {
 			$nl   = self::newsletter( $email );

@@ -4,6 +4,52 @@
 >
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
+## 0.25.0 – Odbavení na místě na webu (14. 11. 2026)
+
+- **R23 – odbavení na webu** ([Issue #30](https://github.com/ludektelecky/resandpay/issues/30), schváleno a implementováno): shortcode **`[reserveandpay_checkin]`** – odbavení na samostatné webové stránce, pro telefon přímo na lekci.
+  - **Nastavení → Rezervace → Odbavení na místě → Odbavení vidí role** – výchozí Administrátor a Šéfredaktor (role z Ultimate Member lze přidat); platí pro webovou stránku i ResAndPay → Odbavení
+  - najít rezervaci podle **VS** nebo **QR kódu**, **Zaplaceno hotově**, **Zobrazit QR kód k zaplacení** (převodem na místě – spáruje se automaticky), nové tlačítko **Zkontrolovat platbu v bance** (znovu nejvýš 1× za nastavený počet sekund – Nastavení → Odbavení na místě, výchozí 30 s) a **Znovu poslat platební údaje** (e-mail zákazníkovi s aktuálním nedoplatkem)
+  - v kartě i v přehledu dne **telefon a poznámka** zákazníka
+  - rušit ani vracet platby odbavení neumí; ruční „Zaplaceno převodem“ zůstává jen v administraci
+- Bez změny databáze. Testy: 752 kontrol + souběh
+
+## 0.24.0 – Materiály podle e-mailu bez účtu (14. 11. 2026)
+
+- **R22 – materiál bez účtu** ([Issue #29](https://github.com/ludektelecky/resandpay/issues/29), schváleno a implementováno):
+  - **Zpřístupnění podle e-mailu** v editoru materiálu (Přístupy) – i **více e-mailů najednou** (každý na řádek, případně „Jméno <e-mail>“), **účet není potřeba**. Zákazník dostane e-mail s **odkazem na materiál** a na **svůj profil**, kde si ho stáhne bez přihlášení.
+  - **Objednávka placeného materiálu bez účtu** – na stránce materiálu jméno a e-mail místo přihlášení (je-li vybraná stránka profilu zákazníka); po zaplacení přijde odkaz ke stažení.
+  - **Profil zákazníka** má novou část **Materiály ke stažení**; odkaz z e-mailu otevře i stránku materiálu se soubory.
+  - Kdo si později založí **účet se stejným e-mailem**, uvidí materiál i v **Moje materiály**.
+  - Limity stažení, log stažení a vodoznak fungují i podle e-mailu.
+- Nová šablona e-mailu **Materiál – zpřístupněn bez účtu** (Nastavení → E-maily).
+- Databáze 15 (e-mail a token u zpřístupnění, e-mail v logu stažení). Testy: 733 kontrol + souběh
+
+## 0.23.0 – Vodoznak v PDF materiálů (14. 11. 2026)
+
+- **R21 – vodoznak v PDF** (R11-e, [Issue #27](https://github.com/ludektelecky/resandpay/issues/27), schváleno a implementováno): do staženého PDF materiálu se vloží **údaje kupujícího** a zapíší se i do **metadat PDF**. Ve výchozím stavu vypnuto.
+  - Nastavení → Materiály ke stažení: výchozí zapnutí, **text vodoznaku** (`{name}`, `{email}`, `{date}`, `{code}`, `{site}`), **umístění** – zápatí / šikmo přes stránku / obojí; u materiálu volba **Vodoznak v PDF** (výchozí / ano / ne)
+  - soubor na disku se nemění – kopie s vodoznakem se tvoří při stažení a 24 h se drží v chráněné mezipaměti; ukázky bez vodoznaku
+  - PDF, do kterého vodoznak vložit nejde (PDF 1.5+ s komprimovanými odkazy, zašifrované), se stáhne bez vodoznaku a **editor materiálu na něj upozorní** s postupem
+- Nová knihovna **FPDI 2.6.4** (MIT) v `lib/fpdi`.
+- Bez změny databáze. Testy: 711 kontrol + souběh
+
+## 0.22.0 – Statistika materiálů (14. 11. 2026)
+
+- **R20 – statistika materiálů** ([Issue #28](https://github.com/ludektelecky/resandpay/issues/28), schváleno a implementováno): stránka **Statistika** (v administraci i na webu se shortcodem `[reserveandpay_stats]`) má přepínač **Termíny akcí a služeb / Materiály**.
+  - za zvolené období (výchozí poslední 3 měsíce): **zaplacené a čekající objednávky**, **tržby**, **zdarma** (kupón 100 %, ruční zpřístupnění, účastníci akcí a služeb), **stažení**, **přehrání** a **počet uživatelů**, kteří stahovali
+  - **graf** vývoje stažení a objednávek po dnech / týdnech / měsících
+  - tabulka po materiálech se součty, řazení podle sloupců, **Export CSV**
+- Bez změny databáze. Testy: 694 kontrol + souběh
+
+## 0.21.0 – Znepřístupnění materiálu (14. 11. 2026)
+
+- **R19 – znepřístupnění materiálu** ([Issue #26](https://github.com/ludektelecky/resandpay/issues/26), schváleno a implementováno): v Parametrech materiálu nová volba **Dostupnost** – **V nabídce** / **Staženo z nabídky** (kdo materiál má, stahuje dál) / **Znepřístupněno** – materiál zmizí z katalogu a **nikdo ho nestáhne**, ani kdo ho už má; už vydané odkazy ke stažení přestanou platit. Správci mají přístup dál.
+  - na stránce materiálu, v Moje materiály a v profilu zákazníka text „Materiál už není k dispozici.“ (Nastavení → Materiály ke stažení)
+  - nároky zůstávají – po vrácení do nabídky se obnoví; zákazníkům se nic neposílá
+  - záznam, kdo a kdy materiál znepřístupnil; v seznamu materiálů štítek „znepřístupněno“
+- Profil zákazníka: nadpis části „Proběhlé a zrušené“ změněn na **„Proběhlé nebo zrušené“** (dříve nevydaná 0.20.1).
+- Bez změny databáze (post meta). První testy materiálů. Testy: 679 kontrol + souběh
+
 ## 0.20.0 – Profil zákazníka „Moje rezervace“ (14. 11. 2026)
 
 - ⚠ **Po aktualizaci:** profil zapnete vytvořením stránky se shortcodem `[reserveandpay_my_reservations]` (např. „Moje rezervace“) a jejím výběrem v **Nastavení → Rezervace → Profil zákazníka**. Do té doby se nic nemění a e-maily odkaz na profil nemají.

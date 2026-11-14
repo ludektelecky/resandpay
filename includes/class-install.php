@@ -316,9 +316,14 @@ class Resandpay_Install {
 			revoked_at datetime NULL,
 			revoked_by bigint(20) unsigned NOT NULL DEFAULT 0,
 			revoke_reason varchar(190) NOT NULL DEFAULT '',
+			email varchar(190) NOT NULL DEFAULT '',
+			name varchar(190) NOT NULL DEFAULT '',
+			token varchar(64) NOT NULL DEFAULT '',
 			PRIMARY KEY  (id),
 			KEY material_user (material_id,user_id),
-			KEY user_id (user_id)
+			KEY user_id (user_id),
+			KEY email (email),
+			KEY token (token)
 		) {$charset};
 		CREATE TABLE {$wpdb->prefix}resandpay_downloads (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -329,8 +334,10 @@ class Resandpay_Install {
 			kind varchar(10) NOT NULL DEFAULT 'download',
 			result varchar(20) NOT NULL DEFAULT 'ok',
 			ip_hash varchar(40) NOT NULL DEFAULT '',
+			email varchar(190) NOT NULL DEFAULT '',
 			PRIMARY KEY  (id),
 			KEY user_file (user_id,file_id,created_at),
+			KEY email_file (email,file_id,created_at),
 			KEY material (material_id,created_at)
 		) {$charset};
 		CREATE TABLE {$locks} (
