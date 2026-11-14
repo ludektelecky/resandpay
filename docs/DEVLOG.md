@@ -8,10 +8,10 @@
 
 - **R23 – odbavení na webu** ([Issue #30](https://github.com/ludektelecky/resandpay/issues/30), schváleno a implementováno): shortcode **`[reserveandpay_checkin]`** – odbavení na samostatné webové stránce, pro telefon přímo na lekci.
   - **Nastavení → Rezervace → Odbavení na místě → Odbavení vidí role** – výchozí Administrátor a Šéfredaktor (role z Ultimate Member lze přidat); platí pro webovou stránku i ResAndPay → Odbavení
-  - najít rezervaci podle **VS** nebo **QR kódu**, **Zaplaceno hotově**, **Zobrazit QR kód k zaplacení** (převodem na místě – spáruje se automaticky) a nové tlačítko **Zkontrolovat platbu v bance**
+  - najít rezervaci podle **VS** nebo **QR kódu**, **Zaplaceno hotově**, **Zobrazit QR kód k zaplacení** (převodem na místě – spáruje se automaticky), nové tlačítko **Zkontrolovat platbu v bance** (znovu nejvýš 1× za nastavený počet sekund – Nastavení → Odbavení na místě, výchozí 30 s) a **Znovu poslat platební údaje** (e-mail zákazníkovi s aktuálním nedoplatkem)
   - v kartě i v přehledu dne **telefon a poznámka** zákazníka
   - rušit ani vracet platby odbavení neumí; ruční „Zaplaceno převodem“ zůstává jen v administraci
-- Bez změny databáze. Testy: 749 kontrol + souběh
+- Bez změny databáze. Testy: 752 kontrol + souběh
 
 ## 0.24.0 – Materiály podle e-mailu bez účtu (14. 11. 2026)
 

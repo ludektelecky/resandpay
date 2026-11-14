@@ -143,6 +143,7 @@ class Resandpay_Admin_Settings {
 			),
 			__( 'Odbavení na místě', 'reserveandpay' ) => array(
 				'checkin_roles' => array( __( 'Odbavení vidí role', 'reserveandpay' ), 'roles', __( 'ResAndPay → Odbavení v administraci i webová stránka se shortcodem [reserveandpay_checkin] (např. pro telefon na lekci). Role spravuje Ultimate Member. Odbavení smí najít rezervaci podle VS / QR kódu, označit platbu hotově, zobrazit QR kód k zaplacení převodem a zkontrolovat platbu v bance – nic nerušit ani nevracet. Správce webu má přístup vždy.', 'reserveandpay' ) ),
+				'checkin_bank_pause' => array( __( 'Kontrola platby v bance nejvýš 1× za (sekund)', 'reserveandpay' ), 'number', __( 'Tlačítko „Zkontrolovat platbu v bance“ v odbavení načte avíza ze schránky. Aby se schránka zbytečně nezatěžovala, lze ho znovu použít až po této době. Výchozí 30 s (5–600).', 'reserveandpay' ) ),
 			),
 			__( 'Profil zákazníka', 'reserveandpay' )  => array(
 				'profile_page'      => array( __( 'Stránka „Moje rezervace“', 'reserveandpay' ), 'page', __( 'Stránka se shortcodem [reserveandpay_my_reservations]. Zákazník na ní vidí všechny své rezervace, stav plateb a platební pokyny a může změnit souhlas s novinkami. Přihlášený uživatel podle e-mailu účtu, ostatní přes osobní odkaz, který je v každém e-mailu zákazníkovi. Nevybráno = profil vypnutý.', 'reserveandpay' ) ),
@@ -345,6 +346,7 @@ class Resandpay_Admin_Settings {
 		$out['mat_due_days']     = max( 0, min( 90, (int) $out['mat_due_days'] ) );
 		$out['mat_access_days']  = max( 0, (int) $out['mat_access_days'] );
 		$out['profile_link_days'] = max( 1, min( 365, (int) $out['profile_link_days'] ) );
+		$out['checkin_bank_pause'] = max( 5, min( 600, (int) $out['checkin_bank_pause'] ) );
 		foreach ( array( 'event' => 'AK', 'service' => 'SL', 'slot' => 'TE', 'material' => 'MA' ) as $k => $def ) {
 			$out[ 'code_prefix_' . $k ] = substr( strtoupper( preg_replace( '/[^A-Za-z]/', '', (string) $out[ 'code_prefix_' . $k ] ) ), 0, 6 ) ?: $def;
 			$out[ 'code_digits_' . $k ] = max( 2, min( 8, (int) $out[ 'code_digits_' . $k ] ) );

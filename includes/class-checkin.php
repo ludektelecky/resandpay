@@ -14,7 +14,7 @@ defined( 'ABSPATH' ) || exit;
 class Resandpay_Checkin {
 
 	const CAP        = 'resandpay_checkin';
-	const BANK_PAUSE = 30; // Sekund mezi kontrolami plateb z odbavení.
+	const BANK_PAUSE = 30; // Výchozí počet sekund mezi kontrolami plateb z odbavení (Nastavení → Odbavení na místě).
 
 	public static function init() {
 		add_filter( 'user_has_cap', array( __CLASS__, 'grant_cap' ), 10, 4 );
@@ -77,8 +77,37 @@ class Resandpay_Checkin {
 		);
 	}
 
+	/** Prodleva mezi kontrolami plateb v bance (s) – z nastavení, 5–600. */
+	public static function bank_pause() {
+		$v = (int) Resandpay_Settings::get( 'checkin_bank_pause' );
+		return max( 5, min( 600, $v ?: self::BANK_PAUSE ) );
+	}
+
 	/**
-	 * Kontrola plateb v bance z odbavení (načtení avíz a spárování), nejvýš 1× za BANK_PAUSE s.
+	 * Znovu pošle zákazníkovi aktuální platební údaje (zbývající částka, QR, PDF) – jako
+	 * „Znovu poslat platební údaje“ v detailu rezervace.
+	 *
+	 * @return array [zpráva, typ]
+	 */
+	public static function resend( $id ) {
+		$r = Resandpay_Reservations::get( $id );
+		if ( ! $r ) {
+			return array( __( 'Rezervace nenalezena.', 'reserveandpay' ), 'error' );
+		}
+		if ( ! self::payable( $r ) || Resandpay_Reservations::remaining( $r ) <= 0 ) {
+			return array( __( 'Rezervace nemá co doplatit – platební údaje se neposílají.', 'reserveandpay' ), 'warning' );
+		}
+		$tpl = (float) $r['amount_paid'] > 0 ? 'reminder' : Resandpay_Mailer::received_key( $r );
+		if ( ! Resandpay_Mailer::send_template( $r['email'], $tpl, $r ) ) {
+			/* translators: %s: chybová zpráva */
+			return array( sprintf( __( 'E-mail se nepodařilo odeslat: %s', 'reserveandpay' ), Resandpay_Mailer::$last_error ?: '—' ), 'error' );
+		}
+		/* translators: 1: e-mail, 2: částka */
+		return array( sprintf( __( 'Platební údaje odeslány na %1$s (k úhradě %2$s).', 'reserveandpay' ), $r['email'], Resandpay_Events::format_price( Resandpay_Reservations::remaining( $r ), $r['currency'] ) ), 'success' );
+	}
+
+	/**
+	 * Kontrola plateb v bance z odbavení (načtení avíz a spárování), nejvýš 1× za bank_pause() s.
 	 *
 	 * @param object $imap Volitelně klient IMAP (testy).
 	 * @return array [zpráva, typ]
@@ -89,7 +118,7 @@ class Resandpay_Checkin {
 			/* translators: %d: sekund */
 			return array( sprintf( __( 'Kontrola plateb právě proběhla – zkuste to znovu za %d s.', 'reserveandpay' ), $wait ), 'warning' );
 		}
-		set_transient( 'rap_checkin_bank', time() + self::BANK_PAUSE, self::BANK_PAUSE );
+		set_transient( 'rap_checkin_bank', time() + self::bank_pause(), self::bank_pause() );
 		$res = Resandpay_Payments::run( 'checkin', $imap );
 		if ( ! $res['ok'] ) {
 			/* translators: %s: chyba */
@@ -119,6 +148,9 @@ class Resandpay_Checkin {
 		}
 		if ( 'bank' === $do ) {
 			return self::check_bank( $id );
+		}
+		if ( 'resend' === $do ) {
+			return self::resend( $id );
 		}
 		if ( 'transfer' === $do && ! self::can_transfer( $ctx ) ) {
 			return array( __( 'Platba převodem se páruje automaticky – použijte „Zkontrolovat platbu v bance“.', 'reserveandpay' ), 'error' );
@@ -212,6 +244,9 @@ class Resandpay_Checkin {
 				$out .= self::action_form( $r, 'transfer', __( 'Zaplaceno převodem', 'reserveandpay' ), self::btn( $ctx, false ), $ctx, $keep );
 			}
 			$out .= self::action_form( $r, 'bank', __( 'Zkontrolovat platbu v bance', 'reserveandpay' ), self::btn( $ctx, false ), $ctx, $keep );
+			if ( Resandpay_Reservations::remaining( $r ) > 0 && '' !== (string) $r['email'] ) {
+				$out .= self::action_form( $r, 'resend', __( 'Znovu poslat platební údaje', 'reserveandpay' ), self::btn( $ctx, false ), $ctx, $keep );
+			}
 			if ( 'admin' === $ctx && current_user_can( resandpay_cap_reservations() ) ) {
 				$out .= '<a class="button" href="' . esc_url( admin_url( 'admin.php?page=reserveandpay-detail&id=' . (int) $r['id'] ) ) . '">' . esc_html__( 'Detail rezervace', 'reserveandpay' ) . '</a>';
 			}

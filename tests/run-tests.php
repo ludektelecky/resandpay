@@ -2410,7 +2410,7 @@ $_GET = array( 'rap_vs' => $ckR['vs'], 'rap_day' => wp_date( 'Y-m-d', $now + 2 *
 $ckHtml = Resandpay_Checkin::shortcode();
 $_GET   = array();
 rap_t( false !== strpos( $ckHtml, 'Olga Odbavená' ) && false !== strpos( $ckHtml, 'id="rap-scan-btn"' ) && false !== strpos( $ckHtml, 'name="rap_vs"' ), 'web: karta rezervace podle VS a čtečka QR' );
-rap_t( false !== strpos( $ckHtml, 'Zaplaceno hotově' ) && false !== strpos( $ckHtml, 'Zobrazit QR kód k zaplacení' ) && false !== strpos( $ckHtml, 'Zkontrolovat platbu v bance' ) && false === strpos( $ckHtml, 'Zaplaceno převodem' ), 'web: hotově, QR kód k zaplacení, kontrola v bance – bez ručního „převodem“' );
+rap_t( false !== strpos( $ckHtml, 'Zaplaceno hotově' ) && false !== strpos( $ckHtml, 'Zobrazit QR kód k zaplacení' ) && false !== strpos( $ckHtml, 'Zkontrolovat platbu v bance' ) && false !== strpos( $ckHtml, 'Znovu poslat platební údaje' ) && false === strpos( $ckHtml, 'Zaplaceno převodem' ), 'web: hotově, QR kód k zaplacení, kontrola v bance – bez ručního „převodem“' );
 rap_t( false !== strpos( $ckHtml, 'Bolí ji záda' ) && false !== strpos( $ckHtml, '777303030' ) && false !== strpos( $ckHtml, 'data:image/png;base64,' ), 'web: poznámka, telefon a QR kód k zaplacení' );
 rap_t( false !== strpos( $ckHtml, 'Radek Převodem' ) && false !== strpos( $ckHtml, 'k vybrání na místě' ), 'web: přehled dne' );
 // Akce.
@@ -2444,7 +2444,16 @@ delete_transient( 'rap_checkin_bank' );
 $ckB0 = Resandpay_Checkin::check_bank( $ckR2['id'], $ckImap );
 rap_t( 'warning' === $ckB0[1] && false !== strpos( $ckB0[0], 'zatím v bance není' ), 'kontrola v bance: platba ještě nedorazila' );
 $ckB1 = Resandpay_Checkin::check_bank( $ckR2['id'], $ckImap );
-rap_t( 'warning' === $ckB1[1] && false !== strpos( $ckB1[0], 'znovu za' ), 'kontrola v bance nejvýš 1× za 30 s' );
+rap_t( 'warning' === $ckB1[1] && false !== strpos( $ckB1[0], 'znovu za' ) && 30 === Resandpay_Checkin::bank_pause(), 'kontrola v bance nejvýš 1× za 30 s (výchozí)' );
+Resandpay_Settings::update( array( 'checkin_bank_pause' => 90 ) );
+rap_t( 90 === Resandpay_Checkin::bank_pause() && 5 === Resandpay_Admin_Settings::sanitize( array( 'checkin_bank_pause' => '1' ) )['checkin_bank_pause'] && 600 === Resandpay_Admin_Settings::sanitize( array( 'checkin_bank_pause' => '9999' ) )['checkin_bank_pause'], 'prodleva kontroly v bance z nastavení (5–600 s)' );
+Resandpay_Settings::update( array( 'checkin_bank_pause' => 30 ) );
+$GLOBALS['rap_mails'] = array();
+wp_set_current_user( $ckEd );
+$ckRs = Resandpay_Checkin::process( 'resend', $ckR2['id'], false, 'front' );
+wp_set_current_user( 1 );
+rap_t( 'success' === $ckRs[1] && 1 === count( $GLOBALS['rap_mails'] ) && false !== strpos( $ckRs[0], '500' ), 'web: Znovu poslat platební údaje (aktuální nedoplatek)' );
+rap_t( 'warning' === Resandpay_Checkin::resend( $ckR['id'] )[1], 'zaplacená rezervace: platební údaje se neposílají' );
 delete_transient( 'rap_checkin_bank' );
 $ckImap->mails = array( 1 => rap_avizo( $eml, $ckR2['vs'], '+500,00 CZK', 'ck30' . wp_generate_password( 6, false ) ) );
 $ckB2 = Resandpay_Checkin::check_bank( $ckR2['id'], $ckImap );
