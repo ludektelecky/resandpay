@@ -58,6 +58,7 @@ class Resandpay_Reservations_Table extends WP_List_Table {
 		$result   = Resandpay_Reservations::query(
 			array(
 				'event_id' => absint( $_GET['event_id'] ?? 0 ),
+				'email'    => Resandpay_Admin_Reservations::customer_filter(),
 				'status'   => sanitize_key( $_GET['status'] ?? '' ),
 				'search'   => sanitize_text_field( wp_unslash( $_GET['s'] ?? '' ) ),
 				'orderby'  => sanitize_key( $_GET['orderby'] ?? 'created_at' ),
@@ -77,7 +78,7 @@ class Resandpay_Reservations_Table extends WP_List_Table {
 	}
 
 	protected function get_views() {
-		$counts = Resandpay_Reservations::counts_by_status( absint( $_GET['event_id'] ?? 0 ) );
+		$counts = Resandpay_Reservations::counts_by_status( absint( $_GET['event_id'] ?? 0 ), Resandpay_Admin_Reservations::customer_filter() );
 		$base   = remove_query_arg( array( 'status', 'paged', 'rap_msg' ) );
 		$cur    = sanitize_key( $_GET['status'] ?? '' );
 		$views  = array(
@@ -119,8 +120,9 @@ class Resandpay_Reservations_Table extends WP_List_Table {
 		}
 		echo '</select>';
 		submit_button( __( 'Filtrovat', 'reserveandpay' ), '', 'filter_action', false );
-		if ( $cur ) {
-			echo ' <a class="button" href="' . esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=resandpay_export&event_id=' . $cur ), 'resandpay_export' ) ) . '">' . esc_html__( 'Export CSV', 'reserveandpay' ) . '</a>';
+		$email = Resandpay_Admin_Reservations::customer_filter();
+		if ( $cur || '' !== $email ) {
+			echo ' <a class="button" href="' . esc_url( Resandpay_Admin_Reservations::export_url( $cur, $email ) ) . '">' . esc_html__( 'Export CSV', 'reserveandpay' ) . '</a>';
 		}
 		echo '</div>';
 	}

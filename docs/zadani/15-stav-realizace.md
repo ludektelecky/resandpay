@@ -19,7 +19,7 @@ Vývoj probíhá na webu slehkouhlavou.cz (WordPress 7.1, PHP 8.5, MySQL 8.4, Ac
 
 ## 15.1 Kniha rozvoje
 
-> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R15 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
+> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R16 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
 
 Funkce navržené k dalšímu rozvoji pluginu. Položka se po schválení podrobného zadání přesune do příslušné kapitoly a do tabulky stavu realizace.
 
@@ -275,3 +275,14 @@ Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, po
 - Písmo v PDF: DejaVu Serif / DejaVu Sans (vloženo v pluginu, plná čeština, výchozí pro nové weby) nebo Fraunces / Work Sans. Do PDF lze vložit jen písma obsažená v pluginu.
 - Pro vývojáře: pole „Vlastní CSS“ (načte se za styly pluginu jen tam, kde plugin něco zobrazuje), filtr resandpay_enqueue_styles (vypnutí frontend.css), dokumentace proměnných --rap-* a hlavních tříd v README (Vzhled a CSS).
 - Neutrální výchozí hodnoty nové instalace: logo z nastavení pluginu bez textů a symbolu (bez loga webu název značky / webu), prázdné motto; popisek a nápověda poznámky ve formuláři v Nastavení. Stávající web (aktualizace na DB 12) si ponechá dosavadní vzhled – chybějící klíče se doplní paletou a texty dle grafického manuálu „s lehkou hlavou“, uložené hodnoty se nemění. Na jiném webu je po aktualizaci potřeba přepnout „Ze šablony webu“ (DEVLOG „⚠ Po aktualizaci“).
+
+### R16 – Přehled zákazníků
+
+**Pozn.: Navrženo a schváleno 14. 11. 2026 ([Issue #19](https://github.com/ludektelecky/resandpay/issues/19)), implementováno ve verzi pluginu 0.18.0.**
+
+- Nová stránka **ResAndPay → Zákazníci** (oprávnění k rezervacím): všichni, kdo kdy provedli jakoukoli rezervaci – akce, termíny služeb i objednávky materiálů. Zákazník = e-mail bez ohledu na velikost písmen a mezery na okrajích; rezervace bez e-mailu se nezapočítávají.
+- Sloupce: jméno a telefon z poslední rezervace, e-mail, počet rezervací (z toho aktivní a zrušené / expirované – započítávají se všechny stavy), první a poslední rezervace, zaplaceno celkem (součet uhrazených částek po měnách), souhlas s newsletterem z poslední rezervace.
+- Hledání podle jména, e-mailu a telefonu kterékoli rezervace zákazníka; řazení podle jména, e-mailu, počtu rezervací, první a poslední rezervace a zaplacené částky (výchozí: poslední rezervace sestupně); stránkování po 50; filtr „jen se souhlasem s newsletterem“.
+- Proklik na zákazníka → seznam rezervací (ResAndPay → Rezervace s filtrem `email`) se souhrnem zákazníka v záhlaví, stavy, hledáním, akcemi nad rezervacemi a exportem CSV; filtr lze kombinovat s výběrem akce. V detailu rezervace odkaz „všechny rezervace zákazníka (N)“.
+- Export CSV (UTF-8 se středníkem pro Excel) podle aktuálního hledání a filtru: jméno, e-mail, telefon, rezervací, aktivních, zrušených / expirovaných, první a poslední rezervace, zaplaceno, newsletter.
+- Počítá se přímo z tabulky rezervací (třída Resandpay_Customers) – bez nové tabulky a bez změny databáze. Hromadné oznámení zákazníkům není součástí, řeší se samostatně.

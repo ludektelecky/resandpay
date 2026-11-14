@@ -5,6 +5,7 @@
 - Poznámka pro lektorku může obsahovat zdravotní údaje (zvláštní kategorie osobních údajů) – přístup jen administrátorka, výslovné upozornění ve formuláři, definovaná doba uchovávání.
 - Spojení se schránkou výhradně šifrovaně (IMAP přes SSL/TLS); spouštěcí skript CRONu nesmí být veřejně volatelný (PHP CLI nebo URL s tajným tokenem).
 - Odkazy ke stažení PDF musí být netriviálně uhodnutelné (dostatečně dlouhý náhodný token).
+- Přehled zákazníků (ResAndPay → Zákazníci) je jen souhrn údajů z existujících rezervací – nevzniká nová evidence ani tabulka. Přístup a export CSV mají jen uživatelé s oprávněním k rezervacím (export s bezpečnostním tokenem). Pro rozesílání nabídek a novinek používat jen zákazníky se souhlasem s newsletterem (filtr v přehledu i v exportu).
 
 **Pozn.:** Toto není daňové ani právní poradenství. Otázku, zda „platební pokyn bez faktury“ postačuje z hlediska účetnictví a daní, doporučujeme probrat s účetním/daňovým poradcem – otevřená otázka 5.
 

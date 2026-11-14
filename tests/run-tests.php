@@ -58,7 +58,7 @@ function rap_person( $n ) {
 }
 
 require_once ABSPATH . 'wp-admin/includes/template.php';
-foreach ( array( 'class-admin.php', 'class-admin-events.php', 'class-admin-settings.php', 'class-admin-services.php', 'class-admin-shortcodes.php', 'class-admin-checkin.php', 'class-admin-payments.php' ) as $f ) {
+foreach ( array( 'class-admin.php', 'class-admin-events.php', 'class-admin-settings.php', 'class-admin-services.php', 'class-admin-shortcodes.php', 'class-admin-checkin.php', 'class-admin-payments.php', 'class-customers-table.php', 'class-admin-customers.php' ) as $f ) {
 	require_once RESANDPAY_DIR . 'admin/' . $f;
 }
 
@@ -1817,6 +1817,74 @@ $tbHtml = ob_get_clean();
 unset( $_GET['tab'] );
 rap_t( 7 === preg_match_all( '/<a [^>]*class="nav-tab/', $tbHtml ) && false !== strpos( $tbHtml, 'nav-tab-active" data-tab="platby"' ) && 1 === substr_count( $tbHtml, 'class="rap-tab-panel" data-tab="platby">' ), 'záložky: aktivní podle ?tab=, ostatní skryté' );
 rap_t( 1 === substr_count( $tbHtml, '<form method="post" action="options.php">' ) && false !== strpos( $tbHtml, 'name="resandpay_settings[company_name]"' ) && false !== strpos( $tbHtml, 'name="resandpay_settings[imap_host]"' ), 'jeden formulář – uloží se všechny záložky' );
+
+echo "== 0.18.0: přehled zákazníků (#19)\n";
+foreach ( array( 'class-reservations-table.php', 'class-admin-reservations.php' ) as $f ) {
+	require_once RESANDPAY_DIR . 'admin/' . $f;
+}
+$cuA  = rap_event( 'Zákazníci A', $now + 40 * $day, $now + 40 * $day + HOUR_IN_SECONDS, 10 );
+$cuB  = rap_event( 'Zákazníci B', $now + 41 * $day, $now + 41 * $day + HOUR_IN_SECONDS, 10 );
+$cu1  = Resandpay_Reservations::create( $cuA, array_merge( rap_person( 19 ), array( 'customer_name' => 'Jana Stará', 'email' => 'jana.zak19@example.cz' ) ) );
+$cu2  = Resandpay_Reservations::create( $cuB, array_merge( rap_person( 19 ), array( 'customer_name' => 'Jana Nová', 'email' => 'Jana.Zak19@Example.cz', 'phone' => '777190190', 'newsletter' => 1 ) ) );
+$cu3  = Resandpay_Reservations::create( $cuB, array_merge( rap_person( 20 ), array( 'customer_name' => 'Petr Zákazník', 'email' => 'petr.zak19@example.cz' ) ) );
+$cu4  = Resandpay_Reservations::create( $cuA, array_merge( rap_person( 20 ), array( 'customer_name' => 'Petr Zákazník', 'email' => 'petr.zak19@example.cz' ) ) );
+rap_t( ! is_wp_error( $cu1 ) && ! is_wp_error( $cu2 ) && ! is_wp_error( $cu3 ) && ! is_wp_error( $cu4 ), 'zákazníci: testovací rezervace vytvořeny' );
+$wpdb->update( Resandpay_Reservations::table(), array( 'email' => ' JANA.zak19@example.cz ' ), array( 'id' => $cu1['id'] ) ); // Mezery a velká písmena ze starších dat.
+$wpdb->update( Resandpay_Reservations::table(), array( 'created_at' => wp_date( 'Y-m-d H:i:s', $now - 30 * $day ) ), array( 'id' => $cu1['id'] ) );
+Resandpay_Reservations::set_status( $cu1['id'], Resandpay_Reservations::PAID, array( 'method' => 'transfer_manual', 'notify' => false ) );
+Resandpay_Reservations::set_status( $cu3['id'], Resandpay_Reservations::CANCELLED, array( 'notify' => false ) );
+$wpdb->update( Resandpay_Reservations::table(), array( 'status' => Resandpay_Reservations::EXPIRED ), array( 'id' => $cu4['id'] ) );
+$cq = Resandpay_Customers::query( array( 'search' => 'zak19@example', 'per_page' => 0 ) );
+$cj = wp_list_filter( $cq['items'], array( 'email_key' => 'jana.zak19@example.cz' ) );
+$cj = $cj ? reset( $cj ) : array();
+$cp = wp_list_filter( $cq['items'], array( 'email_key' => 'petr.zak19@example.cz' ) );
+$cp = $cp ? reset( $cp ) : array();
+rap_t( 2 === $cq['total'] && 2 === count( $cq['items'] ), 'jeden řádek na e-mail (bez ohledu na velikost písmen a mezery)' );
+rap_t( $cj && 2 === $cj['total'] && 2 === $cj['active'] && 0 === $cj['closed'], 'zákazník: počet rezervací a aktivních' );
+rap_t( $cp && 2 === $cp['total'] && 0 === $cp['active'] && 2 === $cp['closed'], 'zrušené a expirované rezervace se počítají (zvlášť)' );
+rap_t( $cj && 'Jana Nová' === $cj['customer_name'] && '777190190' === $cj['phone'] && 1 === $cj['newsletter'], 'jméno, telefon a newsletter z poslední rezervace' );
+rap_t( $cj && substr( $cj['first_at'], 0, 10 ) === wp_date( 'Y-m-d', $now - 30 * $day ) && $cj['last_at'] > $cj['first_at'], 'první a poslední rezervace' );
+rap_t( $cj && abs( $cj['paid'] - 500 ) < 0.01 && false !== strpos( Resandpay_Customers::format_paid( $cj['paid_by_cur'] ), '500' ) && $cp && array() === $cp['paid_by_cur'], 'zaplaceno celkem (po měnách)' );
+$cn = Resandpay_Customers::query( array( 'search' => 'zak19@example', 'newsletter' => true ) );
+rap_t( 1 === $cn['total'] && 'jana.zak19@example.cz' === $cn['items'][0]['email_key'], 'filtr: jen se souhlasem s newsletterem' );
+rap_t( 1 === Resandpay_Customers::query( array( 'search' => '777190190' ) )['total'] && 1 === Resandpay_Customers::query( array( 'search' => 'Petr Zákazník' ) )['total'], 'hledání podle telefonu a jména' );
+$cs = Resandpay_Customers::query( array( 'search' => 'zak19@example', 'orderby' => 'name', 'order' => 'asc' ) );
+rap_t( 'Jana Nová' === $cs['items'][0]['customer_name'] && 'jana.zak19@example.cz' === Resandpay_Customers::query( array( 'search' => 'zak19@example', 'orderby' => 'paid', 'order' => 'desc' ) )['items'][0]['email_key'], 'řazení podle jména a zaplacené částky' );
+$cpg = Resandpay_Customers::query( array( 'search' => 'zak19@example', 'orderby' => 'email', 'order' => 'asc', 'per_page' => 1, 'page' => 2 ) );
+rap_t( 2 === $cpg['total'] && 1 === count( $cpg['items'] ) && 'petr.zak19@example.cz' === $cpg['items'][0]['email_key'], 'stránkování' );
+rap_t( wp_list_pluck( Resandpay_Customers::query( array( 'search' => 'zak19@example', 'orderby' => 'id; DROP TABLE x' ) )['items'], 'email_key' ) === wp_list_pluck( Resandpay_Customers::query( array( 'search' => 'zak19@example' ) )['items'], 'email_key' ), 'neznámé řazení → výchozí (poslední rezervace)' );
+rap_t( 2 === Resandpay_Customers::count_reservations( 'JANA.ZAK19@example.cz' ) && 0 === Resandpay_Customers::count_reservations( '' ), 'počet rezervací zákazníka podle e-mailu' );
+$rq = Resandpay_Reservations::query( array( 'email' => 'Jana.Zak19@example.cz ' ) );
+rap_t( 2 === $rq['total'] && array( $cu1['id'], $cu2['id'] ) == array_map( 'intval', array_reverse( wp_list_pluck( $rq['items'], 'id' ) ) ), 'seznam rezervací filtrovaný podle zákazníka' );
+rap_t( 1 === Resandpay_Reservations::query( array( 'email' => 'jana.zak19@example.cz', 'event_id' => $cuB ) )['total'], 'filtr zákazníka + akce' );
+$cc = Resandpay_Reservations::counts_by_status( 0, 'petr.zak19@example.cz' );
+rap_t( 1 === $cc[ Resandpay_Reservations::CANCELLED ] && 1 === $cc[ Resandpay_Reservations::EXPIRED ] && 2 === array_sum( $cc ), 'počty podle stavu u zákazníka' );
+$csv = Resandpay_Customers::csv_rows( array( 'search' => 'zak19@example', 'newsletter' => false ) );
+rap_t( 3 === count( $csv ) && 'E-mail' === $csv[0][1] && 10 === count( $csv[1] ) && in_array( 'ano', wp_list_pluck( array_slice( $csv, 1 ), 9 ), true ), 'export CSV zákazníků' );
+rap_t( 2 === count( Resandpay_Customers::csv_rows( array( 'search' => 'zak19@example', 'newsletter' => true ) ) ), 'export CSV jen se souhlasem s newsletterem' );
+rap_t( false !== strpos( Resandpay_Admin_Customers::reservations_url( ' Jana.Zak19@example.cz' ), 'email=jana.zak19%40example.cz' ) && false !== strpos( Resandpay_Admin_Customers::export_url( array( 'search' => '', 'newsletter' => true ) ), 'newsletter=1' ), 'odkazy na rezervace zákazníka a export' );
+wp_set_current_user( 1 );
+require_once ABSPATH . 'wp-admin/includes/screen.php';
+require_once ABSPATH . 'wp-admin/includes/class-wp-screen.php';
+set_current_screen( 'toplevel_page_reserveandpay' );
+$_GET['s'] = 'zak19@example';
+ob_start();
+Resandpay_Admin_Customers::page();
+$cuHtml = ob_get_clean();
+unset( $_GET['s'] );
+rap_t( false !== strpos( $cuHtml, 'Jana Nová' ) && false !== strpos( $cuHtml, 'petr.zak19@example.cz' ) && false !== strpos( $cuHtml, 'page=reserveandpay&#038;email=jana.zak19%40example.cz' ) && false !== strpos( $cuHtml, 'zrušené / expirované 2' ), 'stránka Zákazníci: řádky s prokliknutím na rezervace' );
+$_GET['email'] = 'jana.zak19@example.cz';
+ob_start();
+Resandpay_Admin_Reservations::page_list();
+$cuList = ob_get_clean();
+$_GET['id'] = $cu1['id'];
+ob_start();
+Resandpay_Admin_Reservations::page_detail();
+$cuDet = ob_get_clean();
+unset( $_GET['email'], $_GET['id'] );
+rap_t( false !== strpos( $cuList, 'Zákazníci B' ) && false !== strpos( $cuList, 'Zákazníci A' ) && false === strpos( $cuList, 'petr.zak19' ) && false !== strpos( $cuList, 'name="email" value="jana.zak19@example.cz"' ) && false !== strpos( $cuList, 'action=resandpay_export&#038;email=' ), 'rezervace zákazníka: jen jeho rezervace, export CSV' );
+rap_t( false !== strpos( $cuDet, 'všechny rezervace zákazníka (2)' ), 'detail rezervace: odkaz na všechny rezervace zákazníka' );
+wp_set_current_user( 0 );
 
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 

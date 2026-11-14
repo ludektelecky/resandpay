@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.17.1** · zadání: [`docs/zadani/`](docs/zadani/README.md) (odpovídá aktuální verzi pluginu) · rozvojové požadavky: [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) · změny: [DEVLOG](docs/DEVLOG.md)
+> **Aktuální verze pluginu: 0.18.0** · zadání: [`docs/zadani/`](docs/zadani/README.md) (odpovídá aktuální verzi pluginu) · rozvojové požadavky: [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) · změny: [DEVLOG](docs/DEVLOG.md)
 
 ### Název a označení
 
@@ -37,6 +37,7 @@ Technické identifikátory se nemění (slug a textdomain `reserveandpay`, před
 - Stavy: Čeká na platbu · Částečně zaplaceno · Zaplaceno · Platba na místě · Po splatnosti · Expirováno · Zrušeno
 - Rezervace kdykoli až do začátku; při rezervaci na poslední chvíli lze platit na místě
 - Pozdní rezervace (až po splatnosti podle pravidla, např. −30 dní): celá částka do 7 dní, nejpozději den před akcí
+- **ResAndPay → Zákazníci** (od 0.18.0): všichni, kdo kdy rezervovali, jeden řádek na e-mail (počet rezervací vč. zrušených a expirovaných, první a poslední rezervace, zaplaceno, newsletter); hledání, řazení, proklik na rezervace zákazníka, export CSV (i jen se souhlasem s newsletterem)
 
 ### Platby
 - Platební pokyn (proforma) s QR kódem dle standardu SPD, PDF ke stažení přes neuhodnutelný odkaz
