@@ -154,3 +154,15 @@ td.rap-box .rap-payfields { max-width: 520px; }
 .rap-settings-tabs { margin: 12px 0 4px; }
 .rap-tab-panel[hidden] { display: none; }
 .rap-tab-panel > h2:first-child { margin-top: 1.4em; }
+
+/* Statistika – přepínač částí a graf materiálů (R20) */
+.rap-stats--admin .rap-stats__views { margin: 8px 0 12px; border-bottom: 1px solid #c3c4c7; }
+.rap-stats--admin .rap-stats__views .rap-chip { text-decoration: none; }
+.rap-stats--admin .rap-stats__chart { margin: 0 0 16px; padding: 12px; background: #fff; border: 1px solid #c3c4c7; }
+.rap-stats--admin .rap-stats__chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.rap-stats--admin .rap-stats__legend { margin-left: 12px; color: #646970; }
+.rap-stats--admin .rap-stats__legend i { display: inline-block; width: 10px; height: 10px; margin: 0 4px 0 10px; }
+.rap-stats--admin .rap-stats__legend i.is-dl, .rap-stats--admin .rap-stats__bar-dl { background: #2271b1; fill: #2271b1; }
+.rap-stats--admin .rap-stats__legend i.is-ord, .rap-stats--admin .rap-stats__bar-ord { background: #72aee6; fill: #72aee6; }
+.rap-stats--admin .rap-stats__axis { stroke: #c3c4c7; }
+.rap-stats--admin .rap-stats__tick { font-size: 11px; fill: #646970; }

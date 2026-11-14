@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.21.0** · zadání: [`docs/zadani/`](docs/zadani/README.md) (odpovídá aktuální verzi pluginu) · rozvojové požadavky: [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) · změny: [DEVLOG](docs/DEVLOG.md)
+> **Aktuální verze pluginu: 0.22.0** · zadání: [`docs/zadani/`](docs/zadani/README.md) (odpovídá aktuální verzi pluginu) · rozvojové požadavky: [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) · změny: [DEVLOG](docs/DEVLOG.md)
 
 ### Název a označení
 
@@ -271,6 +271,7 @@ V `docs/DEVLOG.md` je u verze, která po aktualizaci vyžaduje zásah, na začá
 | `[reserveandpay_materials category="" type="" filter="yes"]` | Katalog materiálů ke stažení s filtrem druhu a tématu |
 | `[reserveandpay_material id="MA-001"]` | Karta jednoho materiálu (kód, slug nebo ID) |
 | `[reserveandpay_my_materials]` | Moje materiály – dostupné materiály, čekající platby, historie objednávek |
+| `[reserveandpay_stats]` | Statistika pro přihlášené s oprávněním (role v Nastavení): termíny akcí a služeb, od 0.22.0 i materiály (objednávky, tržby, stažení, graf), export CSV |
 | `[reserveandpay_my_reservations]` | Profil zákazníka „Moje rezervace“ – všechny rezervace, stav plateb, platební pokyny, souhlas s novinkami; přihlášení nebo osobní odkaz z e-mailu (stránku vyberte v Nastavení → Rezervace → Profil zákazníka) |
 | `[reserveandpay_booking id="123"]` | Detail a rezervační formulář akce (na stránce akce se vkládá automaticky) |
 

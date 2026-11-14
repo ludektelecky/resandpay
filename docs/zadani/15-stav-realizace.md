@@ -19,7 +19,7 @@ Vývoj probíhá na webu slehkouhlavou.cz (WordPress 7.1, PHP 8.5, MySQL 8.4, Ac
 
 ## 15.1 Kniha rozvoje
 
-> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R19 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
+> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R20 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
 
 Funkce navržené k dalšímu rozvoji pluginu. Položka se po schválení podrobného zadání přesune do příslušné kapitoly a do tabulky stavu realizace.
 
@@ -208,7 +208,7 @@ Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, po
 - Editor materiálu: Parametry materiálu, Soubory ke stažení (nahrávání s průběhem), Přístupy – počty objednávek a stažení, ruční zpřístupnění podle e-mailu účtu (dní: 0 = doba materiálu, −1 = natrvalo, volitelně e-mail), odebrání s důvodem, posledních 20 stažení.
 - Seznam materiálů: kód, druh, přístup / cena, počet souborů, objednávky (zaplaceno / celkem), stažení za 30 dní. Objednávky jsou v ResAndPay → Rezervace (filtr „Materiály (objednávky)“).
 - Nastavení → Materiály ke stažení: stránka „Moje materiály“, stránka s registrací, druhy materiálů, splatnost, výchozí doba přístupu, limit stažení, platnost odkazu, uchování logu, texty pro nepřihlášené a pro role, text souhlasu s digitálním obsahem. Kódy: předpona a číslice materiálu.
-- Mimo rozsah 0.13.0: zápis do MailerLite (spolu s E6b), vodoznak v PDF (R11-e), rozšíření stránky Statistika (R1) o materiály – počty jsou zatím v seznamu materiálů a v Přístupech.
+- Mimo rozsah 0.13.0: zápis do MailerLite (spolu s E6b), vodoznak v PDF (R11-e), rozšíření stránky Statistika (R1) o materiály – hotovo v 0.22.0 (R20).
 
 ### R11.8 Nasazení
 
@@ -319,3 +319,14 @@ Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, po
 - Na stránce materiálu, v Moje materiály (u toho, kdo měl nárok) a v profilu zákazníka se místo souborů zobrazí text z Nastavení → Materiály ke stažení („Text u znepřístupněného materiálu“, výchozí „Materiál už není k dispozici.“).
 - Nároky se nemažou – po vrácení do nabídky se obnoví. Zákazníkům se nic neposílá, správce se na vrácení peněz neupozorňuje (rozhodnutí 14. 11. 2026).
 - Záznam, kdo a kdy materiál znepřístupnil (meta _rap_mat_disabled_at / _by, zobrazeno v Parametrech materiálu); v seznamu materiálů štítek „znepřístupněno“. Meta _rap_mat_withdrawn zůstává (znepřístupněný materiál je zároveň stažený z nabídky).
+
+### R20 – Statistika materiálů
+
+**Pozn.: Navrženo a schváleno 14. 11. 2026 ([Issue #28](https://github.com/ludektelecky/resandpay/issues/28)), implementováno ve verzi pluginu 0.22.0.**
+
+- Stránka Statistika (administrace i web se shortcodem [reserveandpay_stats], stejná oprávnění) má přepínač **Termíny akcí a služeb / Materiály** (parametr rap_st_view=materials). Třída Resandpay_Stats_Materials.
+- Filtr období Od–Do (výchozí poslední 3 měsíce). Souhrn: zaplacené objednávky, tržby, zdarma, stažení a přehrání, uživatelů stahovalo (různí uživatelé přes všechny materiály).
+- **Graf** vývoje v čase (inline SVG, bez knihoven): sloupce stažení a přehrání a zaplacených objednávek po dnech (do 62 dní), týdnech (do ~1 roku) nebo měsících; hodnota po najetí myší, popis pro čtečky.
+- **Tabulka po materiálech** (zveřejněné a materiály s aktivitou v období; štítek staženo z nabídky / znepřístupněno): kód, název, druh a přístup / cena, zaplacené a čekající objednávky, tržby (s informací o slevách), zdarma (kupón 100 % + ruční zpřístupnění + účastníci navázaných akcí a služeb – rozpad v nápovědě), stažení, přehrání, různí uživatelé; součty; řazení podle sloupců (výchozí stažení sestupně).
+- Období: objednávky podle data objednání, tržby = přijaté platby těchto objednávek, ruční zpřístupnění podle data zpřístupnění, účastníci podle data zaplacení rezervace, stažení podle logu (jen úspěšná, ukázky zvlášť). Materiály „zdarma pro přihlášené“ jsou vidět jen ve staženích.
+- **Export CSV** (UTF-8 se středníkem) se všemi ukazateli včetně rozpadu zdarma, expirovaných a zrušených objednávek, slev, kupónů a ukázek.

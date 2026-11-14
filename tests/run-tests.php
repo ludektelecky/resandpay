@@ -2181,6 +2181,65 @@ wp_delete_user( $mdUser );
 wp_delete_user( $mdOther );
 wp_delete_post( $mdId, true );
 
+echo "== 0.22.0: statistika materiálů (#28)\n";
+$smU1 = wp_insert_user( array( 'user_login' => 'stat28a', 'user_email' => 'stat28a.zak@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
+$smU2 = wp_insert_user( array( 'user_login' => 'stat28b', 'user_email' => 'stat28b.zak@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
+$smEv = rap_event( 'Statistika akce', $now + 70 * $day, $now + 70 * $day + HOUR_IN_SECONDS, 10 );
+$smM  = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::MATERIAL, 'post_status' => 'publish', 'post_title' => 'Statistika eBook' ) );
+Resandpay_Admin_Materials::save_meta( $smM, array( 'rap_mat_access' => 'paid', 'rap_price' => '300', 'rap_mat_links' => array( $smEv ) ) );
+$smF  = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::MATERIAL, 'post_status' => 'publish', 'post_title' => 'Statistika video zdarma' ) );
+Resandpay_Admin_Materials::save_meta( $smF, array( 'rap_mat_access' => 'free' ) );
+$smO1 = Resandpay_Materials::order( $smM, $smU1, array( 'customer_name' => 'Stat Jedna', 'consent_gdpr' => 1, 'consent_terms' => 1, 'consent_digital' => 1 ) );
+$smO2 = Resandpay_Materials::order( $smM, $smU2, array( 'customer_name' => 'Stat Dva', 'consent_gdpr' => 1, 'consent_terms' => 1, 'consent_digital' => 1 ) );
+rap_t( ! is_wp_error( $smO1 ) && ! is_wp_error( $smO2 ), 'statistika: testovací objednávky materiálu' );
+Resandpay_Reservations::set_status( $smO1['id'], Resandpay_Reservations::PAID, array( 'method' => 'transfer_manual' ) );
+Resandpay_Materials::grant( $smM, $smU2, -1 );
+$smR = Resandpay_Reservations::create( $smEv, array_merge( rap_person( 28 ), array( 'email' => 'stat28c.zak@example.cz' ) ) );
+Resandpay_Reservations::set_status( $smR['id'], Resandpay_Reservations::PAID, array( 'method' => 'transfer_manual' ) );
+foreach ( array( array( $smU1, $smM, 'download' ), array( $smU1, $smM, 'download' ), array( $smU2, $smM, 'play' ), array( 0, $smM, 'sample' ), array( $smU2, $smF, 'download' ) ) as $smD ) {
+	Resandpay_Materials::log_download( $smD[0], $smD[1], 'f1', $smD[2], 'ok' );
+}
+Resandpay_Materials::log_download( $smU1, $smM, 'f1', 'download', 'limit' );
+$smArgs = Resandpay_Stats_Materials::args_from_request( array( 'rap_st_from' => wp_date( 'Y-m-d', $now - $day ), 'rap_st_to' => wp_date( 'Y-m-d', $now + $day ) ) );
+$smRows = Resandpay_Stats_Materials::rows( $smArgs );
+$smA    = wp_list_filter( $smRows, array( 'id' => $smM ) );
+$smA    = $smA ? reset( $smA ) : array();
+$smB    = wp_list_filter( $smRows, array( 'id' => $smF ) );
+$smB    = $smB ? reset( $smB ) : array();
+rap_t( $smA && 1 === $smA['paid'] && 1 === $smA['open'] && abs( $smA['revenue'] - 300 ) < 0.01, 'materiál: zaplacené a čekající objednávky, tržby' );
+rap_t( $smA && 1 === $smA['grants'] && 1 === $smA['participants'] && 2 === $smA['free'], 'zdarma: ruční zpřístupnění + účastníci navázané akce' );
+rap_t( $smA && 2 === $smA['downloads'] && 1 === $smA['plays'] && 1 === $smA['samples'] && 2 === $smA['users'], 'stažení, přehrání, ukázky a různí uživatelé (neúspěšné nezapočteny)' );
+rap_t( $smB && 1 === $smB['downloads'] && 0 === $smB['paid'], 'materiál zdarma pro přihlášené: jen stažení' );
+$smPast = Resandpay_Stats_Materials::rows( Resandpay_Stats_Materials::args_from_request( array( 'rap_st_from' => '2020-01-01', 'rap_st_to' => '2020-01-31' ) ) );
+$smPA   = wp_list_filter( $smPast, array( 'id' => $smM ) );
+rap_t( $smPA && 0 === reset( $smPA )['paid'] && 0 === reset( $smPA )['downloads'], 'mimo období se nic nezapočítá' );
+rap_t( Resandpay_Stats_Materials::distinct_users( $smArgs ) >= 2, 'uživatelé celkem bez dvojího počítání' );
+$smSorted = Resandpay_Stats_Materials::rows( array_merge( $smArgs, array( 'sort' => 'downloads', 'dir' => 'desc' ) ) );
+rap_t( $smSorted[0]['downloads'] >= end( $smSorted )['downloads'], 'řazení podle stažení' );
+$smSer = Resandpay_Stats_Materials::series( $smArgs );
+rap_t( 'day' === $smSer['step'] && 3 === count( $smSer['buckets'] ) && array_sum( array_column( $smSer['buckets'], 'downloads' ) ) >= 4 && array_sum( array_column( $smSer['buckets'], 'orders' ) ) >= 1, 'graf: časová řada stažení a objednávek po dnech' );
+rap_t( 'month' === Resandpay_Stats_Materials::series( Resandpay_Stats_Materials::args_from_request( array( 'rap_st_from' => '2024-01-01', 'rap_st_to' => '2025-06-30' ) ) )['step'] && 'week' === Resandpay_Stats_Materials::series( Resandpay_Stats_Materials::args_from_request( array( 'rap_st_from' => '2025-01-01', 'rap_st_to' => '2025-05-01' ) ) )['step'], 'graf: delší období po týdnech a měsících' );
+$smCsv = Resandpay_Stats::csv_rows( $smArgs, 'materials' );
+rap_t( 'Zaplacené objednávky' === $smCsv[0][5] && 'Celkem' === end( $smCsv )[0] && in_array( 'Statistika eBook', array_column( $smCsv, 1 ), true ), 'export CSV materiálů' );
+rap_t( false !== strpos( Resandpay_Stats::csv_url( $smArgs, 'materials' ), 'type=materials' ), 'odkaz na export CSV materiálů' );
+wp_set_current_user( 1 );
+$smHtml = Resandpay_Stats::render( 'admin', $smArgs );
+$smTerm = Resandpay_Stats::render( 'admin', Resandpay_Stats::args_from_request( array() ) );
+wp_set_current_user( 0 );
+rap_t( false !== strpos( $smHtml, 'rap-stats__chart' ) && false !== strpos( $smHtml, '<svg' ) && false !== strpos( $smHtml, 'Statistika eBook' ) && false !== strpos( $smHtml, 'Uživatelů stahovalo' ), 'Statistika → Materiály: souhrn, graf a tabulka' );
+rap_t( false !== strpos( $smTerm, 'rap_st_view=materials' ) && false !== strpos( $smTerm, 'Termíny akcí a služeb' ), 'přepínač Termíny / Materiály' );
+wp_set_current_user( $smU1 );
+$_GET['rap_st_view'] = 'materials';
+$smFront = Resandpay_Stats::shortcode();
+unset( $_GET['rap_st_view'] );
+wp_set_current_user( 0 );
+rap_t( false !== strpos( $smFront, 'nemáte oprávnění' ) && false === strpos( $smFront, 'Statistika eBook' ), 'web: bez oprávnění se statistika materiálů nezobrazí' );
+foreach ( array( $smU1, $smU2 ) as $smX ) {
+	wp_delete_user( $smX );
+}
+wp_delete_post( $smM, true );
+wp_delete_post( $smF, true );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );

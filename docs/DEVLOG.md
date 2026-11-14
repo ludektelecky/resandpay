@@ -4,6 +4,14 @@
 >
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
+## 0.22.0 – Statistika materiálů (14. 11. 2026)
+
+- **R20 – statistika materiálů** ([Issue #28](https://github.com/ludektelecky/resandpay/issues/28), schváleno a implementováno): stránka **Statistika** (v administraci i na webu se shortcodem `[reserveandpay_stats]`) má přepínač **Termíny akcí a služeb / Materiály**.
+  - za zvolené období (výchozí poslední 3 měsíce): **zaplacené a čekající objednávky**, **tržby**, **zdarma** (kupón 100 %, ruční zpřístupnění, účastníci akcí a služeb), **stažení**, **přehrání** a **počet uživatelů**, kteří stahovali
+  - **graf** vývoje stažení a objednávek po dnech / týdnech / měsících
+  - tabulka po materiálech se součty, řazení podle sloupců, **Export CSV**
+- Bez změny databáze. Testy: 694 kontrol + souběh
+
 ## 0.21.0 – Znepřístupnění materiálu (14. 11. 2026)
 
 - **R19 – znepřístupnění materiálu** ([Issue #26](https://github.com/ludektelecky/resandpay/issues/26), schváleno a implementováno): v Parametrech materiálu nová volba **Dostupnost** – **V nabídce** / **Staženo z nabídky** (kdo materiál má, stahuje dál) / **Znepřístupněno** – materiál zmizí z katalogu a **nikdo ho nestáhne**, ani kdo ho už má; už vydané odkazy ke stažení přestanou platit. Správci mají přístup dál.

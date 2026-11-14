@@ -465,3 +465,16 @@ audio.rap-mat-player { background: transparent; }
 .rap-profile .rap-status--pending, .rap-profile .rap-status--partial, .rap-profile .rap-status--overdue { border-color: var(--rap-gold); color: var(--rap-ink); }
 .rap-profile .rap-notice--error { border-left-color: var(--rap-error); }
 .rap-profile__link-form input[type="email"] { min-width: 16rem; max-width: 100%; }
+
+/* Statistika – přepínač částí a graf materiálů (R20) */
+.rap-stats__views { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0 0 1rem; }
+.rap-stats__views .rap-chip.is-active { border-color: var(--rap-accent); color: var(--rap-accent) !important; font-weight: 600; }
+.rap-stats__chart { margin: 0 0 1.25rem; padding: 1rem; border: 1px solid var(--rap-line); border-radius: var(--rap-radius); }
+.rap-stats__chart figcaption { display: flex; flex-wrap: wrap; gap: .25rem 1rem; align-items: baseline; margin-bottom: .5rem; }
+.rap-stats__chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.rap-stats__legend { margin-left: auto; font-size: 13px; color: var(--rap-ink-soft); }
+.rap-stats__legend i { display: inline-block; width: .8em; height: .8em; margin: 0 .3em 0 .8em; vertical-align: -.05em; }
+.rap-stats__legend i.is-dl, .rap-stats__bar-dl { background: var(--rap-accent); fill: var(--rap-accent); }
+.rap-stats__legend i.is-ord, .rap-stats__bar-ord { background: var(--rap-accent-2); fill: var(--rap-accent-2); }
+.rap-stats__axis { stroke: var(--rap-line); stroke-width: 1; }
+.rap-stats__tick { font-size: 11px; fill: var(--rap-ink-soft); }
