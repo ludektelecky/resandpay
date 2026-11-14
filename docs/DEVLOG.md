@@ -4,6 +4,11 @@
 >
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
+## 0.20.1 – Úprava textu v profilu zákazníka (14. 11. 2026)
+
+- Profil zákazníka „Moje rezervace“: nadpis části **„Proběhlé a zrušené“** změněn na **„Proběhlé nebo zrušené“**.
+- Testy: 668 kontrol + souběh
+
 ## 0.20.0 – Profil zákazníka „Moje rezervace“ (14. 11. 2026)
 
 - ⚠ **Po aktualizaci:** profil zapnete vytvořením stránky se shortcodem `[reserveandpay_my_reservations]` (např. „Moje rezervace“) a jejím výběrem v **Nastavení → Rezervace → Profil zákazníka**. Do té doby se nic nemění a e-maily odkaz na profil nemají.

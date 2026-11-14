@@ -339,7 +339,7 @@ class Resandpay_Profile {
 		}
 		foreach ( array(
 			array( __( 'Nadcházející', 'reserveandpay' ), $up ),
-			array( __( 'Proběhlé a zrušené', 'reserveandpay' ), $past ),
+			array( __( 'Proběhlé nebo zrušené', 'reserveandpay' ), $past ),
 			array( __( 'Objednávky materiálů', 'reserveandpay' ), $mats ),
 		) as $sec ) {
 			if ( ! $sec[1] ) {
