@@ -41,7 +41,37 @@ class Resandpay_Install {
 			if ( $from && $from < 12 ) {
 				self::keep_legacy_brand();
 			}
+			if ( $from && $from < 16 ) {
+				self::migrate_material_audience();
+			}
 			update_option( 'resandpay_codes_backfill', 1, false );
+		}
+	}
+
+	/**
+	 * 0.27.0 (DB 16, #36): přístup k materiálu = kdo (jen přihlášení / i e-mail / role), placený
+	 * podle ceny. Převod beze změny chování: zdarma pro přihlášené → přihlášení, placený → e-mail
+	 * (bez stránky profilu přihlášení), odeslat na e-mail → e-mail, role → role; u „zdarma“ a „role“
+	 * se dosud nepoužitá cena vynuluje. Už převedené materiály se nemění.
+	 */
+	public static function migrate_material_audience() {
+		$ids = get_posts(
+			array(
+				'post_type'      => 'resandpay_material',
+				'post_status'    => 'any',
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+			)
+		);
+		foreach ( $ids as $id ) {
+			if ( '' !== (string) get_post_meta( $id, '_rap_mat_audience', true ) ) {
+				continue;
+			}
+			$access = (string) get_post_meta( $id, '_rap_mat_access', true ) ?: Resandpay_Materials::ACCESS_FREE;
+			update_post_meta( $id, '_rap_mat_audience', Resandpay_Materials::legacy_audience( $access ) );
+			if ( in_array( $access, array( Resandpay_Materials::ACCESS_FREE, Resandpay_Materials::ACCESS_ROLES ), true ) && (float) get_post_meta( $id, '_rap_price', true ) > 0 ) {
+				update_post_meta( $id, '_rap_price', '' );
+			}
 		}
 	}
 

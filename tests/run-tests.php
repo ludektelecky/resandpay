@@ -2537,6 +2537,91 @@ wp_delete_user( $feU );
 wp_delete_post( $feM, true );
 update_option( Resandpay_Settings::OPTION, $feSaved, false );
 
+echo "== 0.27.0: přístup ke materiálu = kdo + cena, akční cena (#36)\n";
+$auSaved = get_option( Resandpay_Settings::OPTION );
+$auPage  = wp_insert_post( array( 'post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'Profil 36', 'post_content' => '[reserveandpay_my_reservations]' ) );
+Resandpay_Settings::update( array( 'profile_page' => $auPage, 'access_tag' => 'jen pro členy' ) );
+$auU   = wp_insert_user( array( 'user_login' => 'au36', 'user_email' => 'au36.zak@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
+$auMem = wp_insert_user( array( 'user_login' => 'au36m', 'user_email' => 'au36m.zak@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'author' ) );
+$auMk  = function ( $aud, $price, $extra = array() ) {
+	$id = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::MATERIAL, 'post_status' => 'publish', 'post_title' => "Přístup {$aud} {$price}" ) );
+	Resandpay_Admin_Materials::save_meta( $id, array_merge( array( 'rap_mat_audience' => $aud, 'rap_price' => (string) $price, 'rap_mat_roles' => array( 'author' ) ), $extra ) );
+	return Resandpay_Materials::get( $id );
+};
+$auR = function ( $acc ) {
+	return $acc['ok'] ? 'ok' : $acc['reason'];
+};
+rap_t( array( 'logged', 'email', 'roles' ) === array_keys( Resandpay_Materials::audience_labels() ), 'tři volby přístupu' );
+// 1 Jen přihlášení.
+$a1 = $auMk( 'logged', 0 );
+$a1p = $auMk( 'logged', 250 );
+rap_t( 'ok' === $auR( Resandpay_Materials::access( $a1, $auU ) ) && 'login' === $auR( Resandpay_Materials::access( $a1, 0 ) ), '1 + 0 Kč: přihlášený stáhne, nepřihlášený se musí přihlásit' );
+rap_t( 'buy' === $auR( Resandpay_Materials::access( $a1p, $auU ) ) && 'login' === $auR( Resandpay_Materials::access( $a1p, 0 ) ) && is_wp_error( Resandpay_Materials::order( $a1p['id'], 0, array( 'customer_name' => 'X', 'email' => 'x.zak36@example.cz', 'consent_gdpr' => 1, 'consent_terms' => 1, 'consent_digital' => 1 ) ) ), '1 + 250 Kč: přihlášený kupuje, bez účtu objednat nelze' );
+wp_set_current_user( 0 );
+$a1pBox = Resandpay_Materials_Views::render_box( $a1p );
+rap_t( false !== strpos( $a1pBox, 'Přihlásit se' ) && false === strpos( $a1pBox, 'name="rap_email"' ), '1 + cena: nepřihlášený vidí jen přihlášení' );
+// 2 I bez přihlášení – e-mail.
+$a2  = $auMk( 'email', 0 );
+$a2p = $auMk( 'email', 250 );
+rap_t( 'ok' === $auR( Resandpay_Materials::access( $a2, $auU ) ) && false !== strpos( Resandpay_Materials_Views::render_box( $a2 ), 'value="mat_free"' ), '2 + 0 Kč: přihlášený hned, nepřihlášený formulář pro e-mail' );
+rap_t( 'buy' === $auR( Resandpay_Materials::access( $a2p, $auU ) ) && false !== strpos( Resandpay_Materials_Views::render_box( $a2p ), 'value="mat_order"' ), '2 + 250 Kč: přihlášený kupuje, nepřihlášený objednává bez účtu' );
+// 3 Role.
+$a3  = $auMk( 'roles', 0 );
+$a3p = $auMk( 'roles', 250 );
+rap_t( 'ok' === $auR( Resandpay_Materials::access( $a3, $auMem ) ) && 'role' === $auR( Resandpay_Materials::access( $a3, $auU ) ) && 'login' === $auR( Resandpay_Materials::access( $a3, 0 ) ), '3 + 0 Kč: role stáhne, ostatní ne, nepřihlášený přihlášení' );
+rap_t( 'buy' === $auR( Resandpay_Materials::access( $a3p, $auMem ) ) && 'role' === $auR( Resandpay_Materials::access( $a3p, $auU ) ), '3 + 250 Kč: role si kupuje, bez role nelze' );
+$a3o = Resandpay_Materials::order( $a3p['id'], $auU, array( 'customer_name' => 'Bez role', 'consent_gdpr' => 1, 'consent_terms' => 1, 'consent_digital' => 1 ) );
+rap_t( is_wp_error( $a3o ) && 'role' === $a3o->get_error_code(), 'bez role objednávka odmítnuta' );
+rap_t( false !== strpos( Resandpay_Materials_Views::price_label( $a3p ), 'jen pro členy' ) && false !== strpos( Resandpay_Materials_Views::price_label( $a3p ), '250' ), 'cena u materiálu pro role' );
+// Zdarma pro účastníky platí i u placeného (volba 1, 500 Kč).
+$auEv = rap_event( 'Účastníci 36', $now + 30 * $day, $now + 30 * $day + HOUR_IN_SECONDS, 5 );
+$a1x  = $auMk( 'logged', 500, array( 'rap_mat_links' => array( $auEv ) ) );
+$auRes = Resandpay_Reservations::create( $auEv, array_merge( rap_person( 36 ), array( 'email' => 'au36.zak@example.cz' ) ), array( 'notify' => false ) );
+rap_t( 'buy' === $auR( Resandpay_Materials::access( $a1x, $auU ) ), 'účastník s nezaplacenou rezervací zatím platí cenu' );
+Resandpay_Reservations::set_status( $auRes['id'], Resandpay_Reservations::PAID, array( 'method' => 'transfer_manual' ) );
+rap_t( 'event' === Resandpay_Materials::access( $a1x, $auU )['source'], 'účastník se zaplacenou rezervací má materiál za 500 Kč zdarma' );
+// „Odeslat na e-mail“ bez stránky profilu nelze uložit.
+Resandpay_Settings::update( array( 'profile_page' => 0 ) );
+$a4 = $auMk( 'email', 0 );
+rap_t( 'logged' === $a4['audience'] && 'audience_refused' === get_transient( 'rap_mat_notice_' . get_current_user_id() ), 'odeslat na e-mail bez stránky profilu se neuloží (zůstane jen pro přihlášené)' );
+delete_transient( 'rap_mat_notice_' . get_current_user_id() );
+Resandpay_Settings::update( array( 'profile_page' => $auPage ) );
+// Převod starých materiálů.
+$auOld = array();
+foreach ( array( 'free' => 300, 'paid' => 400, 'email' => 0, 'roles' => 200 ) as $auA => $auP ) {
+	$auOld[ $auA ] = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::MATERIAL, 'post_status' => 'publish', 'post_title' => 'Starý ' . $auA ) );
+	update_post_meta( $auOld[ $auA ], '_rap_mat_access', $auA );
+	update_post_meta( $auOld[ $auA ], '_rap_price', $auP );
+}
+Resandpay_Install::migrate_material_audience();
+$auG = fn( $k ) => Resandpay_Materials::get( $auOld[ $k ] );
+rap_t( 'logged' === $auG( 'free' )['audience'] && 0.0 === $auG( 'free' )['price'] && '' === get_post_meta( $auOld['free'], '_rap_price', true ), 'převod: zdarma pro přihlášené → jen přihlášení, nepoužitá cena vynulována' );
+rap_t( 'email' === $auG( 'paid' )['audience'] && 400.0 === $auG( 'paid' )['price'], 'převod: placený → odeslat na e-mail (s cenou)' );
+rap_t( 'email' === $auG( 'email' )['audience'] && 'roles' === $auG( 'roles' )['audience'] && 0.0 === $auG( 'roles' )['price'], 'převod: e-mail → e-mail, role → role (cena vynulována)' );
+update_post_meta( $auOld['paid'], '_rap_price', 999 );
+Resandpay_Install::migrate_material_audience();
+rap_t( 999.0 === $auG( 'paid' )['price'], 'už převedené materiály se znovu nemění' );
+// Akční cena do data.
+$a5 = $auMk( 'email', 300, array( 'rap_early_mode' => 'fixed', 'rap_early_value' => '100', 'rap_early_until' => wp_date( 'Y-m-d', $now + 10 * $day ), 'rap_early_label' => 'Akce' ) );
+$a5L = Resandpay_Materials_Views::price_label( $a5 );
+rap_t( false !== strpos( $a5L, '300' ) && false !== strpos( $a5L, '200' ) && false !== strpos( $a5L, 'při objednávce do' ), 'akční cena na webu: původní, akční a do kdy' );
+$a5o = Resandpay_Materials::order( $a5['id'], 0, array( 'customer_name' => 'Akční', 'email' => 'akce.zak36@example.cz', 'consent_gdpr' => 1, 'consent_terms' => 1, 'consent_digital' => 1 ) );
+rap_t( ! is_wp_error( $a5o ) && 200.0 === (float) $a5o['amount'] && 100.0 === (float) $a5o['discount_amount'] && 'early' === $a5o['discount_type'], 'objednávka s akční cenou (sleva 100 Kč)' );
+$a5c = Resandpay_Materials::order( $a5['id'], 0, array( 'customer_name' => 'Kupón', 'email' => 'kupon.zak36@example.cz', 'coupon' => 'NECO', 'consent_gdpr' => 1, 'consent_terms' => 1, 'consent_digital' => 1 ) );
+rap_t( is_wp_error( $a5c ), 'kupón nelze kombinovat s akční cenou (jako u akcí)' );
+$a6 = $auMk( 'email', 300, array( 'rap_early_mode' => 'fixed', 'rap_early_value' => '100', 'rap_early_until' => wp_date( 'Y-m-d', $now - 2 * $day ) ) );
+rap_t( false === strpos( Resandpay_Materials_Views::price_label( $a6 ), '200' ), 'po datu akční cena neplatí' );
+wp_set_current_user( 1 );
+ob_start();
+Resandpay_Admin_Materials::box_params( get_post( $a5['id'] ) );
+$auBox = ob_get_clean();
+wp_set_current_user( 0 );
+rap_t( false !== strpos( $auBox, 'name="rap_mat_audience"' ) && false !== strpos( $auBox, 'Akční cena do data' ) && false !== strpos( $auBox, 'při objednávce do' ) && false === strpos( $auBox, 'name="rap_mat_access"' ), 'editor materiálu: tři volby přístupu a akční cena' );
+foreach ( array( $auU, $auMem ) as $auX ) {
+	wp_delete_user( $auX );
+}
+update_option( Resandpay_Settings::OPTION, $auSaved, false );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );
