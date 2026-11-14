@@ -32,6 +32,9 @@ class Resandpay_Admin_Customers {
 		if ( $args['newsletter'] ) {
 			$q['newsletter'] = 1;
 		}
+		if ( ! empty( $args['ml'] ) ) {
+			$q['ml'] = $args['ml'];
+		}
 		return wp_nonce_url( add_query_arg( $q, admin_url( 'admin-post.php' ) ), 'resandpay_customers_export' );
 	}
 

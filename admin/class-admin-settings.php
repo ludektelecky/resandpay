@@ -163,6 +163,13 @@ class Resandpay_Admin_Settings {
 			__( 'Statistika', 'reserveandpay' )        => array(
 				'stats_roles' => array( __( 'Statistiku vidí role', 'reserveandpay' ), 'roles', __( 'Přehled termínů a obsazenosti (ResAndPay → Statistika a stránka se shortcodem [reserveandpay_stats]). Uživatelé s oprávněním vidí jména zákazníků a stav plateb – přidělujte jen těm, kdo s rezervacemi pracují.', 'reserveandpay' ) ),
 			),
+			__( 'MailerLite', 'reserveandpay' )        => array(
+				'ml_enabled' => array( __( 'Zapisovat zákazníky do MailerLite', 'reserveandpay' ), 'checkbox', __( 'Zákazník se souhlasem s novinkami (zaškrtávací pole ve formuláři rezervace a objednávky) se zapíše do MailerLite do vybraných skupin. Bez souhlasu se nic neposílá. V testovacím režimu pluginu se do MailerLite neposílá.', 'reserveandpay' ) ),
+				'ml_api_key' => array( __( 'API klíč MailerLite', 'reserveandpay' ), 'secret', __( 'MailerLite → Integrations → MailerLite API → Generate new token. Ukládá se šifrovaně a už se nezobrazí; prázdné pole = ponechat uložený klíč. Alternativně konstanta RESANDPAY_MAILERLITE_API_KEY ve wp-config.php. Web potřebuje odchozí HTTPS na connect.mailerlite.com.', 'reserveandpay' ) ),
+				'ml_groups'  => array( __( 'Výchozí skupiny', 'reserveandpay' ), 'ml_groups', __( 'Skupiny z účtu MailerLite, do kterých se zákazník přidá. U akce, služby a materiálu lze zvolit jiné (boční panel „MailerLite“ v editoru); termín služby přebírá nastavení služby. Žádná skupina = zákazník se zapíše jen do odběratelů účtu. Zákazník se ze skupin nikdy neodebírá a odhlášený odběratel se znovu nepřihlašuje.', 'reserveandpay' ) ),
+				'ml_when'    => array( __( 'Kdy zapsat', 'reserveandpay' ), 'select', __( 'Po zaplacení = do MailerLite se dostanou jen zákazníci, kteří rezervaci zaplatili (i objednávku materiálu zdarma).', 'reserveandpay' ), array( 'paid' => __( 'Po zaplacení', 'reserveandpay' ), 'created' => __( 'Hned po vytvoření rezervace', 'reserveandpay' ) ) ),
+				'ml_phone'   => array( __( 'Předávat telefon', 'reserveandpay' ), 'checkbox', __( 'Kromě e-mailu, jména a příjmení i telefon (pole „phone“ v MailerLite).', 'reserveandpay' ) ),
+			),
 			__( 'E-maily', 'reserveandpay' )           => array(
 				'mail_from_name'        => array( __( 'Jméno odesílatele', 'reserveandpay' ), $text ),
 				'mail_from_email'       => array( __( 'E-mail odesílatele', 'reserveandpay' ), 'email' ),
@@ -241,7 +248,7 @@ class Resandpay_Admin_Settings {
 		foreach ( self::fields() as $section ) {
 			foreach ( $section as $key => $def ) {
 				$type = $def[1];
-				if ( ! array_key_exists( $key, $in ) && ! ( $from_form && in_array( $type, array( 'checkbox', 'roles' ), true ) ) ) {
+				if ( ! array_key_exists( $key, $in ) && ! ( $from_form && in_array( $type, array( 'checkbox', 'roles', 'ml_groups' ), true ) ) ) {
 					continue; // Částečná aktualizace – ponechat stávající hodnotu.
 				}
 				$val = $in[ $key ] ?? null;
@@ -261,6 +268,15 @@ class Resandpay_Admin_Settings {
 							$out[ $key ] = Resandpay_Payments::encrypt( (string) $val );
 							update_option( 'resandpay_imap_pwd_saved', time(), false );
 						}
+						break;
+					case 'secret':
+						// Nový klíč jen z odeslaného formuláře; prázdné pole = ponechat uložený.
+						if ( $from_form && '' !== trim( (string) $val ) && 0 !== strpos( (string) $val, 'v1:' ) ) {
+							$out[ $key ] = Resandpay_Payments::encrypt( trim( (string) $val ) );
+						}
+						break;
+					case 'ml_groups':
+						$out[ $key ] = implode( ',', Resandpay_MailerLite::parse_ids( (array) $val ) );
 						break;
 					case 'select':
 						$out[ $key ] = isset( $def[3][ $val ] ) ? (string) $val : (string) array_key_first( $def[3] );
@@ -323,6 +339,7 @@ class Resandpay_Admin_Settings {
 		$s = Resandpay_Settings::all();
 		echo '<div class="wrap"><h1>' . esc_html__( 'Nastavení ReserveAndPay', 'reserveandpay' ) . '</h1>';
 		settings_errors();
+		Resandpay_Admin::render_flash();
 		echo '<form method="post" action="options.php">';
 		settings_fields( 'resandpay_settings_group' );
 		echo '<input type="hidden" name="' . esc_attr( Resandpay_Settings::OPTION ) . '[__form]" value="1">';
@@ -424,6 +441,16 @@ class Resandpay_Admin_Settings {
 							echo '<p class="description"><strong>' . esc_html__( 'Heslo je nastavené ve wp-config.php – má přednost.', 'reserveandpay' ) . '</strong></p>';
 						}
 						break;
+					case 'secret':
+						$saved = '' !== (string) $val;
+						echo '<input type="password" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" value="" class="regular-text" autocomplete="new-password" placeholder="' . esc_attr( $saved ? __( '•••••• (uloženo)', 'reserveandpay' ) : '' ) . '">';
+						if ( 'ml_api_key' === $key && defined( 'RESANDPAY_MAILERLITE_API_KEY' ) ) {
+							echo '<p class="description"><strong>' . esc_html__( 'Klíč je nastavený ve wp-config.php – má přednost.', 'reserveandpay' ) . '</strong></p>';
+						}
+						break;
+					case 'ml_groups':
+						echo Resandpay_Admin_MailerLite::groups_checkboxes( $name . '[]', Resandpay_MailerLite::parse_ids( $val ) ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
+						break;
 					case 'int':
 						echo '<input type="number" step="1" min="-365" max="365" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" value="' . esc_attr( $val ) . '" class="small-text">';
 						break;
@@ -439,6 +466,9 @@ class Resandpay_Admin_Settings {
 				echo '</td></tr>';
 			}
 			echo '</table>';
+			if ( __( 'MailerLite', 'reserveandpay' ) === $title ) {
+				echo Resandpay_Admin_MailerLite::settings_tools(); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
+			}
 		}
 		echo $open ? '</div>' : '';
 		submit_button( __( 'Uložit nastavení', 'reserveandpay' ) );
@@ -459,6 +489,7 @@ class Resandpay_Admin_Settings {
 			'emaily'       => array( __( 'E-maily', 'reserveandpay' ), array( __( 'E-maily', 'reserveandpay' ), __( 'Testovací režim', 'reserveandpay' ) ) ),
 			'platby'       => array( __( 'Kontrola plateb', 'reserveandpay' ), array( __( 'Kontrola plateb', 'reserveandpay' ) ) ),
 			'materialy'    => array( __( 'Materiály', 'reserveandpay' ), array( __( 'Materiály ke stažení', 'reserveandpay' ) ) ),
+			'napojeni'     => array( __( 'Napojení', 'reserveandpay' ), array( __( 'MailerLite', 'reserveandpay' ) ) ),
 			'dalsi'        => array( __( 'Kódy a statistika', 'reserveandpay' ), array( __( 'Kódy akcí, služeb a termínů', 'reserveandpay' ), __( 'Statistika', 'reserveandpay' ) ) ),
 		);
 	}

@@ -4,6 +4,17 @@
 >
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
+## 0.19.0 – Napojení na MailerLite (14. 11. 2026)
+
+- **R17 – napojení na MailerLite** (etapa E6b, [Issue #22](https://github.com/ludektelecky/resandpay/issues/22), schváleno a implementováno): zákazníci se **souhlasem s novinkami** se zapíší do MailerLite. Volitelné, ve výchozím stavu **vypnuto** – stávající weby se nemění.
+  - **Nastavení → Napojení → MailerLite:** zapnutí, API klíč (šifrovaně), **výchozí skupiny** načtené z účtu MailerLite (lze vybrat více), **Kdy zapsat** (po zaplacení – výchozí / hned po rezervaci), **Předávat telefon**; tlačítka **Ověřit připojení a načíst skupiny**, **Importovat stávající zákazníky**, **Odeslat čekající teď**
+  - u **akce, služby a materiálu** boční panel **MailerLite**: výchozí / vybrané skupiny / neposílat (termín služby přebírá nastavení služby)
+  - odesílá se **na pozadí** (do minuty, po dávkách), 3 pokusy při chybě; zákazník se jen přidává do skupin, **odhlášený se znovu nepřihlásí**; v testovacím režimu se neposílá
+  - **stav** v detailu rezervace (s „Odeslat znovu“), v přehledu **Zákazníci** (sloupec a filtr) a v exportu CSV
+- Pro vývojáře filtry `resandpay_mailerlite_groups` a `resandpay_mailerlite_subscriber`, konstanta `RESANDPAY_MAILERLITE_API_KEY`.
+- Web potřebuje odchozí HTTPS na `connect.mailerlite.com`.
+- Databáze 13 (stav MailerLite u rezervace). Testy: 633 kontrol + souběh
+
 ## 0.18.0 – Přehled zákazníků (14. 11. 2026)
 
 - **R16 – přehled zákazníků** ([Issue #19](https://github.com/ludektelecky/resandpay/issues/19), schváleno a implementováno): nová stránka **ResAndPay → Zákazníci** – všichni, kdo kdy rezervovali (akce, termíny služeb, materiály), **jeden řádek na e-mail** (bez ohledu na velká a malá písmena).

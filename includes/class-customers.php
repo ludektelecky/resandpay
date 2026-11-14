@@ -49,11 +49,35 @@ class Resandpay_Customers {
 				SUM(CASE WHEN status IN ({$active}) THEN 1 ELSE 0 END) AS active,
 				SUM(CASE WHEN status IN ({$closed}) THEN 1 ELSE 0 END) AS closed,
 				MIN(created_at) AS first_at, MAX(created_at) AS last_at,
-				SUM(amount_paid) AS paid, MAX(id) AS last_id
+				SUM(amount_paid) AS paid, MAX(id) AS last_id,
+				SUM(CASE WHEN ml_status = 'sent' THEN 1 ELSE 0 END) AS ml_sent,
+				SUM(CASE WHEN ml_status = 'pending' THEN 1 ELSE 0 END) AS ml_pending,
+				SUM(CASE WHEN ml_status = 'error' THEN 1 ELSE 0 END) AS ml_error
 			FROM {$t} WHERE " . self::where( $args ) . " GROUP BY LOWER(TRIM(email))) c
 			JOIN {$t} r ON r.id = c.last_id";
+		$cond = array();
 		if ( ! empty( $args['newsletter'] ) ) {
-			$sql .= ' WHERE r.newsletter = 1';
+			$cond[] = 'r.newsletter = 1';
+		}
+		switch ( $args['ml'] ?? '' ) {
+			case 'sent':
+				$cond[] = 'c.ml_sent > 0';
+				break;
+			case 'pending':
+				$cond[] = 'c.ml_sent = 0 AND c.ml_pending > 0';
+				break;
+			case 'error':
+				$cond[] = 'c.ml_sent = 0 AND c.ml_pending = 0 AND c.ml_error > 0';
+				break;
+			case 'none':
+				$cond[] = 'c.ml_sent = 0 AND c.ml_pending = 0 AND c.ml_error = 0 AND r.newsletter = 1';
+				break;
+			case 'no_consent':
+				$cond[] = 'c.ml_sent = 0 AND c.ml_pending = 0 AND c.ml_error = 0 AND r.newsletter = 0';
+				break;
+		}
+		if ( $cond ) {
+			$sql .= ' WHERE ' . implode( ' AND ', $cond );
 		}
 		return $sql;
 	}
@@ -61,7 +85,7 @@ class Resandpay_Customers {
 	/**
 	 * Výpis zákazníků.
 	 *
-	 * @param array $args search, newsletter (jen se souhlasem), orderby (viz sortable()), order, per_page (0 = vše), page.
+	 * @param array $args search, newsletter (jen se souhlasem), ml (stav MailerLite, viz Resandpay_MailerLite::customer_status_labels()), orderby (viz sortable()), order, per_page (0 = vše), page.
 	 * @return array{items: array, total: int}
 	 */
 	public static function query( array $args = array() ) {
@@ -71,6 +95,7 @@ class Resandpay_Customers {
 			array(
 				'search'     => '',
 				'newsletter' => false,
+				'ml'         => '',
 				'orderby'    => 'last_at',
 				'order'      => 'DESC',
 				'per_page'   => 50,
@@ -92,11 +117,12 @@ class Resandpay_Customers {
 		$items = $wpdb->get_results( "SELECT c.*, r.customer_name, r.email, r.phone, r.newsletter FROM {$from} ORDER BY {$orderby} {$order}, c.email_key ASC{$limit}", ARRAY_A );
 		$paid  = self::paid_by_currency( wp_list_pluck( $items, 'email_key' ) );
 		foreach ( $items as &$it ) {
-			foreach ( array( 'total', 'active', 'closed', 'last_id', 'newsletter' ) as $k ) {
+			foreach ( array( 'total', 'active', 'closed', 'last_id', 'newsletter', 'ml_sent', 'ml_pending', 'ml_error' ) as $k ) {
 				$it[ $k ] = (int) $it[ $k ];
 			}
 			$it['paid']        = (float) $it['paid'];
 			$it['paid_by_cur'] = $paid[ $it['email_key'] ] ?? array();
+			$it['ml']          = Resandpay_MailerLite::customer_status( $it );
 		}
 		unset( $it );
 		return array(
@@ -173,8 +199,10 @@ class Resandpay_Customers {
 				__( 'Poslední rezervace', 'reserveandpay' ),
 				__( 'Zaplaceno', 'reserveandpay' ),
 				__( 'Newsletter', 'reserveandpay' ),
+				__( 'MailerLite', 'reserveandpay' ),
 			),
 		);
+		$ml = Resandpay_MailerLite::customer_status_labels();
 		foreach ( self::query( $args )['items'] as $c ) {
 			$rows[] = array(
 				$c['customer_name'],
@@ -187,6 +215,7 @@ class Resandpay_Customers {
 				$c['last_at'],
 				self::format_paid( $c['paid_by_cur'] ),
 				$c['newsletter'] ? __( 'ano', 'reserveandpay' ) : __( 'ne', 'reserveandpay' ),
+				$ml[ $c['ml'] ] ?? '',
 			);
 		}
 		return $rows;
