@@ -115,6 +115,8 @@ class Resandpay_Admin_Reservations {
 				return Resandpay_Reservations::delete( $id );
 			case 'keep_discount':
 				return Resandpay_Reservations::keep_discount( $id, $reason );
+			case 'ml_resend':
+				return Resandpay_MailerLite::resend( $id );
 			case 'void_payment':
 				return Resandpay_Reservations::void_payment( absint( $_REQUEST['ledger'] ?? 0 ), $reason, array( 'notify' => ! empty( $_REQUEST['notify'] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification -- ověřeno v handle_action.
 			case 'resend':
@@ -147,6 +149,10 @@ class Resandpay_Admin_Reservations {
 			Resandpay_Admin::flash( __( 'Rezervace byla trvale smazána.', 'reserveandpay' ) );
 			wp_safe_redirect( admin_url( 'admin.php?page=reserveandpay' ) );
 			exit;
+		} elseif ( 'ml_resend' === $do ) {
+			$labels = Resandpay_MailerLite::status_labels();
+			/* translators: 1: stav, 2: poznámka */
+			Resandpay_Admin::flash( trim( sprintf( __( 'MailerLite: %1$s %2$s', 'reserveandpay' ), $labels[ $res['ml_status'] ] ?? $res['ml_status'], $res['ml_error'] ? '– ' . $res['ml_error'] : '' ) ), Resandpay_MailerLite::SENT === $res['ml_status'] ? 'success' : 'warning' );
 		} elseif ( 'keep_discount' === $do ) {
 			/* translators: 1: stav, 2: zbývá */
 			Resandpay_Admin::flash( sprintf( __( 'Sleva ponechána. Stav: %1$s, zbývá zaplatit %2$s.', 'reserveandpay' ), Resandpay_Reservations::status_labels()[ $res['status'] ] ?? $res['status'], Resandpay_Events::format_price( Resandpay_Reservations::remaining( $res ), $res['currency'] ) ) );
@@ -272,6 +278,9 @@ class Resandpay_Admin_Reservations {
 			__( 'Souhlasy', 'reserveandpay' )          => esc_html( sprintf( 'GDPR: %s · %s: %s · Newsletter: %s', $fmt( $r['consent_gdpr_at'] ), __( 'Podmínky', 'reserveandpay' ), $fmt( $r['consent_terms_at'] ), $r['newsletter'] ? __( 'ano', 'reserveandpay' ) : __( 'ne', 'reserveandpay' ) ) ),
 			__( 'Vytvořeno', 'reserveandpay' )         => esc_html( $fmt( $r['created_at'] ) . ' (' . ( 'admin' === $r['source'] ? __( 'ručně v administraci', 'reserveandpay' ) : __( 'web', 'reserveandpay' ) ) . ')' ),
 		);
+		if ( Resandpay_MailerLite::enabled() || '' !== (string) ( $r['ml_status'] ?? '' ) ) {
+			$rows[ __( 'MailerLite', 'reserveandpay' ) ] = Resandpay_Admin_MailerLite::detail_row( $r );
+		}
 		echo '<table class="widefat striped rap-detail"><tbody>';
 		foreach ( $rows as $k => $v ) {
 			echo '<tr><th>' . esc_html( $k ) . '</th><td>' . $v . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput -- hodnoty escapovány výše.

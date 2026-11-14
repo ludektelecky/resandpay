@@ -12,14 +12,14 @@ Vývoj probíhá na webu slehkouhlavou.cz (WordPress 7.1, PHP 8.5, MySQL 8.4, Ac
 | E5 | 0.5.0–0.5.4 | Kontrola plateb z avíz Raiffeisenbank (IMAP, CRON Active24), ověření pravosti, ruční přiřazení, log a upozornění; název v menu ResAndPay; opravy uložení hesla a klíče CRONu | Hotovo, nasazeno (0.5.4); připojení ke schránce ověřeno, zbývá potvrdit pravidelné volání CRONu |
 | E6a | 0.6.0–0.6.1 | Expirace s e-mailem, obnovení pozdní platbou, připomínka před splatností, platba ve dvou částech (1. část a doplatek), stav Částečně zaplaceno | Hotovo, 0.6.1 k nasazení (0.6.1: pozdní rezervace) |
 | – | 0.6.2 | Krátký přehled nadcházejících na úvodní stránce ([reserveandpay_upcoming]) | Hotovo, testuje se |
-| E6b | — | Ultimate Member, MailerLite | Po spuštění |
+| E6b | 0.19.0 | MailerLite (R17); Ultimate Member | MailerLite hotovo; Ultimate Member po spuštění |
 | E7 | — | Závěrečné testy a spuštění | Plánováno |
 
 **Pozn.:** Nastaveno na webu: provozovatel INSYSTEMS CZ s.r.o. (IČ 12345678), časové pásmo Europe/Prague, odesílatel e-mailů na doméně slehkouhlavou.cz, služba Bukální masáž (60 + 15 min, 1 300 Kč, Brno – Hotel Passage, Lidická 23) s testovacími termíny; po nasazení 0.3.2 se založí služba Sound Healing s 15 místy na termín. Účet pro příjem plateb (potvrzen 22. 10. 2026): Raiffeisenbank 1234567890/5500, IBAN CZ7155000000001234567890 – zadává se do nastavení po nasazení 0.4.0 spolu se značkou „S lehkou hlavou…“, webem slehkouhlavou.cz a e-mailem info@example.cz pro platební pokyn. Chybí: stránky GDPR a obchodních podmínek, adresa pro upozornění na nové rezervace.
 
 ## 15.1 Kniha rozvoje
 
-> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R16 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
+> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R17 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
 
 Funkce navržené k dalšímu rozvoji pluginu. Položka se po schválení podrobného zadání přesune do příslušné kapitoly a do tabulky stavu realizace.
 
@@ -286,3 +286,15 @@ Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, po
 - Proklik na zákazníka → seznam rezervací (ResAndPay → Rezervace s filtrem `email`) se souhrnem zákazníka v záhlaví, stavy, hledáním, akcemi nad rezervacemi a exportem CSV; filtr lze kombinovat s výběrem akce. V detailu rezervace odkaz „všechny rezervace zákazníka (N)“.
 - Export CSV (UTF-8 se středníkem pro Excel) podle aktuálního hledání a filtru: jméno, e-mail, telefon, rezervací, aktivních, zrušených / expirovaných, první a poslední rezervace, zaplaceno, newsletter.
 - Počítá se přímo z tabulky rezervací (třída Resandpay_Customers) – bez nové tabulky a bez změny databáze. Hromadné oznámení zákazníkům není součástí, řeší se samostatně.
+
+### R17 – Napojení na MailerLite (E6b)
+
+**Pozn.: Navrženo a schváleno 14. 11. 2026 ([Issue #22](https://github.com/ludektelecky/resandpay/issues/22)), implementováno ve verzi pluginu 0.19.0.**
+
+- Volitelný modul (třída Resandpay_MailerLite), ve výchozím stavu vypnutý. Nastavení → záložka **Napojení** → MailerLite: zapnutí, API klíč (šifrovaně, prázdné pole = ponechat; alternativně konstanta RESANDPAY_MAILERLITE_API_KEY), **výchozí skupiny** (zaškrtávací seznam skupin načtených z účtu – tlačítko „Ověřit připojení a načíst skupiny“, seznam v mezipaměti), **Kdy zapsat** (po zaplacení – výchozí / hned po vytvoření rezervace), **Předávat telefon**.
+- Skupiny se vždy načítají z účtu MailerLite daného webu, administrátor je jen vybírá; lze vybrat více skupin. U akce, služby a materiálu boční panel **MailerLite**: výchozí / vybrané skupiny / neposílat do MailerLite. Termín služby přebírá nastavení služby. Žádná skupina = zákazník se zapíše jen do odběratelů účtu.
+- Zapisují se jen rezervace se souhlasem s novinkami (pole ve formuláři rezervace a objednávky materiálu). Odesílá se e-mail (malými písmeny), jméno a příjmení (z pole Jméno – první slovo / zbytek) a volitelně telefon (pole phone). API connect.mailerlite.com, POST /subscribers – zákazník se jen přidává do skupin, nikdy se neodebírá; parametr status se neposílá, takže odhlášený odběratel se znovu nepřihlásí. Dvojí potvrzení a automatizace se řídí nastavením účtu MailerLite.
+- Odesílání na pozadí: rezervace se zařadí do fronty (stav „čeká na odeslání“), WP-Cron ji odešle do minuty, zbytek po dávkách 50 i při pravidelné kontrole pluginu. Při chybě 3 pokusy, pak stav „chyba“ se zprávou; neplatný API klíč hned chyba. V testovacím režimu pluginu se do MailerLite neposílá (stav „neodesláno – testovací režim“).
+- Stav u rezervace (sloupce ml_status, ml_groups, ml_at, ml_error, ml_tries; DB 13): detail rezervace – řádek MailerLite se stavem, skupinami, časem a chybou, odkaz **Odeslat znovu / Odeslat teď**. Přehled Zákazníci – sloupec a filtr MailerLite (odesláno / čeká / chyba / se souhlasem neodesláno / bez souhlasu), stav i v exportu CSV. V Nastavení souhrn stavů a tlačítko „Odeslat čekající teď“.
+- **Import stávajících zákazníků**: tlačítko v Nastavení → Napojení zařadí do fronty zákazníky, jejichž poslední rezervace má souhlas s novinkami a kteří ještě nebyli odesláni – podle jejich poslední rezervace se souhlasem (při „po zaplacení“ poslední zaplacené); skupiny podle této rezervace.
+- Pro vývojáře filtry resandpay_mailerlite_groups (skupiny pro rezervaci) a resandpay_mailerlite_subscriber (data odběratele).

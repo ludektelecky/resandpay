@@ -58,7 +58,7 @@ function rap_person( $n ) {
 }
 
 require_once ABSPATH . 'wp-admin/includes/template.php';
-foreach ( array( 'class-admin.php', 'class-admin-events.php', 'class-admin-settings.php', 'class-admin-services.php', 'class-admin-shortcodes.php', 'class-admin-checkin.php', 'class-admin-payments.php', 'class-customers-table.php', 'class-admin-customers.php' ) as $f ) {
+foreach ( array( 'class-admin.php', 'class-admin-events.php', 'class-admin-settings.php', 'class-admin-services.php', 'class-admin-shortcodes.php', 'class-admin-checkin.php', 'class-admin-payments.php', 'class-customers-table.php', 'class-admin-customers.php', 'class-admin-mailerlite.php' ) as $f ) {
 	require_once RESANDPAY_DIR . 'admin/' . $f;
 }
 
@@ -1815,7 +1815,7 @@ $_GET['tab'] = 'platby';
 Resandpay_Admin_Settings::page();
 $tbHtml = ob_get_clean();
 unset( $_GET['tab'] );
-rap_t( 7 === preg_match_all( '/<a [^>]*class="nav-tab/', $tbHtml ) && false !== strpos( $tbHtml, 'nav-tab-active" data-tab="platby"' ) && 1 === substr_count( $tbHtml, 'class="rap-tab-panel" data-tab="platby">' ), 'záložky: aktivní podle ?tab=, ostatní skryté' );
+rap_t( 8 === preg_match_all( '/<a [^>]*class="nav-tab/', $tbHtml ) && false !== strpos( $tbHtml, 'nav-tab-active" data-tab="platby"' ) && 1 === substr_count( $tbHtml, 'class="rap-tab-panel" data-tab="platby">' ), 'záložky: aktivní podle ?tab=, ostatní skryté' );
 rap_t( 1 === substr_count( $tbHtml, '<form method="post" action="options.php">' ) && false !== strpos( $tbHtml, 'name="resandpay_settings[company_name]"' ) && false !== strpos( $tbHtml, 'name="resandpay_settings[imap_host]"' ), 'jeden formulář – uloží se všechny záložky' );
 
 echo "== 0.18.0: přehled zákazníků (#19)\n";
@@ -1860,7 +1860,7 @@ rap_t( 1 === Resandpay_Reservations::query( array( 'email' => 'jana.zak19@exampl
 $cc = Resandpay_Reservations::counts_by_status( 0, 'petr.zak19@example.cz' );
 rap_t( 1 === $cc[ Resandpay_Reservations::CANCELLED ] && 1 === $cc[ Resandpay_Reservations::EXPIRED ] && 2 === array_sum( $cc ), 'počty podle stavu u zákazníka' );
 $csv = Resandpay_Customers::csv_rows( array( 'search' => 'zak19@example', 'newsletter' => false ) );
-rap_t( 3 === count( $csv ) && 'E-mail' === $csv[0][1] && 10 === count( $csv[1] ) && in_array( 'ano', wp_list_pluck( array_slice( $csv, 1 ), 9 ), true ), 'export CSV zákazníků' );
+rap_t( 3 === count( $csv ) && 'E-mail' === $csv[0][1] && 11 === count( $csv[1] ) && in_array( 'ano', wp_list_pluck( array_slice( $csv, 1 ), 9 ), true ), 'export CSV zákazníků' );
 rap_t( 2 === count( Resandpay_Customers::csv_rows( array( 'search' => 'zak19@example', 'newsletter' => true ) ) ), 'export CSV jen se souhlasem s newsletterem' );
 rap_t( false !== strpos( Resandpay_Admin_Customers::reservations_url( ' Jana.Zak19@example.cz' ), 'email=jana.zak19%40example.cz' ) && false !== strpos( Resandpay_Admin_Customers::export_url( array( 'search' => '', 'newsletter' => true ) ), 'newsletter=1' ), 'odkazy na rezervace zákazníka a export' );
 wp_set_current_user( 1 );
@@ -1885,6 +1885,144 @@ unset( $_GET['email'], $_GET['id'] );
 rap_t( false !== strpos( $cuList, 'Zákazníci B' ) && false !== strpos( $cuList, 'Zákazníci A' ) && false === strpos( $cuList, 'petr.zak19' ) && false !== strpos( $cuList, 'name="email" value="jana.zak19@example.cz"' ) && false !== strpos( $cuList, 'action=resandpay_export&#038;email=' ), 'rezervace zákazníka: jen jeho rezervace, export CSV' );
 rap_t( false !== strpos( $cuDet, 'všechny rezervace zákazníka (2)' ), 'detail rezervace: odkaz na všechny rezervace zákazníka' );
 wp_set_current_user( 0 );
+
+echo "== 0.19.0: napojení na MailerLite (#22)\n";
+rap_t( 0 === (int) Resandpay_Settings::defaults()['ml_enabled'] && 'paid' === Resandpay_Settings::defaults()['ml_when'], 'výchozí stav: vypnuto, zapisovat po zaplacení' );
+$mlSaved = get_option( Resandpay_Settings::OPTION );
+$mlEv    = rap_event( 'MailerLite akce', $now + 50 * $day, $now + 50 * $day + HOUR_IN_SECONDS, 10 );
+$mlPerson = function ( $n, $nl = 1 ) {
+	return array_merge( rap_person( 22 ), array( 'customer_name' => 'Eva Marie Testová', 'email' => "Ml{$n}.Zak22@Example.cz", 'phone' => '777222' . $n, 'newsletter' => $nl ) );
+};
+// Vypnuto: nic se nezařadí.
+$mlOff = Resandpay_Reservations::create( $mlEv, $mlPerson( 0 ) );
+Resandpay_Reservations::set_status( $mlOff['id'], Resandpay_Reservations::PAID, array( 'method' => 'transfer_manual' ) );
+$mlRow = Resandpay_Reservations::get( $mlOff['id'] );
+rap_t( array() === array_diff( array( 'ml_status', 'ml_groups', 'ml_at', 'ml_error', 'ml_tries' ), array_keys( $mlRow ) ) && '13' === get_option( 'resandpay_db_version' ), 'migrace DB 13: sloupce ml_* u rezervací' );
+rap_t( '' === $mlRow['ml_status'], 'vypnuté napojení: nic se neposílá' );
+// Podvržené API MailerLite.
+$GLOBALS['rap_ml_req']  = array();
+$GLOBALS['rap_ml_fail'] = 0;
+$mlMock = function ( $pre, $args, $url ) {
+	if ( 0 !== strpos( $url, Resandpay_MailerLite::API ) ) {
+		return $pre;
+	}
+	$GLOBALS['rap_ml_req'][] = array( 'method' => $args['method'], 'url' => $url, 'body' => isset( $args['body'] ) ? json_decode( $args['body'], true ) : null, 'auth' => $args['headers']['Authorization'] ?? '' );
+	if ( $GLOBALS['rap_ml_fail'] ) {
+		return array( 'response' => array( 'code' => $GLOBALS['rap_ml_fail'] ), 'body' => wp_json_encode( array( 'message' => 'Server error' ) ), 'headers' => array() );
+	}
+	if ( false !== strpos( $url, 'groups' ) ) {
+		$page = false !== strpos( $url, 'page=2' ) ? 2 : 1;
+		$data = 1 === $page ? array( array( 'id' => '111', 'name' => 'Všichni zákazníci' ), array( 'id' => '222', 'name' => 'Jóga' ) ) : array( array( 'id' => '333', 'name' => 'Masáže' ) );
+		return array( 'response' => array( 'code' => 200 ), 'body' => wp_json_encode( array( 'data' => $data, 'meta' => array( 'last_page' => 2 ) ) ), 'headers' => array() );
+	}
+	return array( 'response' => array( 'code' => 201 ), 'body' => wp_json_encode( array( 'data' => array( 'id' => '9' ) ) ), 'headers' => array() );
+};
+add_filter( 'pre_http_request', $mlMock, 10, 3 );
+// Nastavení: šifrovaný klíč, skupiny.
+$mlSan = Resandpay_Admin_Settings::sanitize( array( '__form' => 1, 'ml_api_key' => ' ml-test-key ', 'ml_groups' => array( '', '111', '222;x' ) ) );
+rap_t( 0 === strpos( $mlSan['ml_api_key'], 'v1:' ) && 'ml-test-key' === Resandpay_Payments::decrypt( $mlSan['ml_api_key'] ) && '111,222x' === $mlSan['ml_groups'], 'nastavení: API klíč šifrovaně, skupiny ošetřené' );
+Resandpay_Settings::update( array( 'ml_api_key' => $mlSan['ml_api_key'] ) );
+$mlKeep = Resandpay_Admin_Settings::sanitize( array( '__form' => 1, 'ml_api_key' => '' ) );
+rap_t( $mlKeep['ml_api_key'] === $mlSan['ml_api_key'] && '' === $mlKeep['ml_groups'], 'prázdné pole klíče = ponechat uložený; nezaškrtnuté skupiny = žádné' );
+Resandpay_Settings::update( array( 'ml_enabled' => 1, 'ml_groups' => '111', 'ml_when' => 'paid', 'ml_phone' => 1, 'test_mode' => 0 ) );
+$mlG = Resandpay_Admin_MailerLite::run( 'verify' );
+rap_t( 'success' === $mlG[1] && array( '111' => 'Všichni zákazníci', '222' => 'Jóga', '333' => 'Masáže' ) === Resandpay_MailerLite::groups() && 'Bearer ml-test-key' === $GLOBALS['rap_ml_req'][0]['auth'], 'načtení skupin z účtu (všechny stránky, klíč v hlavičce)' );
+// Skupiny podle položky.
+$mlSvc  = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::SERVICE, 'post_status' => 'publish', 'post_title' => 'ML služba' ) );
+$mlSlot = rap_event( 'ML termín', $now + 51 * $day, $now + 51 * $day + HOUR_IN_SECONDS, 1 );
+update_post_meta( $mlSlot, '_rap_service', $mlSvc );
+rap_t( array( '111' ) === Resandpay_MailerLite::groups_for( array( 'event_id' => $mlEv ) ), 'skupiny: výchozí z nastavení' );
+Resandpay_MailerLite::save_item_setting( $mlSvc, 'custom', array( '222', '333' ) );
+rap_t( array( '222', '333' ) === Resandpay_MailerLite::groups_for( array( 'event_id' => $mlSlot ) ), 'termín služby přebírá skupiny služby (více skupin)' );
+Resandpay_MailerLite::save_item_setting( $mlSlot, 'none', array() );
+rap_t( false === Resandpay_MailerLite::groups_for( array( 'event_id' => $mlSlot ) ), 'u položky „neposílat do MailerLite“' );
+Resandpay_MailerLite::save_item_setting( $mlSlot, 'default', array() );
+rap_t( '' === get_post_meta( $mlSlot, Resandpay_MailerLite::META_MODE, true ), 'volba „výchozí“ nic neukládá' );
+// Po zaplacení.
+$GLOBALS['rap_ml_req'] = array();
+$ml1 = Resandpay_Reservations::create( $mlEv, $mlPerson( 1 ) );
+rap_t( '' === Resandpay_Reservations::get( $ml1['id'] )['ml_status'], 'po zaplacení: nezaplacená rezervace se neposílá' );
+Resandpay_Reservations::set_status( $ml1['id'], Resandpay_Reservations::PAID, array( 'method' => 'transfer_manual' ) );
+rap_t( Resandpay_MailerLite::PENDING === Resandpay_Reservations::get( $ml1['id'] )['ml_status'] && wp_next_scheduled( Resandpay_MailerLite::CRON ), 'po zaplacení: zařazeno do fronty, naplánováno odeslání' );
+rap_t( array() === $GLOBALS['rap_ml_req'], 'rezervace nečeká na MailerLite (odesílá se na pozadí)' );
+$mlQ = Resandpay_MailerLite::process_queue();
+$mlB = $GLOBALS['rap_ml_req'][0]['body'] ?? array();
+$ml1 = Resandpay_Reservations::get( $ml1['id'] );
+rap_t( 1 === $mlQ['sent'] && Resandpay_MailerLite::SENT === $ml1['ml_status'] && '111' === $ml1['ml_groups'] && $ml1['ml_at'], 'fronta: odesláno, uložena skupina a čas' );
+rap_t( 'POST' === $GLOBALS['rap_ml_req'][0]['method'] && 'ml1.zak22@example.cz' === $mlB['email'] && array( '111' ) === $mlB['groups'] && 'Eva' === $mlB['fields']['name'] && 'Marie Testová' === $mlB['fields']['last_name'] && '7772221' === $mlB['fields']['phone'], 'data odběratele: e-mail, jméno, příjmení, telefon, skupiny' );
+rap_t( ! isset( $mlB['status'] ) && ! isset( $mlB['resubscribe'] ), 'odhlášený odběratel se znovu nepřihlašuje (bez status)' );
+Resandpay_Settings::update( array( 'ml_phone' => 0 ) );
+rap_t( ! isset( Resandpay_MailerLite::subscriber( $ml1, array() )['fields']['phone'] ) && ! isset( Resandpay_MailerLite::subscriber( $ml1, array() )['groups'] ), 'bez telefonu a bez skupin podle nastavení' );
+Resandpay_Settings::update( array( 'ml_phone' => 1 ) );
+// Bez souhlasu.
+$ml2 = Resandpay_Reservations::create( $mlEv, $mlPerson( 2, 0 ) );
+Resandpay_Reservations::set_status( $ml2['id'], Resandpay_Reservations::PAID, array( 'method' => 'transfer_manual' ) );
+rap_t( '' === Resandpay_Reservations::get( $ml2['id'] )['ml_status'], 'bez souhlasu s novinkami se neposílá' );
+// Hned po vytvoření.
+Resandpay_Settings::update( array( 'ml_when' => 'created' ) );
+$ml3 = Resandpay_Reservations::create( $mlEv, $mlPerson( 3 ) );
+rap_t( Resandpay_MailerLite::PENDING === Resandpay_Reservations::get( $ml3['id'] )['ml_status'], 'hned po vytvoření: zařazeno' );
+// Chyby: opakování, pak chyba; neplatný klíč hned chyba.
+$GLOBALS['rap_ml_fail'] = 500;
+Resandpay_MailerLite::process_queue();
+$ml3 = Resandpay_Reservations::get( $ml3['id'] );
+rap_t( Resandpay_MailerLite::PENDING === $ml3['ml_status'] && 1 === (int) $ml3['ml_tries'] && false !== strpos( $ml3['ml_error'], 'HTTP 500' ), 'chyba API: zůstává ve frontě k opakování' );
+Resandpay_MailerLite::process_queue();
+Resandpay_MailerLite::process_queue();
+rap_t( Resandpay_MailerLite::ERROR === Resandpay_Reservations::get( $ml3['id'] )['ml_status'], 'po 3 pokusech stav chyba' );
+$GLOBALS['rap_ml_fail'] = 401;
+rap_t( is_wp_error( Resandpay_MailerLite::resend( $ml3['id'] ) ) && Resandpay_MailerLite::ERROR === Resandpay_Reservations::get( $ml3['id'] )['ml_status'] && false !== strpos( Resandpay_Reservations::get( $ml3['id'] )['ml_error'], 'API klíč' ), 'neplatný API klíč: hned chyba se srozumitelnou zprávou' );
+$GLOBALS['rap_ml_fail'] = 0;
+$mlRes = Resandpay_Admin_Reservations::do_action( 'ml_resend', $ml3['id'] );
+rap_t( ! is_wp_error( $mlRes ) && Resandpay_MailerLite::SENT === $mlRes['ml_status'], 'detail rezervace: Odeslat znovu' );
+// Neposílat u položky, testovací režim.
+Resandpay_MailerLite::save_item_setting( $mlSlot, 'none', array() );
+$ml4 = Resandpay_Reservations::create( $mlSlot, $mlPerson( 4 ) );
+Resandpay_MailerLite::process_queue();
+rap_t( Resandpay_MailerLite::SKIPPED === Resandpay_Reservations::get( $ml4['id'] )['ml_status'], 'položka „neposílat“: neodesláno' );
+Resandpay_Settings::update( array( 'test_mode' => 1 ) );
+$GLOBALS['rap_ml_req'] = array();
+$ml5 = Resandpay_Reservations::create( $mlEv, $mlPerson( 5 ) );
+Resandpay_MailerLite::process_queue();
+rap_t( Resandpay_MailerLite::SKIPPED === Resandpay_Reservations::get( $ml5['id'] )['ml_status'] && array() === $GLOBALS['rap_ml_req'] && false !== strpos( Resandpay_Reservations::get( $ml5['id'] )['ml_error'], 'testovací' ), 'testovací režim: do MailerLite se neposílá' );
+Resandpay_Settings::update( array( 'test_mode' => 0, 'ml_when' => 'paid' ) );
+// Import stávajících: se souhlasem a zaplacené (po zaplacení), jen dosud neodeslaní.
+$wpdb->query( 'UPDATE ' . Resandpay_Reservations::table() . " SET ml_status = '' WHERE id = " . (int) $mlOff['id'] );
+$wpdb->update( Resandpay_Reservations::table(), array( 'newsletter' => 1 ), array( 'id' => $mlOff['id'] ) );
+$mlCand = Resandpay_MailerLite::import_candidates();
+rap_t( in_array( (int) $mlOff['id'], $mlCand, true ) && ! in_array( (int) $ml1['id'], $mlCand, true ) && ! in_array( (int) $ml2['id'], $mlCand, true ) && ! in_array( (int) $ml5['id'], $mlCand, true ), 'import: jen zákazníci se souhlasem, zaplacení, dosud neodeslaní' );
+$GLOBALS['rap_ml_req'] = array();
+$mlImp = Resandpay_Admin_MailerLite::run( 'import' );
+Resandpay_MailerLite::process_queue();
+rap_t( Resandpay_MailerLite::SENT === Resandpay_Reservations::get( $mlOff['id'] )['ml_status'] && 'ml0.zak22@example.cz' === ( $GLOBALS['rap_ml_req'][0]['body']['email'] ?? '' ) && ! in_array( (int) $mlOff['id'], Resandpay_MailerLite::import_candidates(), true ), 'import: zařazení a odeslání, podruhé se už nenabízí' );
+// Přehled zákazníků.
+$mlC = wp_list_filter( Resandpay_Customers::query( array( 'search' => 'zak22@example', 'per_page' => 0 ) )['items'], array( 'email_key' => 'ml1.zak22@example.cz' ) );
+rap_t( $mlC && Resandpay_MailerLite::SENT === reset( $mlC )['ml'], 'přehled zákazníků: stav MailerLite' );
+rap_t( 1 === Resandpay_Customers::query( array( 'search' => 'zak22@example', 'ml' => 'no_consent' ) )['total'] && 2 === Resandpay_Customers::query( array( 'search' => 'zak22@example', 'ml' => 'none' ) )['total'], 'přehled zákazníků: filtr stavu MailerLite' );
+$mlCsv = Resandpay_Customers::csv_rows( array( 'search' => 'ml1.zak22', 'newsletter' => false ) );
+rap_t( 'MailerLite' === $mlCsv[0][10] && 'odesláno' === $mlCsv[1][10], 'export CSV zákazníků se stavem MailerLite' );
+// Administrace.
+wp_set_current_user( 1 );
+$_GET['tab'] = 'napojeni';
+ob_start();
+Resandpay_Admin_Settings::page();
+$mlSet = ob_get_clean();
+unset( $_GET['tab'] );
+rap_t( false !== strpos( $mlSet, 'data-tab="napojeni">' ) && false !== strpos( $mlSet, 'value="222"' ) && false !== strpos( $mlSet, 'Jóga' ) && false !== strpos( $mlSet, 'Ověřit připojení' ) && false !== strpos( $mlSet, '(uloženo)' ) && false === strpos( $mlSet, 'ml-test-key' ), 'Nastavení → Napojení: skupiny z účtu, klíč se nezobrazí' );
+$_GET['id'] = $ml1['id'];
+ob_start();
+Resandpay_Admin_Reservations::page_detail();
+$mlDet = ob_get_clean();
+unset( $_GET['id'] );
+rap_t( false !== strpos( $mlDet, 'rap-ml--sent' ) && false !== strpos( $mlDet, 'Všichni zákazníci' ) && false !== strpos( $mlDet, 'do=ml_resend' ), 'detail rezervace: stav MailerLite, skupina, Odeslat znovu' );
+ob_start();
+Resandpay_Admin_MailerLite::box( get_post( $mlSvc ) );
+$mlBox = ob_get_clean();
+rap_t( 1 === preg_match( '/value="custom"\s+checked/', $mlBox ) && 1 === preg_match( '/value="333"\s+checked/', $mlBox ) && 0 === preg_match( '/value="111"\s+checked/', $mlBox ) && false !== strpos( $mlBox, 'neposílat do MailerLite' ), 'panel MailerLite u služby' );
+wp_set_current_user( 0 );
+remove_filter( 'pre_http_request', $mlMock, 10 );
+wp_clear_scheduled_hook( Resandpay_MailerLite::CRON );
+update_option( Resandpay_Settings::OPTION, $mlSaved, false );
 
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 

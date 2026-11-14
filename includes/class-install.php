@@ -172,6 +172,11 @@ class Resandpay_Install {
 			item_type varchar(20) NOT NULL DEFAULT 'event',
 			consent_digital_at datetime NULL,
 			ip_hash varchar(40) NOT NULL DEFAULT '',
+			ml_status varchar(20) NOT NULL DEFAULT '',
+			ml_groups varchar(255) NOT NULL DEFAULT '',
+			ml_at datetime NULL,
+			ml_error varchar(255) NOT NULL DEFAULT '',
+			ml_tries tinyint(3) unsigned NOT NULL DEFAULT 0,
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			PRIMARY KEY  (id),
@@ -181,7 +186,8 @@ class Resandpay_Install {
 			KEY event_status (event_id,status),
 			KEY email (email),
 			KEY status_due (status,due_at),
-			KEY item_user (item_type,user_id)
+			KEY item_user (item_type,user_id),
+			KEY ml_status (ml_status)
 		) {$charset};
 		CREATE TABLE {$wpdb->prefix}resandpay_payments (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,

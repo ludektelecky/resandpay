@@ -20,7 +20,7 @@ Při přechodu rezervace do stavu „Zaplaceno“ modul (interní hook) provede:
 - Odeslání e-mailu s potvrzením platby a rezervace a dalšími instrukcemi (termín, místo, odkaz na členskou sekci, přístup k digitálnímu produktu).
 - Pokud zákazník nemá účet, automatické založení účtu v Ultimate Member na e-mail z rezervace a přiřazení role dle pole „Přiřazená role po zaplacení“ (kap. 3.2).
 - Pokud účet má, role/oprávnění se jen přidá – nesmí dojít k odebrání jiných rolí.
-- Zápis rezervujícího do MailerLite (source group dle typu akce), pokud udělil souhlas.
+- Zápis rezervujícího do MailerLite (skupiny dle akce / služby / materiálu, jinak výchozí), pokud udělil souhlas – při nastavení „Kdy zapsat: po zaplacení“ (výchozí); alternativně hned po vytvoření rezervace (kap. 15.1 R17).
 
 **Otevřená otázka 4:** Jak předat nový účet zákazníkovi bez hesla – vygenerovaným heslem v e-mailu, nebo odkazem „nastavte si heslo“ (bezpečnější, doporučeno)?
 

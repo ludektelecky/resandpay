@@ -23,7 +23,7 @@ class Resandpay_Customers_Table extends WP_List_Table {
 	}
 
 	public function get_columns() {
-		return array(
+		$cols = array(
 			'name'       => __( 'Jméno', 'reserveandpay' ),
 			'email'      => __( 'Kontakt', 'reserveandpay' ),
 			'total'      => __( 'Rezervace', 'reserveandpay' ),
@@ -32,6 +32,10 @@ class Resandpay_Customers_Table extends WP_List_Table {
 			'paid'       => __( 'Zaplaceno', 'reserveandpay' ),
 			'newsletter' => __( 'Newsletter', 'reserveandpay' ),
 		);
+		if ( Resandpay_MailerLite::enabled() ) {
+			$cols['ml'] = __( 'MailerLite', 'reserveandpay' );
+		}
+		return $cols;
 	}
 
 	protected function get_sortable_columns() {
@@ -50,6 +54,7 @@ class Resandpay_Customers_Table extends WP_List_Table {
 		return array(
 			'search'     => sanitize_text_field( wp_unslash( $_GET['s'] ?? '' ) ), // phpcs:ignore WordPress.Security.NonceVerification
 			'newsletter' => ! empty( $_GET['newsletter'] ), // phpcs:ignore WordPress.Security.NonceVerification
+			'ml'         => sanitize_key( $_GET['ml'] ?? '' ), // phpcs:ignore WordPress.Security.NonceVerification
 			'orderby'    => sanitize_key( $_GET['orderby'] ?? 'last_at' ), // phpcs:ignore WordPress.Security.NonceVerification
 			'order'      => sanitize_key( $_GET['order'] ?? 'desc' ), // phpcs:ignore WordPress.Security.NonceVerification
 		);
@@ -81,6 +86,13 @@ class Resandpay_Customers_Table extends WP_List_Table {
 		}
 		$args = self::request_args();
 		echo '<div class="alignleft actions"><label><input type="checkbox" name="newsletter" value="1"' . checked( $args['newsletter'], true, false ) . '> ' . esc_html__( 'jen se souhlasem s newsletterem', 'reserveandpay' ) . '</label> ';
+		if ( Resandpay_MailerLite::enabled() ) {
+			echo '<select name="ml"><option value="">' . esc_html__( 'MailerLite: vše', 'reserveandpay' ) . '</option>';
+			foreach ( Resandpay_MailerLite::customer_status_labels() as $k => $l ) {
+				echo '<option value="' . esc_attr( $k ) . '" ' . selected( $args['ml'], $k, false ) . '>' . esc_html( 'MailerLite: ' . $l ) . '</option>';
+			}
+			echo '</select> ';
+		}
 		submit_button( __( 'Filtrovat', 'reserveandpay' ), '', 'filter_action', false );
 		echo ' <a class="button" href="' . esc_url( Resandpay_Admin_Customers::export_url( $args ) ) . '">' . esc_html__( 'Export CSV', 'reserveandpay' ) . '</a></div>';
 	}
@@ -110,6 +122,8 @@ class Resandpay_Customers_Table extends WP_List_Table {
 				return esc_html( Resandpay_Customers::format_paid( $item['paid_by_cur'] ) );
 			case 'newsletter':
 				return $item['newsletter'] ? esc_html__( 'ano', 'reserveandpay' ) : esc_html__( 'ne', 'reserveandpay' );
+			case 'ml':
+				return esc_html( Resandpay_MailerLite::customer_status_labels()[ $item['ml'] ] ?? '' );
 		}
 		return esc_html( $item[ $col ] ?? '' );
 	}
