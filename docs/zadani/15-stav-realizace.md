@@ -19,7 +19,7 @@ Vývoj probíhá na webu slehkouhlavou.cz (WordPress 7.1, PHP 8.5, MySQL 8.4, Ac
 
 ## 15.1 Kniha rozvoje
 
-> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R24 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
+> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R25 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
 
 Funkce navržené k dalšímu rozvoji pluginu. Položka se po schválení podrobného zadání přesune do příslušné kapitoly a do tabulky stavu realizace.
 
@@ -163,8 +163,8 @@ Typ obsahu „Materiál“ (resandpay_material) s adresou /materialy/…/, bloko
 |---|---|
 | Kód | MA-NNN – přidělí se při prvním uložení, neměnný, nikdy znovu nepoužitý (kap. 3.8); předpona a počet číslic v nastavení |
 | Druh | Z číselníku v nastavení (výchozí eBook / PDF, Video, Audio, Pracovní list, Balíček, Jiné) |
-| Přístup a role | Zdarma pro přihlášené / Placený / Jen vybrané role (role z Ultimate Member) / Odeslat na e-mail (bez účtu) – zdarma nebo s platbou podle ceny (od 0.26.0, R24) |
-| Cena a měna | U placeného materiálu |
+| Přístup a role | Od 0.27.0 (R25): Jen pro přihlášené / Pro přihlášené i bez přihlášení – odeslat na e-mail / Jen pro vybrané role (role z Ultimate Member); placený / zdarma určuje cena. Do 0.26.0: Zdarma pro přihlášené / Placený / Jen vybrané role / Odeslat na e-mail. |
+| Cena a měna | Prázdná / 0 = zdarma, vyšší = placený (od 0.27.0); akční cena do data (R25) |
 | Splatnost objednávky | Dní od objednání; prázdné = nastavení (výchozí 7) |
 | Doba přístupu | Dní od zaplacení (u účastnic od zaplacení rezervace, u ručního zpřístupnění od jeho data); 0 = natrvalo; prázdné = nastavení |
 | Zdarma pro účastnice | Výběr akcí a služeb (všechny termíny služby); rezervace se páruje podle účtu nebo stejného e-mailu |
@@ -368,3 +368,23 @@ Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, po
 - Po odeslání vznikne **objednávka zdarma** (stav Zaplaceno, částka 0, způsob úhrady „Zdarma“, user_id účtu se stejným e-mailem, jinak 0) a přijde e-mail **„Materiál zdarma po zadání e-mailu“** (šablona v Nastavení → E-maily) s **odkazem na materiál** (osobní token) a automaticky připojeným **odkazem na profil**. Stránka jen oznámí „Odkaz jsme poslali na váš e-mail“ – soubory se zpřístupní až z odkazu (ověření, že e-mail patří zákazníkovi; zvláštní potvrzovací krok se nepoužívá – rozhodnutí 14. 11. 2026).
 - Stejný e-mail podruhé: nová objednávka nevznikne, odkaz se pošle znovu nejvýš 1× za 5 min.
 - Zákazník je v přehledu **Zákazníci**, ve **statistice materiálů** (zdarma) a se souhlasem s novinkami v **MailerLite** (skupina materiálu, podle nastavení „Kdy zapsat“ – objednávka je hned zaplacená). Doba přístupu podle materiálu.
+
+### R25 – Přístup k materiálu: kdo + cena, akční cena do data
+
+**Pozn.: Navrženo a schváleno 14. 11. 2026 ([Issue #36](https://github.com/ludektelecky/resandpay/issues/36)), implementováno ve verzi pluginu 0.27.0.**
+
+- **Přístup** u materiálu určuje jen, *kdo* smí materiál získat (meta _rap_mat_audience): **Jen pro přihlášené** · **Pro přihlášené i bez přihlášení – odeslat na e-mail** (ověření e-mailu odkazem jako R22/R24) · **Jen pro vybrané role** (role z Ultimate Member). **Placený / zdarma určuje jen cena**: prázdná / 0 = zdarma, vyšší = placený (objednávka, QR platba, kontrola plateb).
+
+| Přístup | Cena | Přihlášený | Nepřihlášený |
+|---|---|---|---|
+| Jen přihlášení | 0 | stáhne hned | přihlášení / registrace |
+| Jen přihlášení | > 0 | objedná, zaplatí, stáhne | přihlášení |
+| I e-mail | 0 | stáhne hned | jméno + e-mail → odkaz na materiál a profil |
+| I e-mail | > 0 | objedná, zaplatí, stáhne | jméno + e-mail → platební pokyn → po zaplacení odkaz |
+| Role | 0 | s rolí stáhne, bez role „jen pro členy“ | přihlášení |
+| Role | > 0 | s rolí kupuje, bez role nelze objednat | přihlášení |
+
+- Napříč kombinacemi dál platí zdarma pro účastníky vybraných akcí / služeb (účastník se zaplacenou rezervací má i placený materiál za 0 Kč), ruční zpřístupnění, slevové kupóny, ukázky, dostupnost, vodoznak.
+- „Odeslat na e-mail“ **nelze uložit bez stránky profilu zákazníka** (volba je v editoru zakázaná; při pokusu se ponechá dosavadní přístup a zobrazí hláška).
+- **Akční cena do data**: v Parametrech materiálu sleva (pevná částka nebo procento) a datum, do kdy platí, a popis – stejný mechanismus jako sleva za včasnou rezervaci u akcí (meta _rap_early_*): na webu „300 Kč → 200 Kč (při objednávce do 31. 12. a platbě ve splatnosti)“, sleva zaniká při platbě po splatnosti, slevový kupón s ní nelze kombinovat.
+- **Převod (DB 16)** beze změny chování: Zdarma pro přihlášené → Jen přihlášení (dosud nepoužitá cena se vynuluje), Placený → Odeslat na e-mail (bez stránky profilu Jen přihlášení), Odeslat na e-mail → Odeslat na e-mail, Jen vybrané role → Role (cena se vynuluje). Meta _rap_mat_access zůstává kvůli kompatibilitě.

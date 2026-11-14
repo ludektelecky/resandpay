@@ -4,6 +4,17 @@
 >
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
+## 0.27.0 – Přístup k materiálu podle ceny, akční cena (14. 11. 2026)
+
+- ⚠ **Po aktualizaci:** přístup materiálů se převede sám beze změny chování. Doporučujeme v seznamu materiálů zkontrolovat sloupec Přístup / cena; u materiálů dříve „Placený“ bez stránky profilu zákazníka je nově „Jen pro přihlášené“ (jako dosud fakticky).
+- **R25 – přístup = kdo, cena = placený / zdarma** ([Issue #36](https://github.com/ludektelecky/resandpay/issues/36), schváleno a implementováno): sekce **Přístup** u materiálu má tři volby
+  - **Jen pro přihlášené** · **Pro přihlášené i bez přihlášení – odeslat na e-mail** · **Jen pro vybrané role**
+  - **cena 0 / prázdná = zdarma, vyšší = placený** – platí pro všechny tři volby (i role si mohou materiál kupovat)
+  - „Odeslat na e-mail“ nelze uložit bez stránky profilu zákazníka
+  - zdarma pro účastníky, ruční zpřístupnění, kupóny a ukázky fungují dál ve všech kombinacích
+- **Akční cena do data** i u materiálů: sleva (částka / procento) do zvoleného data, na webu „300 Kč → 200 Kč (při objednávce do …)“; stejná pravidla jako sleva za včasnou rezervaci u akcí.
+- Databáze 16 (převod přístupu materiálů). Testy: 795 kontrol + souběh
+
 ## 0.26.0 – Materiál „Odeslat na e-mail“ (14. 11. 2026)
 
 - **R24 – „Odeslat na e-mail (bez účtu)“** ([Issue #33](https://github.com/ludektelecky/resandpay/issues/33) a [#34](https://github.com/ludektelecky/resandpay/issues/34), schváleno a implementováno): nový přístup u materiálu **„Odeslat na e-mail (bez účtu)“**, který se řídí **cenou** – **s cenou** přijde zákazníkovi **platební pokyn** a po zaplacení odkaz, **bez ceny** odkaz ke stažení **zdarma**.

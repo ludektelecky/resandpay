@@ -329,11 +329,12 @@ class Resandpay_Discounts {
 			return (string) get_post_meta( $post_id, '_rap_early_' . $k, true );
 		};
 		$mode = $g( 'mode' );
-		echo '<fieldset class="rap-early-box"><p><label for="rap_early_mode">' . esc_html__( 'Sleva za včasnou rezervaci', 'reserveandpay' ) . '</label> <select id="rap_early_mode" name="rap_early_mode">';
+		$mat  = Resandpay_Post_Types::MATERIAL === get_post_type( $post_id );
+		echo '<fieldset class="rap-early-box"><p><label for="rap_early_mode">' . esc_html( $mat ? __( 'Akční cena do data', 'reserveandpay' ) : __( 'Sleva za včasnou rezervaci', 'reserveandpay' ) ) . '</label> <select id="rap_early_mode" name="rap_early_mode">';
 		foreach ( array( '' => __( 'Ne', 'reserveandpay' ), 'fixed' => __( 'Pevná částka (Kč)', 'reserveandpay' ), 'percent' => __( 'Procento z ceny', 'reserveandpay' ) ) as $k => $l ) {
 			echo '<option value="' . esc_attr( $k ) . '" ' . selected( $mode, $k, false ) . '>' . esc_html( $l ) . '</option>';
 		}
-		echo '</select> <input type="number" min="0" step="any" name="rap_early_value" value="' . esc_attr( $g( 'value' ) ) . '" class="small-text" aria-label="' . esc_attr__( 'Výše slevy', 'reserveandpay' ) . '"> ' . esc_html__( 'při rezervaci do', 'reserveandpay' ) . ' <input type="date" name="rap_early_until" value="' . esc_attr( $g( 'until' ) ) . '"></p>';
+		echo '</select> <input type="number" min="0" step="any" name="rap_early_value" value="' . esc_attr( $g( 'value' ) ) . '" class="small-text" aria-label="' . esc_attr__( 'Výše slevy', 'reserveandpay' ) . '"> ' . esc_html( $mat ? __( 'při objednávce do', 'reserveandpay' ) : __( 'při rezervaci do', 'reserveandpay' ) ) . ' <input type="date" name="rap_early_until" value="' . esc_attr( $g( 'until' ) ) . '"></p>';
 		echo '<p><label for="rap_early_label">' . esc_html__( 'Popis slevy', 'reserveandpay' ) . '</label> <input type="text" id="rap_early_label" name="rap_early_label" value="' . esc_attr( $g( 'label' ) ) . '" class="regular-text" placeholder="' . esc_attr__( 'Sleva za včasnou rezervaci', 'reserveandpay' ) . '">';
 		echo '<span class="rap-hint">' . esc_html__( 'Jen pro platbu převodem. Sleva zanikne, pokud platba nebo některá její část přijde po splatnosti (rozhoduje datum připsání na účet). U platby ve dvou částech se odečte z doplatku, nejvýš do jeho výše. Slevový kupón s ní nelze kombinovat.', 'reserveandpay' ) . '</span></p>';
 		$ev = Resandpay_Events::get( $post_id );
@@ -455,11 +456,15 @@ class Resandpay_Discounts {
 		}
 		$until = date_create_immutable( $cfg['until'] . ' 12:00:00', wp_timezone() );
 		$price = (float) $ev['price'] - $d;
+		$date  = $until ? $until->format( 'j. n.' ) . ( $until->format( 'Y' ) !== wp_date( 'Y' ) ? ' ' . $until->format( 'Y' ) : '' ) : $cfg['until'];
 		return array(
 			'price'      => $price,
 			'price_text' => Resandpay_Events::format_price( $price, $ev['currency'] ),
-			/* translators: %s: datum */
-			'condition'  => sprintf( __( 'při rezervaci do %s a platbě ve splatnosti', 'reserveandpay' ), $until ? $until->format( 'j. n.' ) . ( $until->format( 'Y' ) !== wp_date( 'Y' ) ? ' ' . $until->format( 'Y' ) : '' ) : $cfg['until'] ),
+			'condition'  => 'material' === ( $ev['type'] ?? '' )
+				/* translators: %s: datum */
+				? sprintf( __( 'při objednávce do %s a platbě ve splatnosti', 'reserveandpay' ), $date )
+				/* translators: %s: datum */
+				: sprintf( __( 'při rezervaci do %s a platbě ve splatnosti', 'reserveandpay' ), $date ),
 			'label'      => $cfg['label'],
 		);
 	}

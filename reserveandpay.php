@@ -3,7 +3,7 @@
  * Plugin Name:       ReserveAndPay
  * Plugin URI:        https://github.com/ludektelecky/resandpay
  * Description:       Rezervace akcí a termínů s platbou převodem (QR) a kontrolou plateb z bankovních avíz.
- * Version:           0.26.0
+ * Version:           0.27.0
  * Requires at least: 6.4
  * Requires PHP:      8.0
  * Author:            INSYSTEMS
@@ -15,8 +15,8 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'RESANDPAY_VERSION', '0.26.0' );
-define( 'RESANDPAY_DB_VERSION', '15' );
+define( 'RESANDPAY_VERSION', '0.27.0' );
+define( 'RESANDPAY_DB_VERSION', '16' );
 define( 'RESANDPAY_FILE', __FILE__ );
 define( 'RESANDPAY_DIR', plugin_dir_path( __FILE__ ) );
 define( 'RESANDPAY_URL', plugin_dir_url( __FILE__ ) );

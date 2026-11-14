@@ -189,12 +189,16 @@ class Resandpay_Materials_Views {
 	/** Štítek ceny / přístupu. */
 	public static function price_label( array $mat ) {
 		if ( Resandpay_Materials::is_paid( $mat ) ) {
-			return Resandpay_Events::format_price( $mat['price'], $mat['currency'] );
+			$price = Resandpay_Events::format_price( $mat['price'], $mat['currency'] );
+			$offer = Resandpay_Discounts::early_offer( Resandpay_Materials::as_event( get_post( $mat['id'] ) ) ?: array( 'id' => 0, 'price' => 0 ) );
+			// Akční cena do data (#36): „250 Kč → 190 Kč (sleva do 31. 12.)“.
+			$price = $offer ? sprintf( /* translators: 1: cena, 2: akční cena, 3: podmínka */ __( '%1$s → %2$s (%3$s)', 'reserveandpay' ), $price, $offer['price_text'], $offer['condition'] ) : $price;
+			return Resandpay_Materials::AUD_ROLES === $mat['audience'] ? $price . ' · ' . (string) Resandpay_Settings::get( 'access_tag' ) : $price;
 		}
-		if ( Resandpay_Materials::ACCESS_ROLES === $mat['access'] ) {
+		if ( Resandpay_Materials::AUD_ROLES === $mat['audience'] ) {
 			return (string) Resandpay_Settings::get( 'access_tag' );
 		}
-		if ( Resandpay_Materials::ACCESS_EMAIL === $mat['access'] ) {
+		if ( Resandpay_Materials::AUD_EMAIL === $mat['audience'] ) {
 			return __( 'Zdarma po zadání e-mailu', 'reserveandpay' );
 		}
 		return __( 'Zdarma pro přihlášené', 'reserveandpay' );
@@ -216,7 +220,7 @@ class Resandpay_Materials_Views {
 
 	/** Lze objednat bez účtu? (placený materiál a vybraná stránka profilu – přes ni zákazník později najde odkaz) */
 	public static function guest_order_on( array $mat ) {
-		return Resandpay_Materials::purchasable( $mat ) && Resandpay_Profile::page_id();
+		return Resandpay_Materials::purchasable( $mat ) && Resandpay_Materials::guest_allowed( $mat ) && Resandpay_Profile::page_id();
 	}
 
 	public static function render_box( array $mat ) {

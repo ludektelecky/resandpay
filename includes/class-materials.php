@@ -18,6 +18,11 @@ class Resandpay_Materials {
 
 	const ACCESS_FREE  = 'free';
 	const ACCESS_EMAIL = 'email'; // Zdarma po zadání e-mailu (#33).
+
+	// Přístup = kdo smí materiál získat (#36); placený / zdarma určuje jen cena.
+	const AUD_LOGGED = 'logged'; // Jen pro přihlášené.
+	const AUD_EMAIL  = 'email';  // Pro přihlášené i bez přihlášení – odeslat na e-mail.
+	const AUD_ROLES  = 'roles';  // Jen pro vybrané role.
 	const ACCESS_PAID  = 'paid';
 	const ACCESS_ROLES = 'roles';
 
@@ -50,6 +55,31 @@ class Resandpay_Materials {
 			self::ACCESS_ROLES => __( 'Jen vybrané role', 'reserveandpay' ),
 			self::ACCESS_EMAIL => __( 'Odeslat na e-mail (bez účtu)', 'reserveandpay' ),
 		);
+	}
+
+	public static function audience_labels() {
+		return array(
+			self::AUD_LOGGED => __( 'Jen pro přihlášené', 'reserveandpay' ),
+			self::AUD_EMAIL  => __( 'Pro přihlášené i bez přihlášení – odeslat na e-mail', 'reserveandpay' ),
+			self::AUD_ROLES  => __( 'Jen pro vybrané role', 'reserveandpay' ),
+		);
+	}
+
+	/**
+	 * Převod staré volby přístupu (do 0.26.0) na nový model (#36): zdarma pro přihlášené → jen
+	 * přihlášení; placený → odeslat na e-mail (objednávka bez účtu), bez stránky profilu jen
+	 * přihlášení; odeslat na e-mail → odeslat na e-mail; jen role → role.
+	 */
+	public static function legacy_audience( $access ) {
+		switch ( $access ) {
+			case self::ACCESS_PAID:
+				return Resandpay_Profile::page_id() ? self::AUD_EMAIL : self::AUD_LOGGED;
+			case self::ACCESS_EMAIL:
+				return self::AUD_EMAIL;
+			case self::ACCESS_ROLES:
+				return self::AUD_ROLES;
+		}
+		return self::AUD_LOGGED;
 	}
 
 	/** Druhy materiálů z nastavení: klíč => název. */
@@ -87,6 +117,15 @@ class Resandpay_Materials {
 		$kind   = (string) $m( 'mat_kind', array_key_first( $kinds ) );
 		$access = (string) $m( 'mat_access', self::ACCESS_FREE );
 		$days   = $m( 'mat_days', '' );
+		$aud    = (string) $m( 'mat_audience', '' );
+		$price  = (float) $m( 'price', 0 );
+		if ( ! isset( self::audience_labels()[ $aud ] ) ) {
+			// Nepřevedený materiál (starší data): cena u „zdarma“ a „jen role“ se nepoužívala.
+			$aud = self::legacy_audience( $access );
+			if ( in_array( $access, array( self::ACCESS_FREE, self::ACCESS_ROLES ), true ) ) {
+				$price = 0.0;
+			}
+		}
 		return array(
 			'id'          => (int) $post->ID,
 			'code'        => Resandpay_Codes::get( $post->ID ),
@@ -96,9 +135,10 @@ class Resandpay_Materials {
 			'thumb_id'    => (int) get_post_thumbnail_id( $post ),
 			'kind'        => $kind,
 			'kind_label'  => $kinds[ $kind ] ?? $kind,
-			'access'      => isset( self::access_labels()[ $access ] ) ? $access : self::ACCESS_FREE,
+			'access'      => isset( self::access_labels()[ $access ] ) ? $access : self::ACCESS_FREE, // Starší volba (kompatibilita).
+			'audience'    => $aud,
 			'roles'       => array_values( array_filter( explode( ',', (string) $m( 'mat_roles' ) ) ) ),
-			'price'       => (float) $m( 'price', 0 ),
+			'price'       => $price,
 			'currency'    => (string) $m( 'currency', Resandpay_Settings::get( 'currency' ) ),
 			'due_days'    => '' === $m( 'mat_due' ) ? (int) Resandpay_Settings::get( 'mat_due_days' ) : (int) $m( 'mat_due' ),
 			'access_days' => '' === $days ? (int) Resandpay_Settings::get( 'mat_access_days' ) : max( 0, (int) $days ),
@@ -545,18 +585,15 @@ class Resandpay_Materials {
 			$res['reason'] = 'unavailable';
 			return $res;
 		}
-		if ( ! $user_id && ! self::is_paid( $mat ) ) {
-			return $res; // Zdarma pro přihlášené / jen pro role / zdarma po zadání e-mailu: bez účtu jen s nárokem výše.
+		if ( ! $user_id && ( ! self::guest_allowed( $mat ) || ! self::is_paid( $mat ) ) ) {
+			return $res; // Bez přihlášení jen s nárokem výše; „odeslat na e-mail“ zdarma řeší formulář (#33).
 		}
-		if ( self::ACCESS_FREE === $mat['access'] || self::is_free_email( $mat ) ) {
-			return $grant( 'free', 0 ); // Přihlášený má materiál „zdarma po zadání e-mailu“ hned, bez formuláře.
-		}
-		if ( self::ACCESS_ROLES === $mat['access'] ) {
-			if ( self::user_has_role( $user_id, $mat['roles'] ) ) {
-				return $grant( 'role', 0 );
-			}
+		if ( $user_id && self::AUD_ROLES === $mat['audience'] && ! self::user_has_role( $user_id, $mat['roles'] ) ) {
 			$res['reason'] = 'role';
 			return $res;
+		}
+		if ( ! self::is_paid( $mat ) ) {
+			return $grant( self::AUD_ROLES === $mat['audience'] ? 'role' : 'free', 0 ); // Zdarma: přihlášený (s rolí) hned.
 		}
 		// Placený materiál bez nároku.
 		$open = self::open_order( $mat['id'], $user_id, $email );
@@ -575,14 +612,19 @@ class Resandpay_Materials {
 		return self::is_paid( $mat ) && 'publish' === $mat['status'] && ! $mat['withdrawn'] && $mat['price'] > 0;
 	}
 
-	/** Placený materiál: „Placený“, nebo „Odeslat na e-mail“ s cenou (#34). */
+	/** Placený materiál: cena vyšší než 0 (#36). */
 	public static function is_paid( array $mat ) {
-		return self::ACCESS_PAID === $mat['access'] || ( self::ACCESS_EMAIL === $mat['access'] && (float) $mat['price'] > 0 );
+		return (float) $mat['price'] > 0;
 	}
 
-	/** Zdarma po zadání e-mailu: „Odeslat na e-mail“ bez ceny (#33, #34). */
+	/** Zdarma po zadání e-mailu: „odeslat na e-mail“ bez ceny (#33, #36). */
 	public static function is_free_email( array $mat ) {
-		return self::ACCESS_EMAIL === $mat['access'] && (float) $mat['price'] <= 0;
+		return self::AUD_EMAIL === ( $mat['audience'] ?? '' ) && ! self::is_paid( $mat );
+	}
+
+	/** Lze materiál získat bez přihlášení (odeslat na e-mail)? */
+	public static function guest_allowed( array $mat ) {
+		return self::AUD_EMAIL === ( $mat['audience'] ?? '' );
 	}
 
 	/** Text „Přístup do …“ k objednávce (pro e-maily). */
@@ -687,6 +729,9 @@ class Resandpay_Materials {
 			return new WP_Error( 'login', __( 'Pro objednávku se prosím přihlaste nebo vyplňte e-mail.', 'reserveandpay' ) );
 		}
 		$user_id = $user ? (int) $user->ID : 0;
+		if ( ! $user && $mat && ! self::guest_allowed( $mat ) ) {
+			return new WP_Error( 'login', __( 'Pro objednávku se prosím přihlaste.', 'reserveandpay' ) );
+		}
 		if ( ! $mat || ! self::purchasable( $mat ) ) {
 			return new WP_Error( 'not_available', __( 'Materiál teď nelze objednat.', 'reserveandpay' ) );
 		}
@@ -717,6 +762,9 @@ class Resandpay_Materials {
 			}
 			if ( 'pending' === $acc['reason'] ) {
 				return new WP_Error( 'pending', __( 'Materiál už máte objednaný – čeká se na platbu.', 'reserveandpay' ), $acc['order'] );
+			}
+			if ( 'role' === $acc['reason'] ) {
+				return new WP_Error( 'role', (string) Resandpay_Settings::get( 'mat_roles_text' ) );
 			}
 			$ev    = self::as_event( get_post( $material_id ) );
 			$price = Resandpay_Discounts::compute(
