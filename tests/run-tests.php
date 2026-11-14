@@ -1897,7 +1897,7 @@ $mlPerson = function ( $n, $nl = 1 ) {
 $mlOff = Resandpay_Reservations::create( $mlEv, $mlPerson( 0 ) );
 Resandpay_Reservations::set_status( $mlOff['id'], Resandpay_Reservations::PAID, array( 'method' => 'transfer_manual' ) );
 $mlRow = Resandpay_Reservations::get( $mlOff['id'] );
-rap_t( array() === array_diff( array( 'ml_status', 'ml_groups', 'ml_at', 'ml_error', 'ml_tries' ), array_keys( $mlRow ) ) && '13' === get_option( 'resandpay_db_version' ), 'migrace DB 13: sloupce ml_* u rezervací' );
+rap_t( array() === array_diff( array( 'ml_status', 'ml_groups', 'ml_at', 'ml_error', 'ml_tries' ), array_keys( $mlRow ) ) && RESANDPAY_DB_VERSION === get_option( 'resandpay_db_version' ), 'migrace DB 13: sloupce ml_* u rezervací' );
 rap_t( '' === $mlRow['ml_status'], 'vypnuté napojení: nic se neposílá' );
 // Podvržené API MailerLite.
 $GLOBALS['rap_ml_req']  = array();
@@ -2024,6 +2024,115 @@ wp_set_current_user( 0 );
 remove_filter( 'pre_http_request', $mlMock, 10 );
 wp_clear_scheduled_hook( Resandpay_MailerLite::CRON );
 update_option( Resandpay_Settings::OPTION, $mlSaved, false );
+
+echo "== 0.20.0: profil zákazníka Moje rezervace (#24)\n";
+$pfSaved = get_option( Resandpay_Settings::OPTION );
+rap_t( '14' === RESANDPAY_DB_VERSION && array_key_exists( 'newsletter_src', Resandpay_Reservations::query( array( 'per_page' => 1 ) )['items'][0] ?? array() ), 'migrace DB 14: záznam změny souhlasu u rezervací' );
+rap_t( 0 === (int) Resandpay_Settings::defaults()['profile_page'] && 30 === (int) Resandpay_Settings::defaults()['profile_link_days'], 'výchozí stav: profil bez stránky, odkaz 30 dní' );
+$pfEvA = rap_event( 'Profil nadcházející', $now + 60 * $day, $now + 60 * $day + HOUR_IN_SECONDS, 10 );
+$pfEvB = rap_event( 'Profil proběhlá', $now + 61 * $day, $now + 61 * $day + HOUR_IN_SECONDS, 10 );
+$pfP   = function ( $extra = array() ) {
+	return array_merge( rap_person( 24 ), array( 'customer_name' => 'Pavla Profilová', 'email' => 'Profil.Zak24@example.cz', 'note' => 'Tajná poznámka pro lektorku' ), $extra );
+};
+$pf1 = Resandpay_Reservations::create( $pfEvA, $pfP() );
+$pf2 = Resandpay_Reservations::create( $pfEvB, $pfP() );
+$pf3 = Resandpay_Reservations::create( $pfEvA, $pfP() );
+$pfX = Resandpay_Reservations::create( $pfEvA, array_merge( rap_person( 25 ), array( 'customer_name' => 'Cizí Zákazník', 'email' => 'cizi.zak24@example.cz' ) ) );
+Resandpay_Reservations::set_status( $pf2['id'], Resandpay_Reservations::PAID, array( 'method' => 'transfer_manual' ) );
+Resandpay_Reservations::set_status( $pf3['id'], Resandpay_Reservations::CANCELLED, array( 'notify' => false ) );
+update_post_meta( $pfEvB, '_rap_start', wp_date( 'Y-m-d H:i', $now - 10 * $day ) ); // Akce už proběhla.
+update_post_meta( $pfEvB, '_rap_end', wp_date( 'Y-m-d H:i', $now - 10 * $day + HOUR_IN_SECONDS ) );
+rap_t( '' === Resandpay_Profile::url_for( $pf1 ) && false === strpos( Resandpay_Mailer::build( 'received', $pf1 )['text'], 'rap_p=' ), 'bez stránky profilu: žádný odkaz v e-mailech' );
+$pfPage = wp_insert_post( array( 'post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'Moje rezervace', 'post_content' => '[reserveandpay_my_reservations]' ) );
+Resandpay_Settings::update( array( 'profile_page' => $pfPage ) );
+$pfUrl = Resandpay_Profile::url_for( $pf1 );
+parse_str( (string) wp_parse_url( $pfUrl, PHP_URL_QUERY ), $pfQ );
+$pfTok = $pfQ['rap_p'] ?? '';
+rap_t( 0 === strpos( $pfUrl, get_permalink( $pfPage ) ) && 'profil.zak24@example.cz' === Resandpay_Profile::verify( $pfTok ) && false === strpos( $pfTok, 'profil' ), 'osobní odkaz: ověří se na e-mail zákazníka, e-mail v odkazu není' );
+$pfBad = substr( $pfTok, 0, -1 ) . ( 'a' === substr( $pfTok, -1 ) ? 'b' : 'a' );
+rap_t( is_wp_error( Resandpay_Profile::verify( $pfBad ) ) && is_wp_error( Resandpay_Profile::verify( 'nesmysl' ) ) && is_wp_error( Resandpay_Profile::verify( str_replace( $pf1['token'], $pfX['token'], $pfTok ) ) ), 'pozměněný nebo cizí odkaz neplatí' );
+rap_t( 'expired' === Resandpay_Profile::verify( $pfTok, $now + 31 * $day )->get_error_code() && ! is_wp_error( Resandpay_Profile::verify( $pfTok, $now + 29 * $day ) ), 'platnost odkazu 30 dní' );
+Resandpay_Settings::update( array( 'profile_link_days' => 7 ) );
+rap_t( 'expired' === Resandpay_Profile::verify( Resandpay_Profile::token_for( $pf1 ), $now + 8 * $day )->get_error_code(), 'platnost odkazu podle nastavení' );
+Resandpay_Settings::update( array( 'profile_link_days' => 30 ) );
+$pfSan = Resandpay_Admin_Settings::sanitize( array( 'profile_link_days' => '0' ) );
+rap_t( 1 === $pfSan['profile_link_days'] && 365 === Resandpay_Admin_Settings::sanitize( array( 'profile_link_days' => '9999' ) )['profile_link_days'], 'nastavení platnosti ošetřené (1–365 dní)' );
+// Odkaz v každém e-mailu zákazníkovi.
+$pfMails = array();
+foreach ( array( 'received', 'paid', 'cancelled', 'reminder', 'event_reminder', 'expired' ) as $pfK ) {
+	$pfMails[ $pfK ] = Resandpay_Mailer::build( $pfK, $pf1 );
+}
+rap_t( array() === array_filter( $pfMails, fn( $m ) => false === strpos( $m['text'], 'rap_p=' ) || false === strpos( $m['html'], 'rap_p=' ) ), 'odkaz na profil v každém e-mailu zákazníkovi (text i HTML)' );
+rap_t( false === strpos( Resandpay_Mailer::build( 'admin', $pf1 )['text'], 'rap_p=' ), 'e-mail správci odkaz na profil nemá' );
+Resandpay_Settings::update( array( 'tpl_profile_footer' => '' ) );
+rap_t( false === strpos( Resandpay_Mailer::build( 'paid', $pf1 )['text'], 'rap_p=' ), 'prázdný text odkazu = nepřipojovat' );
+Resandpay_Settings::update( array( 'tpl_profile_footer' => Resandpay_Settings::defaults()['tpl_profile_footer'] ) );
+// Stránka profilu.
+wp_set_current_user( 0 );
+$pfForm = Resandpay_Profile::shortcode();
+rap_t( false !== strpos( $pfForm, 'name="rap_email"' ) && false !== strpos( $pfForm, 'Pošlete mi odkaz' ) && false === strpos( $pfForm, 'Profil nadcházející' ), 'bez odkazu a přihlášení: jen formulář „Pošlete mi odkaz“' );
+$_REQUEST['rap_p'] = $pfTok;
+$pfHtml = Resandpay_Profile::shortcode();
+rap_t( false !== strpos( $pfHtml, 'Nadcházející' ) && false !== strpos( $pfHtml, 'Proběhlé a zrušené' ) && false !== strpos( $pfHtml, 'Profil nadcházející' ) && false !== strpos( $pfHtml, 'Profil proběhlá' ), 'profil: nadcházející i proběhlé rezervace' );
+rap_t( 3 === substr_count( $pfHtml, 'rap-profile__item ' ) && false !== strpos( $pfHtml, 'rap-status--cancelled' ) && false !== strpos( $pfHtml, 'rap-status--paid' ), 'profil: všechny rezervace zákazníka včetně zrušených' );
+rap_t( strpos( $pfHtml, 'rap-status--cancelled' ) > strpos( $pfHtml, 'Proběhlé a zrušené' ) && strpos( $pfHtml, 'rap-status--pending' ) < strpos( $pfHtml, 'Proběhlé a zrušené' ), 'zrušená rezervace nadcházející akce je mezi zrušenými' );
+rap_t( false !== strpos( $pfHtml, 'Platební pokyn (PDF)' ) && false !== strpos( $pfHtml, 'zbývá' ) && false !== strpos( $pfHtml, 'splatnost' ) && false !== strpos( $pfHtml, 'VS ' . $pf1['vs'] ), 'profil: stav platby, zbývá, splatnost, platební pokyn' );
+rap_t( false === strpos( $pfHtml, 'Tajná poznámka' ) && false === strpos( $pfHtml, 'Cizí Zákazník' ) && false === strpos( $pfHtml, $pfX['vs'] ), 'profil: bez poznámky a bez cizích rezervací' );
+rap_t( false !== strpos( $pfHtml, 'name="rap_newsletter"' ) && false !== strpos( $pfHtml, 'name="rap_p" value="' . $pfTok . '"' ), 'profil: nastavení novinek e-mailem' );
+$_REQUEST['rap_p'] = $pfBad;
+rap_t( false !== strpos( Resandpay_Profile::shortcode(), 'není platný' ), 'neplatný odkaz: zpráva a formulář' );
+unset( $_REQUEST['rap_p'] );
+$pfUser = wp_insert_user( array( 'user_login' => 'profil24', 'user_email' => 'profil.zak24@example.cz', 'user_pass' => wp_generate_password() ) );
+wp_set_current_user( $pfUser );
+rap_t( false !== strpos( Resandpay_Profile::shortcode(), 'Profil nadcházející' ), 'přihlášený uživatel vidí rezervace podle e-mailu účtu' );
+wp_set_current_user( 0 );
+// Poslání odkazu (limity z předchozího běhu testů smazat).
+$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '\\_transient\\_%rap\\_pl\\_%'" );
+wp_cache_flush();
+$GLOBALS['rap_mails'] = array();
+rap_t( 'sent' === Resandpay_Profile::send_link( 'profil.zak24@example.cz' ) && 1 === count( $GLOBALS['rap_mails'] ) && false !== strpos( $GLOBALS['rap_mails'][0]['message'], 'rap_p=' ), 'Pošlete mi odkaz: e-mail s odkazem' );
+rap_t( 'sent' === Resandpay_Profile::send_link( 'profil.zak24@example.cz' ) && 1 === count( $GLOBALS['rap_mails'] ), 'opakovaná žádost do 5 min: stejná odpověď, e-mail se nepošle' );
+rap_t( 'sent' === Resandpay_Profile::send_link( 'nikdo.zak24@example.cz' ) && 1 === count( $GLOBALS['rap_mails'] ) && 'bad_email' === Resandpay_Profile::send_link( 'x' ), 'neznámý e-mail: stejná odpověď, nic se nepošle' );
+// Souhlas s novinkami + MailerLite.
+$GLOBALS['rap_ml_req'] = array();
+$pfMock = function ( $pre, $args, $url ) {
+	if ( 0 !== strpos( $url, Resandpay_MailerLite::API ) ) {
+		return $pre;
+	}
+	$GLOBALS['rap_ml_req'][] = json_decode( $args['body'] ?? 'null', true );
+	return array( 'response' => array( 'code' => 200 ), 'body' => '{"data":{}}', 'headers' => array() );
+};
+add_filter( 'pre_http_request', $pfMock, 10, 3 );
+Resandpay_Settings::update( array( 'ml_enabled' => 1, 'ml_api_key' => Resandpay_Payments::encrypt( 'k' ), 'ml_groups' => '', 'test_mode' => 0 ) );
+rap_t( 'denied' === Resandpay_Profile::process( 'newsletter', array( 'rap_newsletter' => 1 ) ), 'změna souhlasu bez odkazu ani přihlášení se odmítne' );
+$_REQUEST['rap_p'] = $pfTok;
+rap_t( 'nl_on' === Resandpay_Profile::process( 'newsletter', array( 'rap_newsletter' => 1 ) ), 'zákazník udělil souhlas v profilu' );
+$pfR = Resandpay_Reservations::query( array( 'email' => 'profil.zak24@example.cz', 'per_page' => 10 ) )['items'];
+rap_t( 3 === count( array_filter( $pfR, fn( $x ) => 1 === (int) $x['newsletter'] && 'profile' === $x['newsletter_src'] && $x['newsletter_at'] ) ), 'souhlas zapsán ke všem rezervacím s datem a způsobem' );
+rap_t( Resandpay_MailerLite::PENDING === Resandpay_Reservations::get( $pfR[0]['id'] )['ml_status'], 'udělení souhlasu: zařazeno do MailerLite' );
+Resandpay_MailerLite::process_queue();
+rap_t( Resandpay_MailerLite::SENT === Resandpay_Reservations::get( $pfR[0]['id'] )['ml_status'] && 'profil.zak24@example.cz' === ( $GLOBALS['rap_ml_req'][0]['email'] ?? '' ), 'zákazník odeslán do MailerLite' );
+rap_t( 'nl_off' === Resandpay_Profile::process( 'newsletter', array() ), 'zákazník odvolal souhlas v profilu' );
+rap_t( Resandpay_MailerLite::UNSUB === Resandpay_Reservations::get( $pfR[0]['id'] )['ml_status'] && ! Resandpay_Profile::newsletter( 'profil.zak24@example.cz' ), 'odvolání: souhlas zrušen, zařazeno k odhlášení' );
+$GLOBALS['rap_ml_req'] = array();
+Resandpay_MailerLite::process_queue();
+rap_t( 'unsubscribed' === ( $GLOBALS['rap_ml_req'][0]['status'] ?? '' ) && Resandpay_MailerLite::UNSUBD === Resandpay_Reservations::get( $pfR[0]['id'] )['ml_status'], 'odvolání: odhlášeno v MailerLite' );
+$pfC = Resandpay_Customers::query( array( 'search' => 'profil.zak24', 'ml' => 'unsubscribed' ) );
+rap_t( 1 === $pfC['total'] && Resandpay_MailerLite::UNSUBD === $pfC['items'][0]['ml'] && ! in_array( (int) $pfR[0]['id'], Resandpay_MailerLite::import_candidates(), true ), 'přehled zákazníků: odhlášen; import ho nenabízí' );
+rap_t( false === Resandpay_Profile::set_newsletter( 'profil.zak24@example.cz', false ), 'bez změny se nic nezapisuje' );
+unset( $_REQUEST['rap_p'] );
+wp_set_current_user( 1 );
+$_GET['id'] = $pf1['id'];
+ob_start();
+Resandpay_Admin_Reservations::page_detail();
+$pfDet = ob_get_clean();
+unset( $_GET['id'] );
+wp_set_current_user( 0 );
+rap_t( false !== strpos( $pfDet, 'změněno zákazníkem v profilu' ), 'detail rezervace: záznam změny souhlasu' );
+remove_filter( 'pre_http_request', $pfMock, 10 );
+wp_clear_scheduled_hook( Resandpay_MailerLite::CRON );
+wp_delete_user( $pfUser );
+update_option( Resandpay_Settings::OPTION, $pfSaved, false );
 
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 

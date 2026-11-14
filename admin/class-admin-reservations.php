@@ -275,7 +275,7 @@ class Resandpay_Admin_Reservations {
 			__( 'Splatnost', 'reserveandpay' )         => esc_html( $fmt( $r['due_at'] ) ) . ( $r['last_minute'] ? ' (' . esc_html__( 'rezervace na poslední chvíli – lze platit na místě', 'reserveandpay' ) . ')' : '' ),
 			__( 'Zaplaceno', 'reserveandpay' )         => $r['paid_at'] ? esc_html( $fmt( $r['paid_at'] ) . ' – ' . ( Resandpay_Reservations::paid_method_labels()[ $r['paid_method'] ] ?? $r['paid_method'] ) ) : '—',
 			__( 'Zrušeno', 'reserveandpay' )           => $r['cancelled_at'] ? esc_html( $fmt( $r['cancelled_at'] ) . ( $r['cancel_reason'] ? ' – ' . $r['cancel_reason'] : '' ) ) : '—',
-			__( 'Souhlasy', 'reserveandpay' )          => esc_html( sprintf( 'GDPR: %s · %s: %s · Newsletter: %s', $fmt( $r['consent_gdpr_at'] ), __( 'Podmínky', 'reserveandpay' ), $fmt( $r['consent_terms_at'] ), $r['newsletter'] ? __( 'ano', 'reserveandpay' ) : __( 'ne', 'reserveandpay' ) ) ),
+			__( 'Souhlasy', 'reserveandpay' )          => esc_html( sprintf( 'GDPR: %s · %s: %s · Newsletter: %s', $fmt( $r['consent_gdpr_at'] ), __( 'Podmínky', 'reserveandpay' ), $fmt( $r['consent_terms_at'] ), $r['newsletter'] ? __( 'ano', 'reserveandpay' ) : __( 'ne', 'reserveandpay' ) ) . ( ! empty( $r['newsletter_at'] ) ? ' (' . ( Resandpay_Profile::source_labels()[ $r['newsletter_src'] ] ?? $r['newsletter_src'] ) . ' ' . $fmt( $r['newsletter_at'] ) . ')' : '' ) ),
 			__( 'Vytvořeno', 'reserveandpay' )         => esc_html( $fmt( $r['created_at'] ) . ' (' . ( 'admin' === $r['source'] ? __( 'ručně v administraci', 'reserveandpay' ) : __( 'web', 'reserveandpay' ) ) . ')' ),
 		);
 		if ( Resandpay_MailerLite::enabled() || '' !== (string) ( $r['ml_status'] ?? '' ) ) {

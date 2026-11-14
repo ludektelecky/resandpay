@@ -4,10 +4,16 @@
 >
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
-## 0.19.1 – Záložka MailerLite v Nastavení (14. 11. 2026)
+## 0.20.0 – Profil zákazníka „Moje rezervace“ (14. 11. 2026)
 
-- Záložka **Nastavení → Napojení** přejmenována na **Nastavení → MailerLite** – každý napojený systém bude mít vlastní záložku. Starý odkaz `&tab=napojeni` dál otevře záložku MailerLite. Nastavení se nemění.
-- Testy: 634 kontrol + souběh
+- ⚠ **Po aktualizaci:** profil zapnete vytvořením stránky se shortcodem `[reserveandpay_my_reservations]` (např. „Moje rezervace“) a jejím výběrem v **Nastavení → Rezervace → Profil zákazníka**. Do té doby se nic nemění a e-maily odkaz na profil nemají.
+- **R18 – profil zákazníka** ([Issue #24](https://github.com/ludektelecky/resandpay/issues/24), schváleno a implementováno): zákazník vidí na webu **všechny své rezervace** – nadcházející, proběhlé a zrušené i objednávky materiálů – se **stavem platby** (uhrazeno, zbývá, splatnost, VS) a u nezaplacených s **QR platbou a platebním pokynem (PDF)**. Poznámka zákazníka se nezobrazuje.
+  - přístup **přihlášením** (podle e-mailu účtu) nebo **osobním odkazem**, který je v **každém e-mailu zákazníkovi**; platnost odkazu v Nastavení (výchozí **30 dní**); na stránce „**Pošlete mi odkaz**“
+  - **Novinky e-mailem:** zákazník souhlas zapne / vypne; zapíše se s datem („změněno zákazníkem v profilu“, vidět v detailu rezervace); udělení → zápis do MailerLite, odvolání → **odhlášení v MailerLite**
+  - Nastavení → E-maily: text odkazu v e-mailech, e-mail „Odkaz na profil“, proměnné `{profile_url}`, `{profile_days}`
+- **Záložka MailerLite:** Nastavení → „Napojení“ přejmenováno na **MailerLite** – každý napojený systém bude mít vlastní záložku; starý odkaz `&tab=napojeni` funguje dál.
+- Přehled Zákazníci: stav MailerLite „odhlášen (souhlas odvolán)“ a filtr.
+- Databáze 14 (záznam změny souhlasu u rezervace). Testy: 668 kontrol + souběh
 
 ## 0.19.0 – Napojení na MailerLite (14. 11. 2026)
 

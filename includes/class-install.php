@@ -167,6 +167,8 @@ class Resandpay_Install {
 			consent_gdpr_at datetime NULL,
 			consent_terms_at datetime NULL,
 			newsletter tinyint(1) NOT NULL DEFAULT 0,
+			newsletter_at datetime NULL,
+			newsletter_src varchar(20) NOT NULL DEFAULT '',
 			user_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			source varchar(20) NOT NULL DEFAULT 'web',
 			item_type varchar(20) NOT NULL DEFAULT 'event',

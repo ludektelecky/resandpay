@@ -158,6 +158,8 @@ class Resandpay_Mailer {
 			'{material_url}'     => 'material' === ( $r['item_type'] ?? '' ) && get_permalink( $r['event_id'] ) ? get_permalink( $r['event_id'] ) : '',
 			'{my_materials_url}' => Resandpay_Materials::my_url(),
 			'{access_until}'     => 'material' === ( $r['item_type'] ?? '' ) ? Resandpay_Materials::order_until_text( $r ) : '',
+			'{profile_url}'      => Resandpay_Profile::url_for( $r ),
+			'{profile_days}'     => (string) Resandpay_Profile::link_days(),
 			'{event_url}'        => ! empty( $r['event_id'] ) && get_permalink( $r['event_id'] ) ? get_permalink( $r['event_id'] ) : home_url( '/' ),
 			'{split_note}'       => Resandpay_Reservations::is_split( $r ) ? sprintf( /* translators: 1: 1. část, 2: datum, 3: doplatek, 4: datum */ __( "\nPlatba je rozdělená: 1. část %1\$s do %2\$s, doplatek %3\$s do %4\$s. Zaplacením 1. části je Vaše místo potvrzené. Můžete také zaplatit vše najednou do splatnosti 1. části – oba QR kódy najdete níže.\n", 'reserveandpay' ), Resandpay_Events::format_price( $r['part1_amount'], $r['currency'] ), wp_date( 'j. n. Y', Resandpay_Events::ts( $r['part1_due_at'] ) ), Resandpay_Events::format_price( (float) $r['amount'] - (float) $r['part1_amount'], $r['currency'] ), wp_date( 'j. n. Y', Resandpay_Events::ts( $r['due_at'] ) ) ) : '',
 		);
@@ -204,6 +206,10 @@ class Resandpay_Mailer {
 		$tkey    = self::template_key( $key, $r );
 		$subject = self::render( $s[ 'tpl_' . $tkey . '_subject' ] ?? '', $r, $key );
 		$body    = self::render( $s[ 'tpl_' . $tkey . '_body' ] ?? '', $r, $key );
+		// Odkaz na profil „Moje rezervace“ v každém e-mailu zákazníkovi (R18).
+		if ( ! in_array( $key, array( 'admin', 'profile_link', 'test', 'security', 'event_summary' ), true ) && '' !== trim( (string) $s['tpl_profile_footer'] ) && false === strpos( $body, 'rap_p=' ) && '' !== Resandpay_Profile::url_for( $r ) ) {
+			$body .= "\n\n" . self::render( $s['tpl_profile_footer'], $r, $key );
+		}
 		$parts   = array(
 			'subject'  => $subject,
 			'text'     => $body,
@@ -486,6 +492,7 @@ class Resandpay_Mailer {
 			'event_reminder' => __( 'Připomínka akce', 'reserveandpay' ),
 			'event_summary'  => __( 'Přehled účastníků (správce)', 'reserveandpay' ),
 			'mat_grant'      => __( 'Materiál zpřístupněn', 'reserveandpay' ),
+			'profile_link'   => __( 'Odkaz na profil zákazníka', 'reserveandpay' ),
 		);
 	}
 

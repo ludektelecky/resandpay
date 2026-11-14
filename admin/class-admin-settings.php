@@ -141,6 +141,10 @@ class Resandpay_Admin_Settings {
 				'turnstile_site_key'     => array( __( 'Turnstile – Site Key', 'reserveandpay' ), $text ),
 				'turnstile_secret'       => array( __( 'Turnstile – Secret Key', 'reserveandpay' ), $text ),
 			),
+			__( 'Profil zákazníka', 'reserveandpay' )  => array(
+				'profile_page'      => array( __( 'Stránka „Moje rezervace“', 'reserveandpay' ), 'page', __( 'Stránka se shortcodem [reserveandpay_my_reservations]. Zákazník na ní vidí všechny své rezervace, stav plateb a platební pokyny a může změnit souhlas s novinkami. Přihlášený uživatel podle e-mailu účtu, ostatní přes osobní odkaz, který je v každém e-mailu zákazníkovi. Nevybráno = profil vypnutý.', 'reserveandpay' ) ),
+				'profile_link_days' => array( __( 'Platnost osobního odkazu (dní)', 'reserveandpay' ), 'number', __( 'Výchozí 30. Po vypršení si zákazník na stránce profilu nechá poslat nový odkaz.', 'reserveandpay' ) ),
+			),
 			__( 'Připomínky akcí', 'reserveandpay' )   => array(
 				'event_reminder_hours'  => array( __( 'Připomínka akce zákazníkům (hodin před začátkem)', 'reserveandpay' ), 'number', __( 'Výchozí hodnota; u akce i služby ji lze změnit. Připomínka přijde jednou každé aktivní rezervaci (ne rezervaci vzniklé až po tomto okamžiku a ne u externích termínů). 0 = nepřipomínat.', 'reserveandpay' ) ),
 				'event_summary_enabled' => array( __( 'Přehled účastníků den předem', 'reserveandpay' ), 'checkbox', __( 'Jednou denně e-mail se seznamem zítřejších akcí a termínů s rezervacemi (jméno, telefon, stav platby, poznámka).', 'reserveandpay' ) ),
@@ -201,6 +205,9 @@ class Resandpay_Admin_Settings {
 				'tpl_paid_body'         => array( __( 'Potvrzení platby – text', 'reserveandpay' ), 'textarea' ),
 				'tpl_cancelled_subject' => array( __( 'Zrušení – předmět', 'reserveandpay' ), $text ),
 				'tpl_cancelled_body'    => array( __( 'Zrušení – text', 'reserveandpay' ), 'textarea' ),
+				'tpl_profile_footer'       => array( __( 'Odkaz na profil v e-mailech', 'reserveandpay' ), $text, __( 'Připojí se na konec každého e-mailu zákazníkovi, je-li vybraná stránka profilu (Rezervace → Profil zákazníka). {profile_url} = osobní odkaz. Prázdné = nepřipojovat (proměnnou {profile_url} lze dát i přímo do textů výše).', 'reserveandpay' ) ),
+				'tpl_profile_link_subject' => array( __( 'Odkaz na profil – předmět', 'reserveandpay' ), $text, __( 'Posílá se, když si zákazník na stránce profilu nechá poslat odkaz.', 'reserveandpay' ) ),
+				'tpl_profile_link_body'    => array( __( 'Odkaz na profil – text', 'reserveandpay' ), 'textarea', __( '{profile_url} = osobní odkaz, {profile_days} = platnost ve dnech.', 'reserveandpay' ) ),
 				'tpl_admin_subject'     => array( __( 'Upozornění pro správce – předmět', 'reserveandpay' ), $text ),
 				'tpl_admin_body'        => array( __( 'Upozornění pro správce – text', 'reserveandpay' ), 'textarea' ),
 				'tpl_mat_received_subject'  => array( __( 'Materiál – objednávka přijata – předmět', 'reserveandpay' ), $text ),
@@ -328,6 +335,7 @@ class Resandpay_Admin_Settings {
 		$out['mat_link_minutes'] = max( 5, min( 1440, (int) $out['mat_link_minutes'] ) );
 		$out['mat_due_days']     = max( 0, min( 90, (int) $out['mat_due_days'] ) );
 		$out['mat_access_days']  = max( 0, (int) $out['mat_access_days'] );
+		$out['profile_link_days'] = max( 1, min( 365, (int) $out['profile_link_days'] ) );
 		foreach ( array( 'event' => 'AK', 'service' => 'SL', 'slot' => 'TE', 'material' => 'MA' ) as $k => $def ) {
 			$out[ 'code_prefix_' . $k ] = substr( strtoupper( preg_replace( '/[^A-Za-z]/', '', (string) $out[ 'code_prefix_' . $k ] ) ), 0, 6 ) ?: $def;
 			$out[ 'code_digits_' . $k ] = max( 2, min( 8, (int) $out[ 'code_digits_' . $k ] ) );
@@ -384,7 +392,7 @@ class Resandpay_Admin_Settings {
 				echo self::style_preview(); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
 			}
 			if ( __( 'E-maily', 'reserveandpay' ) === $title ) {
-				echo '<p class="description">' . esc_html__( 'Proměnné:', 'reserveandpay' ) . ' <code>{name} {email} {phone} {note} {event} {date} {location} {amount} {vs} {proforma} {due_date} {account} {iban} {company} {free} {reason} {last_minute_note} {pay_choice} {event_code} {event_url} {total} {paid} {remaining} {last_payment} {amount_now} {due_now} {part1} {part1_due} {final_due} {split_note} {price_full} {discount} {discount_label} {coupon} {reminder_note} {payment_note} {where} {map_url}</code></p>';
+				echo '<p class="description">' . esc_html__( 'Proměnné:', 'reserveandpay' ) . ' <code>{name} {email} {phone} {note} {event} {date} {location} {amount} {vs} {proforma} {due_date} {account} {iban} {company} {free} {reason} {last_minute_note} {pay_choice} {event_code} {event_url} {total} {paid} {remaining} {last_payment} {amount_now} {due_now} {part1} {part1_due} {final_due} {split_note} {price_full} {discount} {discount_label} {coupon} {reminder_note} {payment_note} {where} {map_url} {profile_url}</code></p>';
 			}
 			echo '<table class="form-table">';
 			foreach ( $section as $key => $def ) {
@@ -489,7 +497,7 @@ class Resandpay_Admin_Settings {
 	public static function tabs() {
 		return array(
 			'provozovatel' => array( __( 'Provozovatel', 'reserveandpay' ), array( __( 'Provozovatel', 'reserveandpay' ), __( 'Platební pokyn a QR platba', 'reserveandpay' ) ) ),
-			'rezervace'    => array( __( 'Rezervace', 'reserveandpay' ), array( __( 'Rezervace a platby', 'reserveandpay' ), __( 'Připomínky akcí', 'reserveandpay' ), __( 'Ochrana formuláře proti robotům', 'reserveandpay' ) ) ),
+			'rezervace'    => array( __( 'Rezervace', 'reserveandpay' ), array( __( 'Rezervace a platby', 'reserveandpay' ), __( 'Profil zákazníka', 'reserveandpay' ), __( 'Připomínky akcí', 'reserveandpay' ), __( 'Ochrana formuláře proti robotům', 'reserveandpay' ) ) ),
 			'web'          => array( __( 'Web a vzhled', 'reserveandpay' ), array( __( 'Vzhled', 'reserveandpay' ), __( 'Detail akce', 'reserveandpay' ), __( 'Odpočet', 'reserveandpay' ) ) ),
 			'emaily'       => array( __( 'E-maily', 'reserveandpay' ), array( __( 'E-maily', 'reserveandpay' ), __( 'Testovací režim', 'reserveandpay' ) ) ),
 			'platby'       => array( __( 'Kontrola plateb', 'reserveandpay' ), array( __( 'Kontrola plateb', 'reserveandpay' ) ) ),

@@ -28,6 +28,8 @@ class Resandpay_MailerLite {
 	const SENT    = 'sent';
 	const ERROR   = 'error';
 	const SKIPPED = 'skipped';
+	const UNSUB   = 'unsubscribe';  // Čeká na odhlášení (zákazník odvolal souhlas).
+	const UNSUBD  = 'unsubscribed'; // Odhlášeno v MailerLite.
 
 	public static function init() {
 		add_action( 'resandpay_reservation_created', array( __CLASS__, 'on_created' ) );
@@ -43,6 +45,8 @@ class Resandpay_MailerLite {
 			self::SENT    => __( 'odesláno', 'reserveandpay' ),
 			self::ERROR   => __( 'chyba', 'reserveandpay' ),
 			self::SKIPPED => __( 'neodesláno', 'reserveandpay' ),
+			self::UNSUB   => __( 'čeká na odhlášení', 'reserveandpay' ),
+			self::UNSUBD  => __( 'odhlášeno (souhlas odvolán)', 'reserveandpay' ),
 		);
 	}
 
@@ -387,25 +391,102 @@ class Resandpay_MailerLite {
 			return $out;
 		}
 		$t   = Resandpay_Reservations::table();
-		$ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$t} WHERE ml_status = %s ORDER BY id ASC LIMIT %d", self::PENDING, self::BATCH ) );
-		foreach ( $ids as $id ) {
-			$res = self::send( (int) $id );
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT id, ml_status FROM {$t} WHERE ml_status IN (%s, %s) ORDER BY id ASC LIMIT %d", self::PENDING, self::UNSUB, self::BATCH ), ARRAY_A );
+		foreach ( $rows as $row ) {
+			$res = self::UNSUB === $row['ml_status'] ? self::send_unsubscribe( (int) $row['id'] ) : self::send( (int) $row['id'] );
 			if ( is_wp_error( $res ) ) {
 				++$out['failed'];
 				if ( 'ml_key' === $res->get_error_code() ) {
 					break; // Bez klíče nemá smysl pokračovat – fronta počká.
 				}
-			} elseif ( self::SENT === $res['ml_status'] ) {
+			} elseif ( in_array( $res['ml_status'], array( self::SENT, self::UNSUBD ), true ) ) {
 				++$out['sent'];
 			} else {
 				++$out['skipped'];
 			}
 		}
-		$out['left'] = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$t} WHERE ml_status = %s", self::PENDING ) );
+		$out['left'] = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$t} WHERE ml_status IN (%s, %s)", self::PENDING, self::UNSUB ) );
 		if ( $out['left'] ) {
 			self::schedule( $out['failed'] ? 5 * MINUTE_IN_SECONDS : 60 );
 		}
 		return $out;
+	}
+
+	/**
+	 * Zákazník odvolal souhlas: pokud byl do MailerLite odeslán, zařadí se jeho poslední rezervace
+	 * k odhlášení (POST /subscribers se status unsubscribed – na pozadí).
+	 *
+	 * @return bool Zařazeno.
+	 */
+	public static function unsubscribe_customer( $email ) {
+		global $wpdb;
+		$key = Resandpay_Customers::key( $email );
+		$t   = Resandpay_Reservations::table();
+		if ( ! self::enabled() || '' === $key || ! $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$t} WHERE LOWER(TRIM(email)) = %s AND ml_status = %s", $key, self::SENT ) ) ) {
+			return false;
+		}
+		$id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$t} WHERE LOWER(TRIM(email)) = %s ORDER BY id DESC LIMIT 1", $key ) );
+		self::set(
+			$id,
+			array(
+				'ml_status' => self::UNSUB,
+				'ml_error'  => '',
+				'ml_tries'  => 0,
+			)
+		);
+		self::schedule( 30 );
+		return true;
+	}
+
+	/** Odhlášení zákazníka v MailerLite. @return array|WP_Error */
+	public static function send_unsubscribe( $r ) {
+		$r = is_array( $r ) ? $r : Resandpay_Reservations::get( (int) $r );
+		if ( ! $r ) {
+			return new WP_Error( 'not_found', __( 'Rezervace nenalezena.', 'reserveandpay' ) );
+		}
+		$now = current_time( 'mysql' );
+		if ( Resandpay_Settings::is_test_mode() ) {
+			self::set(
+				$r['id'],
+				array(
+					'ml_status' => self::SKIPPED,
+					'ml_error'  => __( 'testovací režim – do MailerLite se neposílá', 'reserveandpay' ),
+					'ml_at'     => $now,
+				)
+			);
+			return Resandpay_Reservations::get( $r['id'] );
+		}
+		$tries = (int) $r['ml_tries'] + 1;
+		$res   = self::request(
+			'POST',
+			'subscribers',
+			array(
+				'email'  => Resandpay_Customers::key( $r['email'] ),
+				'status' => 'unsubscribed',
+			)
+		);
+		if ( is_wp_error( $res ) ) {
+			self::set(
+				$r['id'],
+				array(
+					'ml_status' => $tries >= self::MAX_TRIES || 'ml_api_401' === $res->get_error_code() ? self::ERROR : self::UNSUB,
+					'ml_error'  => mb_substr( $res->get_error_message(), 0, 250 ),
+					'ml_tries'  => min( 255, $tries ),
+					'ml_at'     => $now,
+				)
+			);
+			return $res;
+		}
+		self::set(
+			$r['id'],
+			array(
+				'ml_status' => self::UNSUBD,
+				'ml_error'  => '',
+				'ml_tries'  => min( 255, $tries ),
+				'ml_at'     => $now,
+			)
+		);
+		return Resandpay_Reservations::get( $r['id'] );
 	}
 
 	/** Ruční odeslání znovu (detail rezervace). */
@@ -462,6 +543,9 @@ class Resandpay_MailerLite {
 
 	/** Stav zákazníka v přehledu: sent / pending / error / none (souhlas, neodesláno) / no_consent. */
 	public static function customer_status( array $c ) {
+		if ( empty( $c['newsletter'] ) && ! empty( $c['ml_unsub'] ) ) {
+			return self::UNSUBD;
+		}
 		if ( ! empty( $c['ml_sent'] ) ) {
 			return self::SENT;
 		}
@@ -482,6 +566,7 @@ class Resandpay_MailerLite {
 			self::ERROR   => __( 'chyba', 'reserveandpay' ),
 			'none'        => __( 'se souhlasem, neodesláno', 'reserveandpay' ),
 			'no_consent'  => __( 'bez souhlasu', 'reserveandpay' ),
+			self::UNSUBD  => __( 'odhlášen (souhlas odvolán)', 'reserveandpay' ),
 		);
 	}
 }

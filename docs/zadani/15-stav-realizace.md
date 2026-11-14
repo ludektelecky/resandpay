@@ -19,7 +19,7 @@ Vývoj probíhá na webu slehkouhlavou.cz (WordPress 7.1, PHP 8.5, MySQL 8.4, Ac
 
 ## 15.1 Kniha rozvoje
 
-> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R17 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
+> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R18 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
 
 Funkce navržené k dalšímu rozvoji pluginu. Položka se po schválení podrobného zadání přesune do příslušné kapitoly a do tabulky stavu realizace.
 
@@ -298,3 +298,14 @@ Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, po
 - Stav u rezervace (sloupce ml_status, ml_groups, ml_at, ml_error, ml_tries; DB 13): detail rezervace – řádek MailerLite se stavem, skupinami, časem a chybou, odkaz **Odeslat znovu / Odeslat teď**. Přehled Zákazníci – sloupec a filtr MailerLite (odesláno / čeká / chyba / se souhlasem neodesláno / bez souhlasu), stav i v exportu CSV. V Nastavení souhrn stavů a tlačítko „Odeslat čekající teď“.
 - **Import stávajících zákazníků**: tlačítko v Nastavení → MailerLite zařadí do fronty zákazníky, jejichž poslední rezervace má souhlas s novinkami a kteří ještě nebyli odesláni – podle jejich poslední rezervace se souhlasem (při „po zaplacení“ poslední zaplacené); skupiny podle této rezervace.
 - Pro vývojáře filtry resandpay_mailerlite_groups (skupiny pro rezervaci) a resandpay_mailerlite_subscriber (data odběratele).
+
+### R18 – Profil zákazníka „Moje rezervace“
+
+**Pozn.: Navrženo a schváleno 14. 11. 2026 ([Issue #24](https://github.com/ludektelecky/resandpay/issues/24)), implementováno ve verzi pluginu 0.20.0.**
+
+- Shortcode **[reserveandpay_my_reservations]** (třída Resandpay_Profile); stránka se vybírá v Nastavení → Rezervace → **Profil zákazníka** (nevybráno = profil vypnutý). Tamtéž **Platnost osobního odkazu** (dní, výchozí 30, 1–365).
+- Přístup: **přihlášený uživatel** vidí rezervace podle e-mailu účtu; **kdokoli s osobním odkazem** (`?rap_p=`) vidí rezervace e-mailu, na který odkaz patří. Odkaz = token rezervace, čas vypršení a podpis HMAC (nic se neukládá, e-mail v odkazu není). Po vypršení nebo bez odkazu stránka nabídne **„Pošlete mi odkaz“** – po zadání e-mailu přijde e-mail „Odkaz na profil zákazníka“ (šablona v Nastavení → E-maily), jen pokud k e-mailu existuje rezervace; odpověď je vždy stejná, limit 1× za 5 min na e-mail a 10× za hodinu z IP.
+- **Odkaz v každém e-mailu zákazníkovi:** na konec se připojí text „Odkaz na profil v e-mailech“ (Nastavení → E-maily, výchozí „Své rezervace a platby najdete v profilu: {profile_url}“; prázdné = nepřipojovat). Proměnné {profile_url} a {profile_days} lze použít v textech e-mailů. E-maily správci odkaz nemají.
+- **Obsah profilu:** všechny rezervace zákazníka – **Nadcházející** (platné rezervace akcí a termínů, které ještě neskončily, podle data), **Proběhlé a zrušené** (proběhlé, zrušené a expirované), **Objednávky materiálů**. U každé: název s odkazem, termín, místo, datum rezervace, stav, částka, uhrazeno a zbývá, splatnost, VS; u nezaplacených QR platba a **Platební pokyn (PDF)**; u zaplacených materiálů odkaz do Moje materiály. Poznámka zákazníka se nezobrazuje.
+- **Novinky e-mailem:** zaškrtávací pole „Chci dostávat novinky e-mailem“ – změna se zapíše ke všem rezervacím zákazníka s datem a způsobem (sloupce newsletter_at, newsletter_src; DB 14; v detailu rezervace „změněno zákazníkem v profilu“). Udělení souhlasu → zařazení do MailerLite; odvolání → odhlášení v MailerLite (stav „odhlášeno (souhlas odvolán)“, filtr v přehledu Zákazníci; import ho nenabízí) – je-li napojení zapnuté. Hook resandpay_newsletter_changed.
+- Stránka profilu se neukládá do cache, neindexuje (noindex) a posílá Referrer-Policy: no-referrer.

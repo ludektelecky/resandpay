@@ -448,3 +448,20 @@ audio.rap-mat-player { background: transparent; }
 .rap-event__cta .rap-countdown { flex-basis: 100%; }
 .rap-booking--card .rap-countdown { max-width: none; background: var(--rap-bg); border: 1px solid var(--rap-line); }
 .rap-countdown__sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(1px,1px,1px,1px); white-space: nowrap; margin: 0; }
+
+/* Profil zákazníka „Moje rezervace“ – [reserveandpay_my_reservations] (R18) */
+.rap-profile__who { color: var(--rap-ink-soft); }
+.rap-profile__title { margin-top: 2rem; }
+.rap-profile__list { list-style: none; margin: 0; padding: 0; }
+.rap-profile__item { border: 1px solid var(--rap-line); border-radius: var(--rap-radius); padding: 1rem 1.15rem; margin: 0 0 .85rem; }
+.rap-profile__name { margin: 0 0 .25rem; font-size: 1.15rem; }
+.rap-profile__meta, .rap-profile__pay { margin: .25rem 0; }
+.rap-profile__meta { color: var(--rap-ink-soft); font-size: .92em; }
+.rap-profile__item--cancelled, .rap-profile__item--expired { opacity: .75; }
+.rap-profile__payment { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-top: .6rem; }
+.rap-profile__qr { width: 140px; height: 140px; image-rendering: pixelated; background: #fff; padding: 4px; }
+.rap-profile .rap-status { display: inline-block; padding: .1rem .55rem; border: 1px solid var(--rap-line); border-radius: var(--rap-radius); font-size: .85em; font-weight: 600; }
+.rap-profile .rap-status--paid { border-color: var(--rap-accent); color: var(--rap-accent); }
+.rap-profile .rap-status--pending, .rap-profile .rap-status--partial, .rap-profile .rap-status--overdue { border-color: var(--rap-gold); color: var(--rap-ink); }
+.rap-profile .rap-notice--error { border-left-color: var(--rap-error); }
+.rap-profile__link-form input[type="email"] { min-width: 16rem; max-width: 100%; }

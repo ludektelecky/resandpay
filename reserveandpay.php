@@ -3,7 +3,7 @@
  * Plugin Name:       ReserveAndPay
  * Plugin URI:        https://github.com/ludektelecky/resandpay
  * Description:       Rezervace akcí a termínů s platbou převodem (QR) a kontrolou plateb z bankovních avíz.
- * Version:           0.19.1
+ * Version:           0.20.0
  * Requires at least: 6.4
  * Requires PHP:      8.0
  * Author:            INSYSTEMS
@@ -15,8 +15,8 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'RESANDPAY_VERSION', '0.19.1' );
-define( 'RESANDPAY_DB_VERSION', '13' );
+define( 'RESANDPAY_VERSION', '0.20.0' );
+define( 'RESANDPAY_DB_VERSION', '14' );
 define( 'RESANDPAY_FILE', __FILE__ );
 define( 'RESANDPAY_DIR', plugin_dir_path( __FILE__ ) );
 define( 'RESANDPAY_URL', plugin_dir_url( __FILE__ ) );
@@ -29,6 +29,7 @@ require_once RESANDPAY_DIR . 'includes/class-events.php';
 require_once RESANDPAY_DIR . 'includes/class-reservations.php';
 require_once RESANDPAY_DIR . 'includes/class-customers.php';
 require_once RESANDPAY_DIR . 'includes/class-mailerlite.php';
+require_once RESANDPAY_DIR . 'includes/class-profile.php';
 require_once RESANDPAY_DIR . 'includes/class-services.php';
 require_once RESANDPAY_DIR . 'includes/class-codes.php';
 require_once RESANDPAY_DIR . 'includes/class-qr.php';
@@ -88,6 +89,7 @@ function resandpay_init() {
 	Resandpay_PDF::init();
 	Resandpay_Payments::init();
 	Resandpay_MailerLite::init();
+	Resandpay_Profile::init();
 	Resandpay_Stats::init();
 	Resandpay_Materials::init();
 	Resandpay_FAQ::init();
