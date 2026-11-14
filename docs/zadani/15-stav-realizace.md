@@ -19,7 +19,7 @@ Vývoj probíhá na webu slehkouhlavou.cz (WordPress 7.1, PHP 8.5, MySQL 8.4, Ac
 
 ## 15.1 Kniha rozvoje
 
-> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R20 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
+> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R21 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
 
 Funkce navržené k dalšímu rozvoji pluginu. Položka se po schválení podrobného zadání přesune do příslušné kapitoly a do tabulky stavu realizace.
 
@@ -145,7 +145,7 @@ Sekce webu pro stahování eBooků, videí a dalších elektronických instrukt�
 | R11-c Doba přístupu | Nastavitelná u každého materiálu: počet dní, 0 = natrvalo; výchozí hodnota v nastavení (0). |
 | R11-d Materiály pro účastnice | Ano – u materiálu lze vybrat akce a služby; zaplacená rezervace dává materiál zdarma. |
 | R11-h Právní a daňová stránka | Znění souhlasu se ztrátou práva na odstoupení ověří vlastník s právníkem, daně s účetní. Text souhlasu je v nastavení. |
-| R11-e Vodoznak v PDF | Zatím neřešeno – kandidát do knihy rozvoje. |
+| R11-e Vodoznak v PDF | Hotovo v 0.23.0 (R21). |
 | R11-f Limity hostingu | Obejito nahráváním po částech (2 MB), takže limit velikosti souboru je dán jen místem na disku. Ochranu složky (.htaccess) ověřuje plugin sám a v editoru materiálu upozorní, pokud nefunguje. |
 | R11-g První materiály | Doplní vlastník při naplnění knihovny. |
 
@@ -208,7 +208,7 @@ Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, po
 - Editor materiálu: Parametry materiálu, Soubory ke stažení (nahrávání s průběhem), Přístupy – počty objednávek a stažení, ruční zpřístupnění podle e-mailu účtu (dní: 0 = doba materiálu, −1 = natrvalo, volitelně e-mail), odebrání s důvodem, posledních 20 stažení.
 - Seznam materiálů: kód, druh, přístup / cena, počet souborů, objednávky (zaplaceno / celkem), stažení za 30 dní. Objednávky jsou v ResAndPay → Rezervace (filtr „Materiály (objednávky)“).
 - Nastavení → Materiály ke stažení: stránka „Moje materiály“, stránka s registrací, druhy materiálů, splatnost, výchozí doba přístupu, limit stažení, platnost odkazu, uchování logu, texty pro nepřihlášené a pro role, text souhlasu s digitálním obsahem. Kódy: předpona a číslice materiálu.
-- Mimo rozsah 0.13.0: zápis do MailerLite (spolu s E6b), vodoznak v PDF (R11-e), rozšíření stránky Statistika (R1) o materiály – hotovo v 0.22.0 (R20).
+- Mimo rozsah 0.13.0: zápis do MailerLite (spolu s E6b – hotovo v 0.19.0), vodoznak v PDF (R11-e – hotovo v 0.23.0), rozšíření stránky Statistika (R1) o materiály – hotovo v 0.22.0 (R20).
 
 ### R11.8 Nasazení
 
@@ -330,3 +330,11 @@ Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, po
 - **Tabulka po materiálech** (zveřejněné a materiály s aktivitou v období; štítek staženo z nabídky / znepřístupněno): kód, název, druh a přístup / cena, zaplacené a čekající objednávky, tržby (s informací o slevách), zdarma (kupón 100 % + ruční zpřístupnění + účastníci navázaných akcí a služeb – rozpad v nápovědě), stažení, přehrání, různí uživatelé; součty; řazení podle sloupců (výchozí stažení sestupně).
 - Období: objednávky podle data objednání, tržby = přijaté platby těchto objednávek, ruční zpřístupnění podle data zpřístupnění, účastníci podle data zaplacení rezervace, stažení podle logu (jen úspěšná, ukázky zvlášť). Materiály „zdarma pro přihlášené“ jsou vidět jen ve staženích.
 - **Export CSV** (UTF-8 se středníkem) se všemi ukazateli včetně rozpadu zdarma, expirovaných a zrušených objednávek, slev, kupónů a ukázek.
+
+### R21 – Vodoznak v PDF materiálů (R11-e)
+
+**Pozn.: Navrženo a schváleno 14. 11. 2026 ([Issue #27](https://github.com/ludektelecky/resandpay/issues/27)), implementováno ve verzi pluginu 0.23.0.**
+
+- Nastavení → Materiály ke stažení: **Vodoznak v PDF – výchozí** (vypnuto), **Text vodoznaku** (proměnné {name}, {email}, {date}, {code}, {site}; výchozí „{name} · {email} · {date}“), **Umístění** – zápatí stránky / šikmo přes stránku / obojí (výchozí zápatí). U materiálu Parametry → **Vodoznak v PDF**: výchozí / ano / ne.
+- Při stažení i zobrazení PDF v prohlížeči (ne u ukázky) se vytvoří kopie, do každé stránky se vloží text (zápatí: malý šedý text dole; šikmo: velký světlý text přes střed, průhlednost 14 %) a údaje se zapíší do **metadat PDF** (předmět a klíčová slova „Licencováno pro: …“). Soubor na disku se nemění; kopie je v chráněné mezipaměti (resandpay-protected/wm-cache, 24 h, úklid automaticky) a odesílá se stejně jako originál včetně HTTP Range.
+- Třída Resandpay_Watermark, knihovna FPDI 2.6.4 (MIT, lib/fpdi) nad TCPDF. Omezení: bezplatný parser FPDI nezpracuje PDF s komprimovanými křížovými odkazy (PDF 1.5+) ani zašifrované PDF – takový soubor se stáhne **bez vodoznaku**, do logu stažení se zapíše záznam (druh wm, výsledek unsupported) a editor materiálu u souboru zobrazí upozornění s postupem (uložit jako PDF kompatibilní s 1.4). Odkazy, záložky a formuláře původního PDF se do kopie nepřenášejí.

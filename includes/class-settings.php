@@ -106,6 +106,10 @@ class Resandpay_Settings {
 			'mat_login_text'       => 'Materiály ke stažení jsou pro přihlášené. Přihlaste se, nebo si zdarma založte účet.',
 			'mat_roles_text'       => 'Tento materiál je jen pro členy.',
 			'mat_disabled_text'    => 'Materiál už není k dispozici.',
+			// Vodoznak v PDF (kap. 15.1 R21) – ve výchozím stavu vypnuto.
+			'mat_wm_default'       => 0,
+			'mat_wm_text'          => '{name} · {email} · {date}',
+			'mat_wm_position'      => 'footer',
 			'mat_digital_consent'  => 'Souhlasím s poskytnutím digitálního obsahu před uplynutím lhůty pro odstoupení od smlouvy a beru na vědomí, že tím právo na odstoupení zaniká.',
 			// Kontrola plateb (SWD kap. 6.4).
 			'payment_mode'         => 'auto',

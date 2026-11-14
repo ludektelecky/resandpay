@@ -2240,6 +2240,79 @@ foreach ( array( $smU1, $smU2 ) as $smX ) {
 wp_delete_post( $smM, true );
 wp_delete_post( $smF, true );
 
+echo "== 0.23.0: vodoznak v PDF (#27)\n";
+$wmSaved = get_option( Resandpay_Settings::OPTION );
+$wmUser  = wp_insert_user( array( 'user_login' => 'wm27', 'user_email' => 'wm27.zak@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'subscriber', 'first_name' => 'Wm', 'last_name' => 'Tester' ) );
+$wmM     = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::MATERIAL, 'post_status' => 'publish', 'post_title' => 'Vodoznak eBook' ) );
+Resandpay_Admin_Materials::save_meta( $wmM, array( 'rap_mat_access' => 'free' ) );
+Resandpay_Materials::ensure_dir();
+$wmSub = Resandpay_Materials::material_subdir( $wmM );
+wp_mkdir_p( Resandpay_Materials::base_dir() . '/' . $wmSub );
+require_once RESANDPAY_DIR . 'lib/tcpdf/tcpdf.php';
+$wmSrc = new TCPDF();
+$wmSrc->setPrintHeader( false );
+$wmSrc->setPrintFooter( false );
+foreach ( array( 'Strana jedna', 'Strana dva' ) as $wmT ) {
+	$wmSrc->AddPage();
+	$wmSrc->SetFont( 'dejavusans', '', 14 );
+	$wmSrc->Write( 10, $wmT );
+}
+$wmAbs = Resandpay_Materials::base_dir() . '/' . $wmSub . '/kniha.pdf';
+$wmSrc->Output( $wmAbs, 'F' );
+copy( RESANDPAY_DIR . 'tests/fixtures/pdf-compressed-xref.pdf', Resandpay_Materials::base_dir() . '/' . $wmSub . '/nova.pdf' );
+Resandpay_Materials::save_files(
+	$wmM,
+	array(
+		array( 'id' => 'wa', 'label' => 'Kniha', 'name' => 'kniha.pdf', 'path' => $wmSub . '/kniha.pdf', 'size' => filesize( $wmAbs ), 'mime' => 'application/pdf', 'sample' => 0 ),
+		array( 'id' => 'wb', 'label' => 'Nová', 'name' => 'nova.pdf', 'path' => $wmSub . '/nova.pdf', 'size' => 9234, 'mime' => 'application/pdf', 'sample' => 0 ),
+		array( 'id' => 'wc', 'label' => 'Ukázka', 'name' => 'ukazka.pdf', 'path' => $wmSub . '/kniha.pdf', 'size' => 1, 'mime' => 'application/pdf', 'sample' => 1 ),
+	)
+);
+$wmMat = Resandpay_Materials::get( $wmM );
+rap_t( 0 === (int) Resandpay_Settings::defaults()['mat_wm_default'] && ! Resandpay_Watermark::enabled_for( $wmMat ), 'výchozí stav: vodoznak vypnutý' );
+$wmTok = function ( $file ) use ( $wmM, $wmUser ) {
+	parse_str( (string) wp_parse_url( Resandpay_Materials::download_url( $wmM, $file, false, $wmUser ), PHP_URL_QUERY ), $q );
+	return $q['rap_dl'];
+};
+$wmA0 = Resandpay_Materials::authorize( $wmTok( 'wa' ), $wmUser );
+rap_t( ! is_wp_error( $wmA0 ) && $wmA0['abs'] === $wmAbs, 'bez vodoznaku: stáhne se originál' );
+Resandpay_Admin_Materials::save_meta( $wmM, array( 'rap_mat_access' => 'free', 'rap_mat_wm' => '1' ) );
+Resandpay_Settings::update( array( 'mat_wm_text' => 'Pro {email} {code}', 'mat_wm_position' => 'both' ) );
+$wmMat = Resandpay_Materials::get( $wmM );
+rap_t( Resandpay_Watermark::enabled_for( $wmMat ) && 'Pro wm27.zak@example.cz ' . $wmMat['code'] === Resandpay_Watermark::text( $wmMat, $wmUser ), 'zapnuto u materiálu; text z nastavení s proměnnými' );
+rap_t( true === Resandpay_Watermark::supported( $wmAbs ), 'běžné PDF: vodoznak lze vložit' );
+$wmA = Resandpay_Materials::authorize( $wmTok( 'wa' ), $wmUser );
+$wmOut = is_wp_error( $wmA ) ? '' : $wmA['abs'];
+rap_t( $wmOut && $wmOut !== $wmAbs && false !== strpos( $wmOut, Resandpay_Watermark::CACHE_DIR ) && '' === $wmA['wm_error'] && 0 === strpos( (string) file_get_contents( $wmOut ), '%PDF-' ), 'stažení: kopie s vodoznakem v chráněné mezipaměti' );
+$wmRaw = (string) file_get_contents( $wmOut );
+rap_t( false !== strpos( $wmRaw, mb_convert_encoding( 'wm27.zak@example.cz', 'UTF-16BE', 'UTF-8' ) ) || false !== strpos( $wmRaw, 'wm27.zak@example.cz' ), 'údaje kupujícího v metadatech PDF' );
+require_once RESANDPAY_DIR . 'lib/fpdi/src/autoload.php';
+$wmChk = new \setasign\Fpdi\Tcpdf\Fpdi();
+rap_t( 2 === $wmChk->setSourceFile( $wmOut ), 'kopie má stejný počet stran' );
+rap_t( filesize( $wmOut ) > 0 && file_get_contents( $wmAbs ) === file_get_contents( Resandpay_Materials::base_dir() . '/' . $wmSub . '/kniha.pdf' ), 'originál na disku se nemění' );
+$wmA2 = Resandpay_Materials::authorize( $wmTok( 'wa' ), $wmUser );
+rap_t( ! is_wp_error( $wmA2 ) && $wmA2['abs'] === $wmOut, 'opakované stažení (i pokračování) z mezipaměti' );
+$wmSup = Resandpay_Watermark::supported( Resandpay_Materials::base_dir() . '/' . $wmSub . '/nova.pdf' );
+rap_t( is_wp_error( $wmSup ) && false !== strpos( $wmSup->get_error_message(), 'komprimované' ), 'PDF 1.5+ s komprimovanými odkazy: rozpoznáno se srozumitelným vysvětlením' );
+$wmB = Resandpay_Materials::authorize( $wmTok( 'wb' ), $wmUser );
+rap_t( ! is_wp_error( $wmB ) && false !== strpos( $wmB['abs'], 'nova.pdf' ) && 'wm_unsupported' === $wmB['wm_error'], 'nepodporované PDF se stáhne bez vodoznaku (zapíše se do logu)' );
+rap_t( array( 'Nová' ) === array_keys( Resandpay_Watermark::problems( $wmMat ) ), 'editor materiálu upozorní na soubor bez vodoznaku' );
+$wmS = Resandpay_Materials::authorize( $wmTok( 'wc' ), $wmUser );
+rap_t( ! is_wp_error( $wmS ) && 'sample' === $wmS['kind'] && $wmS['abs'] === $wmAbs, 'ukázka bez vodoznaku' );
+Resandpay_Settings::update( array( 'mat_wm_position' => 'footer' ) );
+$wmF = Resandpay_Materials::authorize( $wmTok( 'wa' ), $wmUser );
+rap_t( ! is_wp_error( $wmF ) && $wmF['abs'] !== $wmOut, 'změna umístění = nová kopie' );
+touch( $wmOut, time() - 2 * DAY_IN_SECONDS );
+Resandpay_Watermark::prune();
+rap_t( ! file_exists( $wmOut ) && file_exists( $wmF['abs'] ), 'úklid mezipaměti po 24 h' );
+$wmSan = Resandpay_Admin_Settings::sanitize( array( 'mat_wm_position' => 'nesmysl' ) );
+rap_t( 'footer' === $wmSan['mat_wm_position'], 'nastavení umístění ošetřené' );
+Resandpay_Admin_Materials::save_meta( $wmM, array( 'rap_mat_access' => 'free', 'rap_mat_wm' => 'x' ) );
+rap_t( '' === get_post_meta( $wmM, '_rap_mat_wm', true ), 'neplatná volba u materiálu = výchozí' );
+wp_delete_post( $wmM, true );
+wp_delete_user( $wmUser );
+update_option( Resandpay_Settings::OPTION, $wmSaved, false );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );

@@ -4,6 +4,15 @@
 >
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
+## 0.23.0 – Vodoznak v PDF materiálů (14. 11. 2026)
+
+- **R21 – vodoznak v PDF** (R11-e, [Issue #27](https://github.com/ludektelecky/resandpay/issues/27), schváleno a implementováno): do staženého PDF materiálu se vloží **údaje kupujícího** a zapíší se i do **metadat PDF**. Ve výchozím stavu vypnuto.
+  - Nastavení → Materiály ke stažení: výchozí zapnutí, **text vodoznaku** (`{name}`, `{email}`, `{date}`, `{code}`, `{site}`), **umístění** – zápatí / šikmo přes stránku / obojí; u materiálu volba **Vodoznak v PDF** (výchozí / ano / ne)
+  - soubor na disku se nemění – kopie s vodoznakem se tvoří při stažení a 24 h se drží v chráněné mezipaměti; ukázky bez vodoznaku
+  - PDF, do kterého vodoznak vložit nejde (PDF 1.5+ s komprimovanými odkazy, zašifrované), se stáhne bez vodoznaku a **editor materiálu na něj upozorní** s postupem
+- Nová knihovna **FPDI 2.6.4** (MIT) v `lib/fpdi`.
+- Bez změny databáze. Testy: 711 kontrol + souběh
+
 ## 0.22.0 – Statistika materiálů (14. 11. 2026)
 
 - **R20 – statistika materiálů** ([Issue #28](https://github.com/ludektelecky/resandpay/issues/28), schváleno a implementováno): stránka **Statistika** (v administraci i na webu se shortcodem `[reserveandpay_stats]`) má přepínač **Termíny akcí a služeb / Materiály**.

@@ -988,6 +988,16 @@ class Resandpay_Materials {
 			return new WP_Error( 'not_found', __( 'Soubor se nepodařilo najít. Dejte nám prosím vědět.', 'reserveandpay' ), array( 'status' => 404 ) );
 		}
 		$kind  = $sample ? 'sample' : ( $t['inline'] ? 'play' : 'download' );
+		// Vodoznak v PDF (#27): kopie s údaji kupujícího; když nejde vytvořit, stáhne se originál a zapíše se do logu.
+		$wm_note = '';
+		if ( 'sample' !== $kind && $user_id && Resandpay_Watermark::is_pdf( $file ) && Resandpay_Watermark::enabled_for( $mat ) ) {
+			$wm = Resandpay_Watermark::make( $abs, $mat, $file, $user_id, $now );
+			if ( is_wp_error( $wm ) ) {
+				$wm_note = $wm->get_error_code();
+			} else {
+				$abs = $wm;
+			}
+		}
 		$limit = (int) Resandpay_Settings::get( 'mat_download_limit' );
 		// Limit jen pro skutečné stažení (první požadavek, ne pokračování přerušeného stahování).
 		if ( 'download' === $kind && $limit > 0 && 0 === (int) $range_start && $user_id && ! user_can( $user_id, resandpay_cap_reservations() ) && self::downloads_24h( $user_id, $file['id'], $now ) >= $limit ) {
@@ -1002,6 +1012,7 @@ class Resandpay_Materials {
 			'kind'     => $kind,
 			'user'     => $user_id,
 			'inline'   => $t['inline'],
+			'wm_error' => $wm_note,
 		);
 	}
 
@@ -1028,6 +1039,9 @@ class Resandpay_Materials {
 		}
 		if ( null === $rng || 0 === $rng[0] ) {
 			self::log_download( $auth['user'], $auth['material']['id'], $auth['file']['id'], $auth['kind'], 'ok' );
+			if ( $auth['wm_error'] ) {
+				self::log_download( $auth['user'], $auth['material']['id'], $auth['file']['id'], 'wm', 'unsupported' ); // Staženo bez vodoznaku.
+			}
 		}
 		self::stream( $auth['abs'], $auth['file'], $auth['inline'], $rng, $size );
 		exit;
@@ -1106,6 +1120,7 @@ class Resandpay_Materials {
 		if ( $days > 0 ) {
 			$wpdb->query( $wpdb->prepare( 'DELETE FROM ' . self::downloads_table() . ' WHERE created_at < %s', wp_date( 'Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS ) ) );
 		}
+		Resandpay_Watermark::prune();
 		$tmp = self::base_dir() . '/tmp';
 		if ( is_dir( $tmp ) ) {
 			foreach ( (array) glob( $tmp . '/*.part' ) as $f ) {

@@ -120,6 +120,23 @@ class Resandpay_Admin_Materials {
 					<?php endforeach; ?></optgroup>
 				</select>
 					<p class="description"><?php esc_html_e( 'Kdo má zaplacenou rezervaci vybrané akce nebo termínu služby, má materiál zdarma (podle účtu nebo stejného e-mailu). Výběr více položek s Ctrl / Cmd.', 'reserveandpay' ); ?></p></td></tr>
+			<?php $wm = (string) get_post_meta( $post->ID, '_rap_mat_wm', true ); ?>
+			<tr><th><label for="rap_mat_wm"><?php esc_html_e( 'Vodoznak v PDF', 'reserveandpay' ); ?></label></th>
+				<td><select id="rap_mat_wm" name="rap_mat_wm">
+					<option value="" <?php selected( $wm, '' ); ?>><?php echo esc_html( Resandpay_Settings::get( 'mat_wm_default' ) ? __( 'výchozí (ano)', 'reserveandpay' ) : __( 'výchozí (ne)', 'reserveandpay' ) ); ?></option>
+					<option value="1" <?php selected( $wm, '1' ); ?>><?php esc_html_e( 'ano', 'reserveandpay' ); ?></option>
+					<option value="0" <?php selected( $wm, '0' ); ?>><?php esc_html_e( 'ne', 'reserveandpay' ); ?></option>
+				</select>
+					<p class="description"><?php esc_html_e( 'Do staženého PDF se vloží údaje kupujícího (text a umístění v Nastavení → Materiály ke stažení) a zapíší se do metadat. Soubor na disku se nemění.', 'reserveandpay' ); ?></p>
+					<?php
+					if ( Resandpay_Watermark::enabled_for( $mat ) ) {
+						foreach ( Resandpay_Watermark::problems( $mat ) as $fname => $why ) {
+							/* translators: 1: soubor, 2: důvod */
+							echo '<p class="rap-err">' . esc_html( sprintf( __( '„%1$s“ se stáhne bez vodoznaku: %2$s', 'reserveandpay' ), $fname, $why ) ) . '</p>';
+						}
+					}
+					?>
+				</td></tr>
 			<?php $avail = $mat['disabled'] ? 'disabled' : ( $mat['withdrawn'] ? 'withdrawn' : 'offer' ); ?>
 			<tr><th><?php esc_html_e( 'Dostupnost', 'reserveandpay' ); ?></th>
 				<td><label class="rap-inline"><input type="radio" name="rap_mat_availability" value="offer" <?php checked( $avail, 'offer' ); ?>> <?php esc_html_e( 'V nabídce', 'reserveandpay' ); ?></label><br>
@@ -266,6 +283,8 @@ class Resandpay_Admin_Materials {
 			update_post_meta( $post_id, $meta, '' === $v ? '' : max( 0, (int) $v ) );
 		}
 		update_post_meta( $post_id, '_rap_mat_links', implode( ',', array_filter( array_map( 'absint', (array) ( $in['rap_mat_links'] ?? array() ) ) ) ) );
+		$wm = (string) ( $in['rap_mat_wm'] ?? '' );
+		update_post_meta( $post_id, '_rap_mat_wm', in_array( $wm, array( '1', '0' ), true ) ? $wm : '' );
 		// Dostupnost (#26): v nabídce / staženo z nabídky / znepřístupněno (starší formulář: zaškrtávátko rap_mat_withdrawn).
 		$avail = isset( $in['rap_mat_availability'] ) ? sanitize_key( $in['rap_mat_availability'] ) : ( empty( $in['rap_mat_withdrawn'] ) ? 'offer' : 'withdrawn' );
 		$was   = (bool) get_post_meta( $post_id, '_rap_mat_disabled', true );
