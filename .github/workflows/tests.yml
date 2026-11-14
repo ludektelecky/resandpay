@@ -1,0 +1,48 @@
+# Testy ReserveAndPay u každého pull requestu a pushe do main:
+# testovací WordPress (SQLite) z tests/setup-wp.sh, integrační testy a test souběhu (tests/run.sh).
+name: Testy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.3', '8.5']   # 8.5 = produkční slehkouhlavou.cz
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_sqlite, sqlite3, mbstring, gd, zip, intl
+          tools: wp-cli
+          coverage: none
+
+      - name: Kontrola syntaxe PHP
+        run: |
+          find . -name '*.php' -not -path './lib/*' -print0 | xargs -0 -n1 -P4 php -l > /dev/null
+
+      - name: Testovací WordPress
+        env:
+          WP_DIR: ${{ runner.temp }}/rap-wp
+        run: bash tests/setup-wp.sh
+
+      - name: Testy
+        env:
+          WP_DIR: ${{ runner.temp }}/rap-wp
+        run: bash tests/run.sh

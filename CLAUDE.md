@@ -5,7 +5,7 @@
 - Komunikace s vlastníkem (Luděk) v češtině.
 - Vývojový web: slehkouhlavou.cz (WordPress 7.1, PHP 8.5, MySQL 8.4, hosting Active24, časové pásmo Europe/Prague).
   Plugin se na webu aktualizuje tlačítkem „Aktualizovat nyní“ z GitHub Releases (od 0.16.0).
-- Testy na lokálním WordPressu: `wp eval-file tests/run-tests.php` a `bash tests/concurrency.sh 12`. Složka `tests/` se do .zip nebalí.
+- Testy: `bash tests/setup-wp.sh` (jednou – testovací WordPress se SQLite v `/tmp/rap-wp`, zdroje z GitHubu) a pak `bash tests/run.sh` (integrační testy `run-tests.php` + souběh `concurrency.sh 12`). Totéž běží v GitHub Actions (`.github/workflows/tests.yml`) u každého pull requestu a pushe do `main`. Složka `tests/` se do .zip nebalí.
 - Vzhled: Nastavení → Vzhled (ze šablony webu / vlastní paleta, CSS proměnné `--rap-*`); slehkouhlavou.cz má vlastní paletu dle grafického manuálu „s lehkou hlavou“ v1.
 - Banka pro příjem plateb: Raiffeisenbank (avíza „Pohyb na účtě“ z info@rb.cz). Vzorové avízo: `tests/fixtures/rb-prichozi-okamzita-platba.eml`.
 - Pravidla fáze 1 (zadání kap. 14.1): nic natvrdo – identifikace, schránka, banka, vzhled, texty a měna jsou v nastavení.
@@ -15,7 +15,7 @@
 - **Změny dat a nastavení jen migrací:** zvýšit `RESANDPAY_DB_VERSION` a doplnit krok do `Resandpay_Install::maybe_upgrade()`. Migrace nikdy nepřepíše hodnoty uložené uživatelem; nový výchozí stav pro nové instalace nesmí změnit chování stávajících webů (vzor: `keep_legacy_brand()` v 0.17.0).
 - **Nic vázaného na jeden web:** v kódu žádné texty, barvy, adresy, loga ani výchozí hodnoty ze slehkouhlavou.cz – patří jen do nastavení daného webu. Výchozí hodnoty pro nové instalace jsou neutrální.
 - **Texty pro uživatele přes `__()` / `esc_html__()`** s textovou doménou `reserveandpay` (příprava na angličtinu); texty upravitelné v Nastavení mají výchozí hodnotu v `Resandpay_Settings::defaults()`.
-- **Každá změna s testem** v `tests/run-tests.php`; u opravy chyby test, který chybu zachytí. Před commitem musí projít `run-tests.php` i `concurrency.sh 12`.
+- **Každá změna s testem** v `tests/run-tests.php`; u opravy chyby test, který chybu zachytí. Před commitem musí projít `bash tests/run.sh`; pull request se slučuje až se zeleným během „Testy“.
 - Bezpečnost: vstupy ošetřovat (`sanitize_*`), výstupy escapovat (`esc_*`), akce v administraci s nonce a kontrolou oprávnění.
 
 ## Vydání verze (od 0.16.0)

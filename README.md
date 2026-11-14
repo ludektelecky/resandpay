@@ -274,10 +274,17 @@ V `docs/DEVLOG.md` je u verze, která po aktualizaci vyžaduje zásah, na začá
 
 ## Testy
 
+Testovací WordPress (SQLite, bez MySQL) se připraví jedním příkazem; potřeba je PHP 8.0+ s rozšířeními `pdo_sqlite` a `mbstring`, git a curl. WordPress, plugin SQLite Database Integration a WP-CLI se stahují z GitHubu.
+
 ```bash
-wp eval-file wp-content/plugins/reserveandpay/tests/run-tests.php   # jen na testovacím WordPressu!
-bash wp-content/plugins/reserveandpay/tests/concurrency.sh 12
+bash tests/setup-wp.sh            # připraví testovací web v /tmp/rap-wp (WP_DIR=… jinam, --reset znovu)
+bash tests/run.sh                 # integrační testy (run-tests.php) + souběh rezervací (concurrency.sh)
+bash tests/run.sh unit            # jen integrační testy
 ```
+
+Testovací web jde otevřít i v prohlížeči: `php -S localhost:8080 -t /tmp/rap-wp` → http://localhost:8080/wp-admin (admin / TestHeslo123). Testy pracují s daty instalace – nikdy je nespouštějte na produkčním webu.
+
+V **GitHub Actions** (`.github/workflows/tests.yml`) běží totéž u každého pull requestu a pushe do `main` na PHP 8.3 a 8.5 (produkce); výsledek je u pull requestu jako kontrola „Testy“.
 
 ---
 
