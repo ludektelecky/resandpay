@@ -163,7 +163,7 @@ Typ obsahu „Materiál“ (resandpay_material) s adresou /materialy/…/, bloko
 |---|---|
 | Kód | MA-NNN – přidělí se při prvním uložení, neměnný, nikdy znovu nepoužitý (kap. 3.8); předpona a počet číslic v nastavení |
 | Druh | Z číselníku v nastavení (výchozí eBook / PDF, Video, Audio, Pracovní list, Balíček, Jiné) |
-| Přístup a role | Zdarma pro přihlášené / Placený / Jen vybrané role (role z Ultimate Member) / Zdarma po zadání e-mailu (od 0.26.0, R24) |
+| Přístup a role | Zdarma pro přihlášené / Placený / Jen vybrané role (role z Ultimate Member) / Odeslat na e-mail (bez účtu) – zdarma nebo s platbou podle ceny (od 0.26.0, R24) |
 | Cena a měna | U placeného materiálu |
 | Splatnost objednávky | Dní od objednání; prázdné = nastavení (výchozí 7) |
 | Doba přístupu | Dní od zaplacení (u účastnic od zaplacení rezervace, u ručního zpřístupnění od jeho data); 0 = natrvalo; prázdné = nastavení |
@@ -360,11 +360,11 @@ Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, po
 - Karta rezervace i přehled dne zobrazují **telefon a poznámku** zákazníka (rozhodnutí 14. 11. 2026).
 - Stránka se neukládá do cache a neindexuje (osobní údaje); akce s nonce a kontrolou oprávnění, zpráva po akci (PRG).
 
-### R24 – Materiál zdarma po zadání e-mailu
+### R24 – Materiál „Odeslat na e-mail (bez účtu)“
 
-**Pozn.: Navrženo a schváleno 14. 11. 2026 ([Issue #33](https://github.com/ludektelecky/resandpay/issues/33)), implementováno ve verzi pluginu 0.26.0.**
+**Pozn.: Navrženo a schváleno 14. 11. 2026 ([Issue #33](https://github.com/ludektelecky/resandpay/issues/33), sjednocení [Issue #34](https://github.com/ludektelecky/resandpay/issues/34)), implementováno ve verzi pluginu 0.26.0.**
 
-- Nový přístup u materiálu **„Zdarma po zadání e-mailu“** (Resandpay_Materials::ACCESS_EMAIL = email). Nepřihlášený zákazník na stránce materiálu vyplní **jméno**, **e-mail**, **souhlas se zpracováním osobních údajů** (povinný) a nepovinný, nezaškrtnutý **souhlas s novinkami**; ochrana formuláře proti robotům a limity četnosti jako u rezervací. Formulář se zobrazí jen s vybranou stránkou profilu zákazníka (jinak editor materiálu upozorní). Přihlášený uživatel má materiál hned.
+- Nový přístup u materiálu **„Odeslat na e-mail (bez účtu)“** (Resandpay_Materials::ACCESS_EMAIL = email), řídí se **cenou**: **s cenou** se chová jako placený materiál – zákazník bez účtu vyplní objednávkový formulář (jméno, e-mail, souhlasy včetně obchodních podmínek a okamžitého poskytnutí digitálního obsahu), přijde mu **platební pokyn** a po zaplacení odkaz na materiál a profil (R22); **bez ceny (prázdná / 0)** platí následující body (zdarma po zadání e-mailu). Nepřihlášený zákazník na stránce materiálu vyplní **jméno**, **e-mail**, **souhlas se zpracováním osobních údajů** (povinný) a nepovinný, nezaškrtnutý **souhlas s novinkami**; ochrana formuláře proti robotům a limity četnosti jako u rezervací. Formulář se zobrazí jen s vybranou stránkou profilu zákazníka (jinak editor materiálu upozorní). Přihlášený uživatel má materiál zdarma hned (materiál s cenou si kupuje).
 - Po odeslání vznikne **objednávka zdarma** (stav Zaplaceno, částka 0, způsob úhrady „Zdarma“, user_id účtu se stejným e-mailem, jinak 0) a přijde e-mail **„Materiál zdarma po zadání e-mailu“** (šablona v Nastavení → E-maily) s **odkazem na materiál** (osobní token) a automaticky připojeným **odkazem na profil**. Stránka jen oznámí „Odkaz jsme poslali na váš e-mail“ – soubory se zpřístupní až z odkazu (ověření, že e-mail patří zákazníkovi; zvláštní potvrzovací krok se nepoužívá – rozhodnutí 14. 11. 2026).
 - Stejný e-mail podruhé: nová objednávka nevznikne, odkaz se pošle znovu nejvýš 1× za 5 min.
 - Zákazník je v přehledu **Zákazníci**, ve **statistice materiálů** (zdarma) a se souhlasem s novinkami v **MailerLite** (skupina materiálu, podle nastavení „Kdy zapsat“ – objednávka je hned zaplacená). Doba přístupu podle materiálu.

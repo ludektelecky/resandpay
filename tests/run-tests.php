@@ -2515,6 +2515,21 @@ rap_t( Resandpay_Materials::access( $feMat, $feU )['ok'], 'přihlášený má ma
 // Bez stránky profilu se formulář nezobrazí.
 Resandpay_Settings::update( array( 'profile_page' => 0 ) );
 rap_t( false === strpos( Resandpay_Materials_Views::render_box( $feMat ), 'value="mat_free"' ), 'bez stránky profilu se formulář nezobrazí' );
+// #34: jedna volba „Odeslat na e-mail“ – s cenou = platba.
+Resandpay_Settings::update( array( 'profile_page' => $fePage ) );
+Resandpay_Admin_Materials::save_meta( $feM, array( 'rap_mat_access' => 'email', 'rap_price' => '120' ) );
+$fePaid = Resandpay_Materials::get( $feM );
+rap_t( 'Odeslat na e-mail (bez účtu)' === Resandpay_Materials::access_labels()['email'] && Resandpay_Materials::is_paid( $fePaid ) && Resandpay_Materials::purchasable( $fePaid ) && false !== strpos( Resandpay_Materials_Views::price_label( $fePaid ), '120' ), '„Odeslat na e-mail“ s cenou = placený materiál' );
+$fePBox = Resandpay_Materials_Views::render_box( $fePaid );
+rap_t( false !== strpos( $fePBox, 'value="mat_order"' ) && false !== strpos( $fePBox, 'name="rap_email"' ) && false !== strpos( $fePBox, 'name="rap_digital"' ) && false === strpos( $fePBox, 'value="mat_free"' ), 's cenou: objednávkový formulář bez účtu (s povinnými souhlasy)' );
+rap_t( is_wp_error( Resandpay_Materials::request_free( $feM, array( 'customer_name' => 'H', 'email' => 'h.zak33@example.cz', 'consent_gdpr' => 1 ) ) ), 's cenou nelze získat zdarma' );
+$GLOBALS['rap_mails'] = array();
+$feP = Resandpay_Materials::order( $feM, 0, array( 'customer_name' => 'Hana Platící', 'email' => 'hana.zak34@example.cz', 'consent_gdpr' => 1, 'consent_terms' => 1, 'consent_digital' => 1 ) );
+rap_t( ! is_wp_error( $feP ) && Resandpay_Reservations::PENDING === $feP['status'] && 120.0 === (float) $feP['amount'] && in_array( true, array_map( fn( $mm ) => false !== strpos( $mm['subject'], 'hana.zak34@example.cz' ) && false !== strpos( $mm['subject'], 'Objednávka přijata' ), $GLOBALS['rap_mails'] ), true ), 's cenou: objednávka bez účtu, e-mail s platebním pokynem zákazníkovi' );
+$feU2 = wp_insert_user( array( 'user_login' => 'fe34', 'user_email' => 'fe34.zak@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
+rap_t( 'buy' === Resandpay_Materials::access( $fePaid, $feU2 )['reason'], 's cenou: přihlášený si materiál kupuje (ne zdarma)' );
+wp_delete_user( $feU2 );
+Resandpay_Settings::update( array( 'profile_page' => 0 ) );
 // Jiný přístup materiálu → žádost odmítnuta.
 Resandpay_Admin_Materials::save_meta( $feM, array( 'rap_mat_access' => 'free' ) );
 rap_t( is_wp_error( Resandpay_Materials::request_free( $feM, array( 'customer_name' => 'X', 'email' => 'x.zak33@example.cz', 'consent_gdpr' => 1 ) ) ), 'žádost jen u materiálu „zdarma po zadání e-mailu“' );

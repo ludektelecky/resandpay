@@ -48,7 +48,7 @@ class Resandpay_Materials {
 			self::ACCESS_FREE  => __( 'Zdarma pro přihlášené', 'reserveandpay' ),
 			self::ACCESS_PAID  => __( 'Placený', 'reserveandpay' ),
 			self::ACCESS_ROLES => __( 'Jen vybrané role', 'reserveandpay' ),
-			self::ACCESS_EMAIL => __( 'Zdarma po zadání e-mailu', 'reserveandpay' ),
+			self::ACCESS_EMAIL => __( 'Odeslat na e-mail (bez účtu)', 'reserveandpay' ),
 		);
 	}
 
@@ -545,10 +545,10 @@ class Resandpay_Materials {
 			$res['reason'] = 'unavailable';
 			return $res;
 		}
-		if ( ! $user_id && self::ACCESS_PAID !== $mat['access'] ) {
-			return $res; // Zdarma pro přihlášené / jen pro role: bez účtu jen s nárokem výše.
+		if ( ! $user_id && ! self::is_paid( $mat ) ) {
+			return $res; // Zdarma pro přihlášené / jen pro role / zdarma po zadání e-mailu: bez účtu jen s nárokem výše.
 		}
-		if ( self::ACCESS_FREE === $mat['access'] || self::ACCESS_EMAIL === $mat['access'] ) {
+		if ( self::ACCESS_FREE === $mat['access'] || self::is_free_email( $mat ) ) {
 			return $grant( 'free', 0 ); // Přihlášený má materiál „zdarma po zadání e-mailu“ hned, bez formuláře.
 		}
 		if ( self::ACCESS_ROLES === $mat['access'] ) {
@@ -572,7 +572,17 @@ class Resandpay_Materials {
 
 	/** Lze materiál koupit (placený, publikovaný, v nabídce, s cenou)? */
 	public static function purchasable( array $mat ) {
-		return self::ACCESS_PAID === $mat['access'] && 'publish' === $mat['status'] && ! $mat['withdrawn'] && $mat['price'] > 0;
+		return self::is_paid( $mat ) && 'publish' === $mat['status'] && ! $mat['withdrawn'] && $mat['price'] > 0;
+	}
+
+	/** Placený materiál: „Placený“, nebo „Odeslat na e-mail“ s cenou (#34). */
+	public static function is_paid( array $mat ) {
+		return self::ACCESS_PAID === $mat['access'] || ( self::ACCESS_EMAIL === $mat['access'] && (float) $mat['price'] > 0 );
+	}
+
+	/** Zdarma po zadání e-mailu: „Odeslat na e-mail“ bez ceny (#33, #34). */
+	public static function is_free_email( array $mat ) {
+		return self::ACCESS_EMAIL === $mat['access'] && (float) $mat['price'] <= 0;
 	}
 
 	/** Text „Přístup do …“ k objednávce (pro e-maily). */
@@ -851,7 +861,7 @@ class Resandpay_Materials {
 		$mat   = self::get( $material_id );
 		$email = Resandpay_Customers::key( sanitize_email( (string) ( $data['email'] ?? '' ) ) );
 		$name  = mb_substr( sanitize_text_field( (string) ( $data['customer_name'] ?? '' ) ), 0, 190 );
-		if ( ! $mat || self::ACCESS_EMAIL !== $mat['access'] || 'publish' !== $mat['status'] || $mat['withdrawn'] ) {
+		if ( ! $mat || ! self::is_free_email( $mat ) || 'publish' !== $mat['status'] || $mat['withdrawn'] ) {
 			return new WP_Error( 'not_available', __( 'Materiál teď nelze získat.', 'reserveandpay' ) );
 		}
 		if ( ! is_email( $email ) ) {

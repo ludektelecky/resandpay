@@ -109,7 +109,7 @@ class Resandpay_Stats_Materials {
 				'title'       => $mat['title'],
 				'kind'        => $mat['kind'],
 				'kind_label'  => $mat['kind_label'],
-				'access'      => Resandpay_Materials::ACCESS_PAID === $mat['access'] ? Resandpay_Events::format_price( $mat['price'], $mat['currency'] ) : Resandpay_Materials::access_labels()[ $mat['access'] ],
+				'access'      => Resandpay_Materials::is_paid( $mat ) ? Resandpay_Events::format_price( $mat['price'], $mat['currency'] ) : Resandpay_Materials::access_labels()[ $mat['access'] ],
 				'currency'    => $mat['currency'],
 				'state'       => $mat['disabled'] ? 'disabled' : ( $mat['withdrawn'] ? 'withdrawn' : '' ),
 				'paid'        => (int) ( $o['paid'] ?? 0 ),

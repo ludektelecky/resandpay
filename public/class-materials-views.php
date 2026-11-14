@@ -188,7 +188,7 @@ class Resandpay_Materials_Views {
 
 	/** Štítek ceny / přístupu. */
 	public static function price_label( array $mat ) {
-		if ( Resandpay_Materials::ACCESS_PAID === $mat['access'] ) {
+		if ( Resandpay_Materials::is_paid( $mat ) ) {
 			return Resandpay_Events::format_price( $mat['price'], $mat['currency'] );
 		}
 		if ( Resandpay_Materials::ACCESS_ROLES === $mat['access'] ) {
@@ -238,7 +238,7 @@ class Resandpay_Materials_Views {
 			}
 			$out .= self::render_files( $mat, false, $id['email'] );
 		} else {
-			if ( 'login' === $acc['reason'] && ! $id['user'] && Resandpay_Materials::ACCESS_EMAIL === $mat['access'] && Resandpay_Profile::page_id() && empty( $mat['withdrawn'] ) ) {
+			if ( 'login' === $acc['reason'] && ! $id['user'] && Resandpay_Materials::is_free_email( $mat ) && Resandpay_Profile::page_id() && empty( $mat['withdrawn'] ) ) {
 				$acc['reason'] = 'email_form'; // Zdarma po zadání e-mailu (#33).
 			}
 			if ( 'login' === $acc['reason'] && ! $id['user'] && self::guest_order_on( $mat ) ) {

@@ -93,9 +93,9 @@ class Resandpay_Admin_Materials {
 				<td><?php foreach ( Resandpay_Materials::access_labels() as $k => $l ) : ?>
 					<label style="margin-right:1.4em"><input type="radio" name="rap_mat_access" value="<?php echo esc_attr( $k ); ?>" <?php checked( $mat['access'], $k ); ?>> <?php echo esc_html( $l ); ?></label>
 				<?php endforeach; ?>
-					<p class="description"><?php esc_html_e( 'Zdarma pro přihlášené: stažení po přihlášení. Placený: materiál se odemkne po zaplacení objednávky (QR platba, kontrola plateb; i bez účtu). Zdarma po zadání e-mailu: zákazník vyplní jméno a e-mail a přijde mu odkaz ke stažení (bez účtu; se souhlasem s novinkami i do MailerLite). Ukázky lze stáhnout vždy.', 'reserveandpay' ); ?></p>
+					<p class="description"><?php esc_html_e( 'Zdarma pro přihlášené: stažení po přihlášení. Placený: materiál se odemkne po zaplacení objednávky (QR platba, kontrola plateb; i bez účtu). Odeslat na e-mail (bez účtu): řídí se cenou – bez ceny zákazník vyplní jméno a e-mail a přijde mu odkaz ke stažení zdarma; s cenou mu přijde platební pokyn a po zaplacení odkaz (se souhlasem s novinkami i do MailerLite). Ukázky lze stáhnout vždy.', 'reserveandpay' ); ?></p>
 					<?php if ( Resandpay_Materials::ACCESS_EMAIL === $mat['access'] && ! Resandpay_Profile::page_id() ) : ?>
-						<p class="rap-err"><?php esc_html_e( 'Pro „Zdarma po zadání e-mailu“ vyberte stránku profilu zákazníka (Nastavení → Rezervace → Profil zákazníka) – bez ní se formulář nezobrazí.', 'reserveandpay' ); ?></p>
+						<p class="rap-err"><?php esc_html_e( 'Pro „Odeslat na e-mail (bez účtu)“ vyberte stránku profilu zákazníka (Nastavení → Rezervace → Profil zákazníka) – bez ní se formulář nezobrazí.', 'reserveandpay' ); ?></p>
 					<?php endif; ?>
 					<div style="margin-top:.6em"><strong><?php esc_html_e( 'Role (pro „Jen vybrané role“):', 'reserveandpay' ); ?></strong><br>
 					<?php foreach ( wp_roles()->get_names() as $rk => $rl ) : ?>
@@ -104,7 +104,7 @@ class Resandpay_Admin_Materials {
 			<tr><th><label for="rap_price"><?php esc_html_e( 'Cena', 'reserveandpay' ); ?></label></th>
 				<td><input type="number" min="0" step="any" id="rap_price" name="rap_price" value="<?php echo esc_attr( $raw( 'price' ) ); ?>" class="regular-text" style="width:10em">
 					<input type="text" name="rap_currency" value="<?php echo esc_attr( $mat['currency'] ); ?>" class="small-text" maxlength="3" aria-label="<?php esc_attr_e( 'Měna', 'reserveandpay' ); ?>">
-					<p class="description"><?php esc_html_e( 'Jen u placeného materiálu. Platí i slevové kupóny (rozsah „všechny“, kategorie nebo konkrétní materiál).', 'reserveandpay' ); ?></p></td></tr>
+					<p class="description"><?php esc_html_e( 'U placeného materiálu a u „Odeslat na e-mail (bez účtu)“ – tam prázdná nebo 0 = zdarma, jinak platba. Platí i slevové kupóny (rozsah „všechny“, kategorie nebo konkrétní materiál).', 'reserveandpay' ); ?></p></td></tr>
 			<tr><th><label for="rap_mat_due"><?php esc_html_e( 'Splatnost objednávky', 'reserveandpay' ); ?></label></th>
 				<td><input type="number" min="0" max="90" id="rap_mat_due" name="rap_mat_due" value="<?php echo esc_attr( $raw( 'mat_due' ) ); ?>" class="small-text" placeholder="<?php echo esc_attr( (string) Resandpay_Settings::get( 'mat_due_days' ) ); ?>"> <?php esc_html_e( 'dní', 'reserveandpay' ); ?>
 					<p class="description"><?php esc_html_e( 'Prázdné = výchozí z nastavení. Nezaplacená objednávka po splatnosti vyprší; pozdní platba ji obnoví.', 'reserveandpay' ); ?></p></td></tr>
@@ -460,7 +460,7 @@ class Resandpay_Admin_Materials {
 				echo esc_html( $mat['kind_label'] );
 				break;
 			case 'rap_access':
-				echo esc_html( Resandpay_Materials::ACCESS_PAID === $mat['access'] ? Resandpay_Events::format_price( $mat['price'], $mat['currency'] ) : Resandpay_Materials::access_labels()[ $mat['access'] ] );
+				echo esc_html( Resandpay_Materials::is_paid( $mat ) ? Resandpay_Events::format_price( $mat['price'], $mat['currency'] ) : Resandpay_Materials::access_labels()[ $mat['access'] ] );
 				if ( $mat['disabled'] ) {
 					echo '<br><strong class="rap-err">' . esc_html__( 'znepřístupněno', 'reserveandpay' ) . '</strong>';
 				} elseif ( $mat['withdrawn'] ) {
