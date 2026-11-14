@@ -2387,6 +2387,75 @@ wp_delete_post( $geM, true );
 wp_delete_post( $geF, true );
 update_option( Resandpay_Settings::OPTION, $geSaved, false );
 
+echo "== 0.25.0: odbavení na webu a role (#30)\n";
+$ckSaved = get_option( Resandpay_Settings::OPTION );
+rap_t( 'administrator,editor' === Resandpay_Settings::defaults()['checkin_roles'], 'výchozí role odbavení: Administrátor a Šéfredaktor' );
+Resandpay_Settings::update( array( 'checkin_roles' => Resandpay_Settings::defaults()['checkin_roles'] ) ); // Dřívější testy odeslaly formulář bez rolí.
+$ckEd  = wp_insert_user( array( 'user_login' => 'ck30ed', 'user_email' => 'ck30ed@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'editor' ) );
+$ckSub = wp_insert_user( array( 'user_login' => 'ck30sub', 'user_email' => 'ck30sub@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'subscriber' ) );
+rap_t( user_can( 1, Resandpay_Checkin::CAP ) && user_can( $ckEd, Resandpay_Checkin::CAP ) && ! user_can( $ckSub, Resandpay_Checkin::CAP ), 'oprávnění podle rolí (správce vždy)' );
+Resandpay_Settings::update( array( 'checkin_roles' => 'subscriber' ) );
+rap_t( user_can( $ckSub, Resandpay_Checkin::CAP ) && ! user_can( $ckEd, Resandpay_Checkin::CAP ) && user_can( 1, Resandpay_Checkin::CAP ), 'role z nastavení (např. role Ultimate Member)' );
+Resandpay_Settings::update( array( 'checkin_roles' => 'administrator,editor' ) );
+$ckEv = rap_event( 'Odbavení 30', $now + 2 * HOUR_IN_SECONDS, $now + 3 * HOUR_IN_SECONDS, 10 );
+$ckR  = Resandpay_Reservations::create( $ckEv, array_merge( rap_person( 30 ), array( 'customer_name' => 'Olga Odbavená', 'phone' => '777303030', 'note' => 'Bolí ji záda' ) ), array( 'notify' => false ) );
+$ckR2 = Resandpay_Reservations::create( $ckEv, array_merge( rap_person( 31 ), array( 'customer_name' => 'Radek Převodem' ) ), array( 'notify' => false ) );
+// Web – přístup.
+wp_set_current_user( 0 );
+rap_t( false !== strpos( Resandpay_Checkin::shortcode(), 'Přihlásit se' ), 'web: nepřihlášený – výzva k přihlášení' );
+wp_set_current_user( $ckSub );
+rap_t( false !== strpos( Resandpay_Checkin::shortcode(), 'nemáte oprávnění' ), 'web: bez oprávnění se odbavení nezobrazí' );
+wp_set_current_user( $ckEd );
+$_GET = array( 'rap_vs' => $ckR['vs'], 'rap_day' => wp_date( 'Y-m-d', $now + 2 * HOUR_IN_SECONDS ) );
+$ckHtml = Resandpay_Checkin::shortcode();
+$_GET   = array();
+rap_t( false !== strpos( $ckHtml, 'Olga Odbavená' ) && false !== strpos( $ckHtml, 'id="rap-scan-btn"' ) && false !== strpos( $ckHtml, 'name="rap_vs"' ), 'web: karta rezervace podle VS a čtečka QR' );
+rap_t( false !== strpos( $ckHtml, 'Zaplaceno hotově' ) && false !== strpos( $ckHtml, 'Zobrazit QR kód k zaplacení' ) && false !== strpos( $ckHtml, 'Zkontrolovat platbu v bance' ) && false === strpos( $ckHtml, 'Zaplaceno převodem' ), 'web: hotově, QR kód k zaplacení, kontrola v bance – bez ručního „převodem“' );
+rap_t( false !== strpos( $ckHtml, 'Bolí ji záda' ) && false !== strpos( $ckHtml, '777303030' ) && false !== strpos( $ckHtml, 'data:image/png;base64,' ), 'web: poznámka, telefon a QR kód k zaplacení' );
+rap_t( false !== strpos( $ckHtml, 'Radek Převodem' ) && false !== strpos( $ckHtml, 'k vybrání na místě' ), 'web: přehled dne' );
+// Akce.
+rap_t( 'error' === Resandpay_Checkin::process( 'transfer', $ckR2['id'], false, 'front' )[1] && Resandpay_Reservations::PAID !== Resandpay_Reservations::get( $ckR2['id'] )['status'], 'web: ruční „zaplaceno převodem“ se odmítne' );
+$ckCash = Resandpay_Checkin::process( 'cash', $ckR['id'], false, 'front' );
+rap_t( 'success' === $ckCash[1] && 'cash' === Resandpay_Reservations::get( $ckR['id'] )['paid_method'], 'web: zaplaceno hotově' );
+wp_set_current_user( $ckSub );
+rap_t( 'error' === Resandpay_Checkin::process( 'cash', $ckR2['id'], false, 'front' )[1], 'bez oprávnění akce neprojde' );
+wp_set_current_user( 1 );
+$_GET = array( 'rap_vs' => $ckR2['vs'] );
+ob_start();
+Resandpay_Admin_Checkin::page();
+$ckAdm = ob_get_clean();
+$_GET  = array();
+rap_t( false !== strpos( $ckAdm, 'Zaplaceno převodem' ) && false !== strpos( $ckAdm, 'Zkontrolovat platbu v bance' ), 'administrace: správce má i „Zaplaceno převodem“' );
+// Kontrola v bance (podvržená schránka s avízem).
+$ckImap = new class() {
+	public $error = '';
+	public $mails = array();
+	public function connect( $h, $p, $s ) { return true; }
+	public function login( $u, $p ) { return true; }
+	public function select( $f ) { return count( $this->mails ); }
+	public function search_from( $from ) { return array_keys( $this->mails ); }
+	public function fetch( $uid ) { return $this->mails[ $uid ] ?? ''; }
+	public function ensure_folder( $f ) { return ''; }
+	public function move( $uid, $f ) { return true; }
+	public function logout() { return true; }
+};
+Resandpay_Settings::update( array( 'bank_account' => '1234567890/5500', 'imap_folder_done' => '' ) );
+delete_transient( 'rap_checkin_bank' );
+$ckB0 = Resandpay_Checkin::check_bank( $ckR2['id'], $ckImap );
+rap_t( 'warning' === $ckB0[1] && false !== strpos( $ckB0[0], 'zatím v bance není' ), 'kontrola v bance: platba ještě nedorazila' );
+$ckB1 = Resandpay_Checkin::check_bank( $ckR2['id'], $ckImap );
+rap_t( 'warning' === $ckB1[1] && false !== strpos( $ckB1[0], 'znovu za' ), 'kontrola v bance nejvýš 1× za 30 s' );
+delete_transient( 'rap_checkin_bank' );
+$ckImap->mails = array( 1 => rap_avizo( $eml, $ckR2['vs'], '+500,00 CZK', 'ck30' . wp_generate_password( 6, false ) ) );
+$ckB2 = Resandpay_Checkin::check_bank( $ckR2['id'], $ckImap );
+rap_t( 'success' === $ckB2[1] && Resandpay_Reservations::PAID === Resandpay_Reservations::get( $ckR2['id'] )['status'], 'kontrola v bance: platba nalezena, rezervace zaplacená (' . $ckB2[0] . ')' );
+wp_set_current_user( 0 );
+delete_transient( 'rap_checkin_bank' );
+foreach ( array( $ckEd, $ckSub ) as $ckX ) {
+	wp_delete_user( $ckX );
+}
+update_option( Resandpay_Settings::OPTION, $ckSaved, false );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );

@@ -141,6 +141,9 @@ class Resandpay_Admin_Settings {
 				'turnstile_site_key'     => array( __( 'Turnstile – Site Key', 'reserveandpay' ), $text ),
 				'turnstile_secret'       => array( __( 'Turnstile – Secret Key', 'reserveandpay' ), $text ),
 			),
+			__( 'Odbavení na místě', 'reserveandpay' ) => array(
+				'checkin_roles' => array( __( 'Odbavení vidí role', 'reserveandpay' ), 'roles', __( 'ResAndPay → Odbavení v administraci i webová stránka se shortcodem [reserveandpay_checkin] (např. pro telefon na lekci). Role spravuje Ultimate Member. Odbavení smí najít rezervaci podle VS / QR kódu, označit platbu hotově, zobrazit QR kód k zaplacení převodem a zkontrolovat platbu v bance – nic nerušit ani nevracet. Správce webu má přístup vždy.', 'reserveandpay' ) ),
+			),
 			__( 'Profil zákazníka', 'reserveandpay' )  => array(
 				'profile_page'      => array( __( 'Stránka „Moje rezervace“', 'reserveandpay' ), 'page', __( 'Stránka se shortcodem [reserveandpay_my_reservations]. Zákazník na ní vidí všechny své rezervace, stav plateb a platební pokyny a může změnit souhlas s novinkami. Přihlášený uživatel podle e-mailu účtu, ostatní přes osobní odkaz, který je v každém e-mailu zákazníkovi. Nevybráno = profil vypnutý.', 'reserveandpay' ) ),
 				'profile_link_days' => array( __( 'Platnost osobního odkazu (dní)', 'reserveandpay' ), 'number', __( 'Výchozí 30. Po vypršení si zákazník na stránce profilu nechá poslat nový odkaz.', 'reserveandpay' ) ),
@@ -503,7 +506,7 @@ class Resandpay_Admin_Settings {
 	public static function tabs() {
 		return array(
 			'provozovatel' => array( __( 'Provozovatel', 'reserveandpay' ), array( __( 'Provozovatel', 'reserveandpay' ), __( 'Platební pokyn a QR platba', 'reserveandpay' ) ) ),
-			'rezervace'    => array( __( 'Rezervace', 'reserveandpay' ), array( __( 'Rezervace a platby', 'reserveandpay' ), __( 'Profil zákazníka', 'reserveandpay' ), __( 'Připomínky akcí', 'reserveandpay' ), __( 'Ochrana formuláře proti robotům', 'reserveandpay' ) ) ),
+			'rezervace'    => array( __( 'Rezervace', 'reserveandpay' ), array( __( 'Rezervace a platby', 'reserveandpay' ), __( 'Odbavení na místě', 'reserveandpay' ), __( 'Profil zákazníka', 'reserveandpay' ), __( 'Připomínky akcí', 'reserveandpay' ), __( 'Ochrana formuláře proti robotům', 'reserveandpay' ) ) ),
 			'web'          => array( __( 'Web a vzhled', 'reserveandpay' ), array( __( 'Vzhled', 'reserveandpay' ), __( 'Detail akce', 'reserveandpay' ), __( 'Odpočet', 'reserveandpay' ) ) ),
 			'emaily'       => array( __( 'E-maily', 'reserveandpay' ), array( __( 'E-maily', 'reserveandpay' ), __( 'Testovací režim', 'reserveandpay' ) ) ),
 			'platby'       => array( __( 'Kontrola plateb', 'reserveandpay' ), array( __( 'Kontrola plateb', 'reserveandpay' ) ) ),

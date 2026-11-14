@@ -139,6 +139,8 @@ class Resandpay_Settings {
 			'access_tag'             => 'jen pro členy',
 			'priority_text'          => 'pro členy od %s',
 			'stats_roles'            => 'administrator,editor,contributor', // Kdo vidí statistiku (SWD kap. 15.1, R1).
+			// Odbavení na místě (kap. 15.1 R23): kdo vidí odbavení v administraci i na webu.
+			'checkin_roles'          => 'administrator,editor',
 			// Profil zákazníka „Moje rezervace“ (kap. 15.1 R18) – zapne se výběrem stránky.
 			'profile_page'           => 0,
 			'profile_link_days'      => 30,

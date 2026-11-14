@@ -478,3 +478,32 @@ audio.rap-mat-player { background: transparent; }
 .rap-stats__legend i.is-ord, .rap-stats__bar-ord { background: var(--rap-accent-2); fill: var(--rap-accent-2); }
 .rap-stats__axis { stroke: var(--rap-line); stroke-width: 1; }
 .rap-stats__tick { font-size: 11px; fill: var(--rap-ink-soft); }
+
+/* Odbavení na místě na webu – [reserveandpay_checkin] (R23), pro telefon */
+.rap-checkin--front { font-family: var(--rap-font); color: var(--rap-ink); max-width: 960px; margin: 0 auto; }
+.rap-checkin--front .screen-reader-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.rap-checkin--front .rap-checkin__form { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0 0 .75rem; }
+.rap-checkin--front .rap-checkin__form input { font: inherit; font-size: 22px; letter-spacing: .05em; padding: .55rem .75rem; border: 1px solid var(--rap-line); border-radius: var(--rap-radius); min-width: 0; flex: 1 1 10em; max-width: 16em; }
+.rap-checkin--front .rap-button { padding: .85rem 1.3rem; font-size: 16px; }
+.rap-checkin__card { border: 1px solid var(--rap-line); border-left: 4px solid var(--rap-accent); border-radius: var(--rap-radius); padding: 1rem 1.15rem; margin: 0 0 1.25rem; background: var(--rap-bg); }
+.rap-checkin__card.is-paid { border-left-color: var(--rap-accent-2); }
+.rap-checkin__card.is-off { opacity: .75; }
+.rap-checkin__card h2 { margin: 0 0 .25rem; }
+.rap-checkin__card dl { display: grid; grid-template-columns: minmax(7rem, auto) 1fr; gap: .2rem .9rem; margin: .5rem 0 .9rem; }
+.rap-checkin__card dt { color: var(--rap-ink-soft); }
+.rap-checkin__card dd { margin: 0; }
+.rap-checkin--front .rap-checkin__actions { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
+.rap-checkin--front .rap-checkin__act { display: inline-flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: 0; }
+.rap-checkin__notify { font-size: 14px; color: var(--rap-ink-soft); }
+.rap-checkin--front .rap-checkin__qr { margin-top: .75rem; }
+.rap-checkin--front .rap-checkin__qr summary { list-style: none; cursor: pointer; display: inline-block; }
+.rap-checkin--front .rap-checkin__qr figure { margin: .75rem 0 0; }
+.rap-checkin--front .rap-checkin__qr img { background: #fff; padding: 6px; width: 220px; height: 220px; image-rendering: pixelated; }
+.rap-checkin--front .rap-checkin__qr figcaption { color: var(--rap-ink-soft); font-size: 14px; max-width: 26rem; }
+.rap-checkin--front .rap-scan video { width: 100%; max-width: 420px; border-radius: var(--rap-radius); }
+.rap-checkin__scroll { overflow-x: auto; }
+.rap-checkin--front .rap-checkin__day { width: 100%; border-collapse: collapse; font-size: 15px; }
+.rap-checkin--front .rap-checkin__day th, .rap-checkin--front .rap-checkin__day td { border-bottom: 1px solid var(--rap-line); padding: .5rem .45rem; text-align: left; vertical-align: top; }
+.rap-checkin--front .rap-checkin__day .rap-button { padding: .45rem .8rem; font-size: 14px; }
+.rap-checkin__note { white-space: pre-line; }
+.rap-checkin--front .rap-checkin__days { display: flex; flex-wrap: wrap; gap: .5rem; }

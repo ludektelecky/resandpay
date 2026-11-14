@@ -19,7 +19,7 @@ Vývoj probíhá na webu slehkouhlavou.cz (WordPress 7.1, PHP 8.5, MySQL 8.4, Ac
 
 ## 15.1 Kniha rozvoje
 
-> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R22 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
+> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R23 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
 
 Funkce navržené k dalšímu rozvoji pluginu. Položka se po schválení podrobného zadání přesune do příslušné kapitoly a do tabulky stavu realizace.
 
@@ -349,3 +349,13 @@ Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, po
 - **Účet se stejným e-mailem**: objednávky a zpřístupnění podle e-mailu platí i po přihlášení – materiál se zobrazí v Moje materiály (rozhodnutí 14. 11. 2026).
 - „Pošlete mi odkaz“ na stránce profilu funguje i pro zákazníka, který má jen zpřístupnění (bez rezervace).
 - Databáze 15: tabulka resandpay_grants – sloupce email, name, token; resandpay_downloads – sloupec email. Funkce Resandpay_Materials::access_email(), grant_email(), grant_bulk(), for_email().
+
+### R23 – Odbavení na místě na webu a přístup podle rolí
+
+**Pozn.: Navrženo a schváleno 14. 11. 2026 ([Issue #30](https://github.com/ludektelecky/resandpay/issues/30)), implementováno ve verzi pluginu 0.25.0.**
+
+- Shortcode **[reserveandpay_checkin]** pro samostatnou webovou stránku (např. /odbaveni) – stejné odbavení jako ResAndPay → Odbavení, ve vzhledu webu a pro telefon (velká tlačítka). Logika i výpis jsou sdílené (třída Resandpay_Checkin, administrace Resandpay_Admin_Checkin jen obaluje).
+- **Nastavení → Rezervace → Odbavení na místě → Odbavení vidí role** (role webu včetně Ultimate Member), výchozí **Administrátor, Šéfredaktor**; platí pro webovou stránku i administraci (oprávnění resandpay_checkin, správce webu vždy). Nepřihlášený dostane výzvu k přihlášení, bez oprávnění hlášku „K odbavení nemáte oprávnění“.
+- Uživatel odbavení smí jen platbu na místě (nic nerušit ani nevracet): najít rezervaci podle **VS** nebo **QR kódu** (kamera), **Zaplaceno hotově** (volitelně potvrzení e-mailem), **Zobrazit QR kód k zaplacení** (QR platba na zbývající částku – platba převodem se spáruje automaticky z bankovního avíza) a **Zkontrolovat platbu v bance** (spustí kontrolu plateb – načtení avíz a spárování – nejvýš 1× za 30 s a ukáže výsledek pro rezervaci). Ruční „Zaplaceno převodem“ a odkaz na detail rezervace jen v administraci pro role s oprávněním k rezervacím.
+- Karta rezervace i přehled dne zobrazují **telefon a poznámku** zákazníka (rozhodnutí 14. 11. 2026).
+- Stránka se neukládá do cache a neindexuje (osobní údaje); akce s nonce a kontrolou oprávnění, zpráva po akci (PRG).
