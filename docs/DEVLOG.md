@@ -4,6 +4,15 @@
 >
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
+## 0.28.0 – Přehlednější editor materiálu, akce a služby (14. 11. 2026)
+
+- **R26 – nastavení v záložkách** ([Issue #38](https://github.com/ludektelecky/resandpay/issues/38), schváleno a implementováno):
+  - **materiál** v **klasickém editoru** – nastavení hned pod popisem v jednom rámečku **„Nastavení materiálu“** se záložkami **Základní · Přístup a cena · Zdarma pro účastníky · Soubory · Přístupy a stažení · MailerLite**
+  - **akce** a **služba** – Parametry rozdělené do záložek (termín a místo, cena a platba, rezervace, připomínky / web a shortcody, MailerLite)
+  - **MailerLite** přesunuto z pravého panelu do záložky; v pravém panelu zůstávají jen věci WordPressu
+  - záložka se pamatuje, chybné pole nebo odkaz otevře správnou záložku
+- Bez změny databáze. Testy: 806 kontrol + souběh
+
 ## 0.27.0 – Přístup k materiálu podle ceny, akční cena (14. 11. 2026)
 
 - ⚠ **Po aktualizaci:** přístup materiálů se převede sám beze změny chování. Doporučujeme v seznamu materiálů zkontrolovat sloupec Přístup / cena; u materiálů dříve „Placený“ bez stránky profilu zákazníka je nově „Jen pro přihlášené“ (jako dosud fakticky).

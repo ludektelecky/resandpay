@@ -131,6 +131,20 @@ class Resandpay_Admin_Events {
 		<?php
 	}
 
+	/** Záložky Parametrů akce (#38). */
+	public static function tabs() {
+		$tabs = array(
+			'termin'     => __( 'Termín a místo', 'reserveandpay' ),
+			'cena'       => __( 'Cena a platba', 'reserveandpay' ),
+			'rezervace'  => __( 'Rezervace', 'reserveandpay' ),
+			'pripominky' => __( 'Připomínka a odpočet', 'reserveandpay' ),
+		);
+		if ( Resandpay_MailerLite::enabled() ) {
+			$tabs['mailerlite'] = __( 'MailerLite', 'reserveandpay' );
+		}
+		return $tabs;
+	}
+
 	public static function box_event( $post ) {
 		wp_nonce_field( 'rap_save_event', '_rap_event_nonce' );
 		$ev        = Resandpay_Events::get( $post->ID );
@@ -146,9 +160,10 @@ class Resandpay_Admin_Events {
 		$svc_id  = (int) get_post_meta( $post->ID, '_rap_service', true );
 		$svc     = $svc_id ? Resandpay_Services::get( $svc_id ) : null;
 		$from_svc = $svc ? ' <span class="rap-hint">' . esc_html( sprintf( /* translators: %s: služba */ __( 'ze služby %s', 'reserveandpay' ), $svc['title'] ) ) . ' – <a href="' . esc_url( (string) get_edit_post_link( $svc_id ) ) . '">' . esc_html__( 'upravit službu', 'reserveandpay' ) . '</a></span>' : '';
+		echo Resandpay_Admin::tabs_open( 'event', self::tabs() ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
 		?>
 		<table class="form-table rap-params" role="presentation">
-			<tr><th><?php esc_html_e( 'Termín', 'reserveandpay' ); ?></th>
+			<tr<?php echo Resandpay_Admin::tab( 'termin' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><?php esc_html_e( 'Termín', 'reserveandpay' ); ?></th>
 				<td class="rap-params__grid">
 					<p><label for="rap_type"><?php esc_html_e( 'Typ akce', 'reserveandpay' ); ?></label>
 						<select id="rap_type" name="rap_type">
@@ -163,7 +178,7 @@ class Resandpay_Admin_Events {
 						<span class="rap-hint" id="rap_end_hint"></span></p>
 					<div class="rap-params__full"><?php Resandpay_Events::time_display_field( get_post_meta( $post->ID, '_rap_time_display', true ) ); ?></div>
 				</td></tr>
-			<tr><th><?php esc_html_e( 'Místo a kapacita', 'reserveandpay' ); ?></th>
+			<tr<?php echo Resandpay_Admin::tab( 'termin' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><?php esc_html_e( 'Místo a kapacita', 'reserveandpay' ); ?></th>
 				<td class="rap-params__grid">
 					<p><label for="rap_location"><?php esc_html_e( 'Místo konání', 'reserveandpay' ); ?></label>
 						<select id="rap_location" name="rap_location">
@@ -176,7 +191,7 @@ class Resandpay_Admin_Events {
 					<p id="rap_capacity_wrap"><label for="rap_capacity"><?php esc_html_e( 'Kapacita', 'reserveandpay' ); ?> *</label>
 						<input type="number" min="1" step="1" id="rap_capacity" name="rap_capacity" value="<?php echo esc_attr( $ev['capacity'] ?: '' ); ?>" class="small-text"></p>
 				</td></tr>
-			<tr><th><?php esc_html_e( 'Cena a platba', 'reserveandpay' ); ?></th>
+			<tr<?php echo Resandpay_Admin::tab( 'cena' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><?php esc_html_e( 'Cena a platba', 'reserveandpay' ); ?></th>
 				<td>
 					<p class="rap-params__inline"><label for="rap_price"><?php esc_html_e( 'Cena za místo', 'reserveandpay' ); ?></label>
 						<input type="number" min="0" step="any" id="rap_price" name="rap_price" value="<?php echo esc_attr( $ev['price'] ); ?>" style="width:9em">
@@ -195,7 +210,7 @@ class Resandpay_Admin_Events {
 					);
 					?>
 				</td></tr>
-			<tr><th><?php esc_html_e( 'Sleva', 'reserveandpay' ); ?></th>
+			<tr<?php echo Resandpay_Admin::tab( 'cena' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><?php esc_html_e( 'Sleva', 'reserveandpay' ); ?></th>
 				<td><?php
 				if ( $svc ) {
 					echo '<p class="rap-hint">' . esc_html__( 'Sleva za včasnou rezervaci', 'reserveandpay' ) . $from_svc . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno výše.
@@ -203,7 +218,7 @@ class Resandpay_Admin_Events {
 					Resandpay_Discounts::early_fields( $post->ID );
 				}
 				?></td></tr>
-			<tr><th><?php esc_html_e( 'Rezervace', 'reserveandpay' ); ?></th>
+			<tr<?php echo Resandpay_Admin::tab( 'rezervace' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><?php esc_html_e( 'Rezervace', 'reserveandpay' ); ?></th>
 				<td><?php
 				if ( $svc ) {
 					echo '<p class="rap-hint">' . esc_html__( 'Kdo a od kdy může rezervovat', 'reserveandpay' ) . $from_svc . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput
@@ -220,10 +235,10 @@ class Resandpay_Admin_Events {
 						<span class="rap-hint"><?php esc_html_e( 'Prázdné = rezervovat lze až do začátku.', 'reserveandpay' ); ?></span></p>
 					<p><label class="rap-inline"><input type="checkbox" name="rap_cancelled" value="1" <?php checked( $ev['cancelled'] ); ?>> <?php esc_html_e( 'Akce je zrušena', 'reserveandpay' ); ?></label></p>
 				</td></tr>
-			<tr><th><?php esc_html_e( 'Připomínka', 'reserveandpay' ); ?></th>
+			<tr<?php echo Resandpay_Admin::tab( 'pripominky' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><?php esc_html_e( 'Připomínka', 'reserveandpay' ); ?></th>
 				<td><?php Resandpay_Events::reminder_fields( $post->ID, $svc_id ? sprintf( /* translators: %d: hodin */ __( 'ze služby (%d h)', 'reserveandpay' ), Resandpay_Events::resolve_reminder_hours( '', $svc_id ) ) : '' ); ?></td></tr>
 			<?php if ( ! $svc_id ) : ?>
-			<tr><th><?php esc_html_e( 'Odpočet', 'reserveandpay' ); ?></th>
+			<tr<?php echo Resandpay_Admin::tab( 'pripominky' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><?php esc_html_e( 'Odpočet', 'reserveandpay' ); ?></th>
 				<td><?php Resandpay_Countdown::fields( $post->ID ); ?></td></tr>
 			<?php endif; ?>
 		</table>
@@ -236,6 +251,12 @@ class Resandpay_Admin_Events {
 			}
 			echo '</ul><span class="rap-hint">' . esc_html__( 'Překrývání je povoleno, jde jen o informaci.', 'reserveandpay' ) . '</span></div>';
 		}
+		if ( Resandpay_MailerLite::enabled() ) {
+			echo '<div' . Resandpay_Admin::tab( 'mailerlite' ) . ' class="rap-tabs__ml">'; // phpcs:ignore WordPress.Security.EscapeOutput
+			Resandpay_Admin_MailerLite::box( $post );
+			echo '</div>';
+		}
+		echo '</div>';
 		?>
 		<script>
 		( function () {

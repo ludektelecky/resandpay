@@ -61,6 +61,33 @@ class Resandpay_Admin {
 		wp_add_inline_style( 'reserveandpay-admin', self::badge_css() );
 	}
 
+	/**
+	 * Záložky v rámečku editoru (#38): obal s popisky záložek. Prvky uvnitř s atributem
+	 * data-rap-tab="klíč" (řádky tabulky i bloky) se zobrazují podle aktivní záložky. Bez JS je
+	 * vidět vše (jako dřív). Odkaz s #kotvou nebo neplatné pole otevře příslušnou záložku.
+	 *
+	 * @param string $id   Klíč (pamatování poslední záložky).
+	 * @param array  $tabs klíč => popisek.
+	 */
+	public static function tabs_open( $id, array $tabs ) {
+		return '<div class="rap-tabs" data-rap-tabs="' . esc_attr( $id ) . '" data-rap-labels="' . esc_attr( wp_json_encode( $tabs ) ) . '">';
+	}
+
+	/** Atribut záložky pro řádek / blok. */
+	public static function tab( $key ) {
+		return ' data-rap-tab="' . esc_attr( $key ) . '"';
+	}
+
+	/** Skript záložek v rámečcích editoru. */
+	public static function tabs_script() {
+		return "(function(){function init(){document.querySelectorAll('.rap-tabs[data-rap-tabs]').forEach(function(box){if(box.dataset.rapReady){return;}box.dataset.rapReady='1';var labels={};try{labels=JSON.parse(box.dataset.rapLabels||'{}');}catch(e){}var keys=Object.keys(labels);if(!keys.length){return;}"
+			. "var items=function(){return box.querySelectorAll('[data-rap-tab]');};var nav=document.createElement('div');nav.className='rap-tabs__nav nav-tab-wrapper';nav.setAttribute('role','tablist');var store='rapTab_'+box.dataset.rapTabs;"
+			. "function show(k,save){if(!labels[k]){k=keys[0];}items().forEach(function(el){if(el.closest('.rap-tabs')!==box){return;}el.style.display=el.getAttribute('data-rap-tab')===k?'':'none';});nav.querySelectorAll('button').forEach(function(b){var on=b.dataset.k===k;b.classList.toggle('nav-tab-active',on);b.setAttribute('aria-selected',on?'true':'false');});if(save){try{sessionStorage.setItem(store,k);}catch(e){}}}"
+			. "keys.forEach(function(k){var has=false;items().forEach(function(el){if(el.getAttribute('data-rap-tab')===k&&el.closest('.rap-tabs')===box){has=true;}});if(!has){return;}var b=document.createElement('button');b.type='button';b.className='nav-tab';b.dataset.k=k;b.setAttribute('role','tab');b.textContent=labels[k];b.addEventListener('click',function(){show(k,true);});nav.appendChild(b);});box.insertBefore(nav,box.firstChild);"
+			. "var start=keys[0];try{start=sessionStorage.getItem(store)||start;}catch(e){}if(location.hash){var t=box.querySelector(location.hash.replace(/[^#\w-]/g,''));var p=t&&t.closest('[data-rap-tab]');if(p){start=p.getAttribute('data-rap-tab');}}show(start,false);"
+			. "box.addEventListener('invalid',function(e){var p=e.target.closest('[data-rap-tab]');if(p){show(p.getAttribute('data-rap-tab'),true);}},true);});}if(document.readyState!=='loading'){init();}document.addEventListener('DOMContentLoaded',init);window.addEventListener('load',init);})();";
+	}
+
 	/** Štítek verze v barvách palety pluginu (Nastavení → Vzhled). */
 	public static function badge_css() {
 		return '.rap-version{background:' . Resandpay_Style::color( 'bg_alt' ) . ';color:' . Resandpay_Style::color( 'accent_2' ) . ';border-color:' . Resandpay_Style::color( 'line' ) . ';}';
@@ -108,11 +135,15 @@ class Resandpay_Admin {
 			}
 			$screen = get_current_screen();
 			if ( $screen && method_exists( $screen, 'is_block_editor' ) && $screen->is_block_editor() ) {
-				return; // Blokový editor: verze v panelu Shrnutí (block_editor_version()).
+				// Blokový editor: verze v panelu Shrnutí (block_editor_version()), záložky v rámečcích.
+				wp_register_script( 'resandpay-tabs', '', array(), RESANDPAY_VERSION, true );
+				wp_enqueue_script( 'resandpay-tabs' );
+				wp_add_inline_script( 'resandpay-tabs', self::tabs_script() );
+				return;
 			}
 			wp_register_script( 'resandpay-version-badge', '', array(), RESANDPAY_VERSION, false );
 			wp_enqueue_script( 'resandpay-version-badge' );
-			wp_add_inline_script( 'resandpay-version-badge', self::version_script() );
+			wp_add_inline_script( 'resandpay-version-badge', self::version_script() . self::tabs_script() );
 		}
 	}
 

@@ -123,7 +123,8 @@ class Resandpay_Admin_MailerLite {
 		if ( ! Resandpay_MailerLite::enabled() ) {
 			return;
 		}
-		foreach ( self::post_types() as $pt ) {
+		// Materiál, akce a služba mají MailerLite jako záložku v rámečku nastavení (#38) – boční panel už ne.
+		foreach ( array_diff( self::post_types(), array( Resandpay_Post_Types::MATERIAL, Resandpay_Post_Types::EVENT, Resandpay_Post_Types::SERVICE ) ) as $pt ) {
 			add_meta_box( 'rap_mailerlite', __( 'MailerLite', 'reserveandpay' ), array( __CLASS__, 'box' ), $pt, 'side', 'default' );
 		}
 	}
