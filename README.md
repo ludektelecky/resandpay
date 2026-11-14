@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.19.0** · zadání: [`docs/zadani/`](docs/zadani/README.md) (odpovídá aktuální verzi pluginu) · rozvojové požadavky: [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) · změny: [DEVLOG](docs/DEVLOG.md)
+> **Aktuální verze pluginu: 0.20.0** · zadání: [`docs/zadani/`](docs/zadani/README.md) (odpovídá aktuální verzi pluginu) · rozvojové požadavky: [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) · změny: [DEVLOG](docs/DEVLOG.md)
 
 ### Název a označení
 
@@ -37,6 +37,7 @@ Technické identifikátory se nemění (slug a textdomain `reserveandpay`, před
 - Stavy: Čeká na platbu · Částečně zaplaceno · Zaplaceno · Platba na místě · Po splatnosti · Expirováno · Zrušeno
 - Rezervace kdykoli až do začátku; při rezervaci na poslední chvíli lze platit na místě
 - Pozdní rezervace (až po splatnosti podle pravidla, např. −30 dní): celá částka do 7 dní, nejpozději den před akcí
+- **Profil zákazníka „Moje rezervace“** (od 0.20.0): všechny rezervace zákazníka (nadcházející, proběhlé, zrušené, materiály) se stavem platby, platebním pokynem a QR; změna souhlasu s novinkami. Přístup přihlášením nebo osobním odkazem, který je v každém e-mailu zákazníkovi (platnost nastavitelná, výchozí 30 dní)
 - **ResAndPay → Zákazníci** (od 0.18.0): všichni, kdo kdy rezervovali, jeden řádek na e-mail (počet rezervací vč. zrušených a expirovaných, první a poslední rezervace, zaplaceno, newsletter); hledání, řazení, proklik na rezervace zákazníka, export CSV (i jen se souhlasem s newsletterem)
 
 ### Platby
@@ -61,7 +62,7 @@ Technické identifikátory se nemění (slug a textdomain `reserveandpay`, před
 
 ### Napojení
 - **Ultimate Member** – po zaplacení založení účtu / přidání role
-- **MailerLite** (od 0.19.0, volitelné) – zákazníci se souhlasem s novinkami se zapíší do skupin načtených z účtu MailerLite (výchozí v Nastavení → Napojení, jiné u akce / služby / materiálu); po zaplacení nebo hned po rezervaci, na pozadí, se stavem u rezervace a v přehledu Zákazníci; import stávajících zákazníků
+- **MailerLite** (od 0.19.0, volitelné) – zákazníci se souhlasem s novinkami se zapíší do skupin načtených z účtu MailerLite (výchozí v Nastavení → záložka MailerLite, jiné u akce / služby / materiálu); po zaplacení nebo hned po rezervaci, na pozadí, se stavem u rezervace a v přehledu Zákazníci; import stávajících zákazníků
 - Transakční e-maily s upravitelnými texty
 
 ### Bezpečnost a provoz
@@ -168,7 +169,7 @@ Po etapách E1 a E2 lze rezervace spustit s ručním potvrzováním plateb.
 
 ## Nastavení
 
-ResAndPay → Nastavení je rozdělené do záložek (od 0.17.1): **Provozovatel** (provozovatel, platební pokyn a QR platba) · **Rezervace** (rezervace a platby, připomínky akcí, ochrana formuláře) · **Web a vzhled** (vzhled, detail akce, odpočet) · **E-maily** (šablony e-mailů, testovací režim) · **Kontrola plateb** · **Materiály** · **Napojení** (MailerLite, od 0.19.0) · **Kódy a statistika**. Všechny záložky jsou jeden formulář – „Uložit nastavení“ uloží vše a vrátí se na stejnou záložku. Přímý odkaz: `admin.php?page=reserveandpay-settings&tab=platby`.
+ResAndPay → Nastavení je rozdělené do záložek (od 0.17.1): **Provozovatel** (provozovatel, platební pokyn a QR platba) · **Rezervace** (rezervace a platby, připomínky akcí, ochrana formuláře) · **Web a vzhled** (vzhled, detail akce, odpočet) · **E-maily** (šablony e-mailů, testovací režim) · **Kontrola plateb** · **Materiály** · **MailerLite** (od 0.19.0; každý napojený systém má vlastní záložku) · **Kódy a statistika**. Všechny záložky jsou jeden formulář – „Uložit nastavení“ uloží vše a vrátí se na stejnou záložku. Přímý odkaz: `admin.php?page=reserveandpay-settings&tab=platby`.
 
 ## Vzhled a CSS
 
@@ -270,6 +271,7 @@ V `docs/DEVLOG.md` je u verze, která po aktualizaci vyžaduje zásah, na začá
 | `[reserveandpay_materials category="" type="" filter="yes"]` | Katalog materiálů ke stažení s filtrem druhu a tématu |
 | `[reserveandpay_material id="MA-001"]` | Karta jednoho materiálu (kód, slug nebo ID) |
 | `[reserveandpay_my_materials]` | Moje materiály – dostupné materiály, čekající platby, historie objednávek |
+| `[reserveandpay_my_reservations]` | Profil zákazníka „Moje rezervace“ – všechny rezervace, stav plateb, platební pokyny, souhlas s novinkami; přihlášení nebo osobní odkaz z e-mailu (stránku vyberte v Nastavení → Rezervace → Profil zákazníka) |
 | `[reserveandpay_booking id="123"]` | Detail a rezervační formulář akce (na stránce akce se vkládá automaticky) |
 
 Šablona webu může výpis vložit i bez shortcodu v obsahu stránky (`do_shortcode()` nebo data z `Resandpay_Views::upcoming_feed()`); styly pluginu na takové stránce zapne filtr `resandpay_enqueue_assets`, např. `add_filter( 'resandpay_enqueue_assets', fn( $on ) => $on || is_front_page() );`.

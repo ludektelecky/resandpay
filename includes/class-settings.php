@@ -134,6 +134,9 @@ class Resandpay_Settings {
 			'access_tag'             => 'jen pro členy',
 			'priority_text'          => 'pro členy od %s',
 			'stats_roles'            => 'administrator,editor,contributor', // Kdo vidí statistiku (SWD kap. 15.1, R1).
+			// Profil zákazníka „Moje rezervace“ (kap. 15.1 R18) – zapne se výběrem stránky.
+			'profile_page'           => 0,
+			'profile_link_days'      => 30,
 			// Napojení na MailerLite (kap. 15.1 R17) – ve výchozím stavu vypnuto.
 			'ml_enabled'             => 0,
 			'ml_api_key'             => '', // Šifrovaně (Resandpay_Payments::encrypt).
@@ -183,6 +186,9 @@ class Resandpay_Settings {
 			'tpl_paid_body'        => "Dobrý den, {name},\n\nVaše platba za akci {event} byla přijata a rezervace je potvrzena.\n\nTermín: {date}\nMísto: {location}\nVariabilní symbol: {vs}\n\nTěšíme se na Vás.\n\nS pozdravem\n{company}",
 			'tpl_cancelled_subject' => 'Rezervace zrušena: {event}',
 			'tpl_cancelled_body'    => "Dobrý den, {name},\n\nVaše rezervace akce {event} ({date}) s variabilním symbolem {vs} byla zrušena.\n{reason}\nV případě dotazů nás neváhejte kontaktovat.\n\nS pozdravem\n{company}",
+			'tpl_profile_footer'       => 'Své rezervace a platby najdete v profilu: {profile_url}',
+			'tpl_profile_link_subject' => 'Odkaz na Vaše rezervace',
+			'tpl_profile_link_body'    => "Dobrý den, {name},\n\nzde je odkaz na Váš profil s přehledem rezervací a plateb:\n{profile_url}\n\nOdkaz platí {profile_days} dní. Pokud jste o něj nežádali, e-mail můžete ignorovat.\n\nS pozdravem\n{company}",
 			'tpl_admin_subject'     => 'Nová rezervace: {event} – {name}',
 			'tpl_mat_received_subject' => 'Objednávka přijata: {event}',
 			'tpl_mat_received_body'    => "Dobrý den, {name},\n\nděkujeme za objednávku materiálu {event}.\n\nMateriál se Vám odemkne po přijetí platby. Platební údaje a QR kód najdete níže, platební pokyn je také v příloze. Nejrychlejší je naskenovat QR kód v bankovní aplikaci.\n\nPo zaplacení najdete materiál ve svém účtu: {my_materials_url}\n\nS pozdravem\n{company}",

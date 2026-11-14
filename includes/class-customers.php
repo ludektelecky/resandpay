@@ -52,7 +52,8 @@ class Resandpay_Customers {
 				SUM(amount_paid) AS paid, MAX(id) AS last_id,
 				SUM(CASE WHEN ml_status = 'sent' THEN 1 ELSE 0 END) AS ml_sent,
 				SUM(CASE WHEN ml_status = 'pending' THEN 1 ELSE 0 END) AS ml_pending,
-				SUM(CASE WHEN ml_status = 'error' THEN 1 ELSE 0 END) AS ml_error
+				SUM(CASE WHEN ml_status = 'error' THEN 1 ELSE 0 END) AS ml_error,
+				SUM(CASE WHEN ml_status IN ('unsubscribe', 'unsubscribed') THEN 1 ELSE 0 END) AS ml_unsub
 			FROM {$t} WHERE " . self::where( $args ) . " GROUP BY LOWER(TRIM(email))) c
 			JOIN {$t} r ON r.id = c.last_id";
 		$cond = array();
@@ -61,7 +62,10 @@ class Resandpay_Customers {
 		}
 		switch ( $args['ml'] ?? '' ) {
 			case 'sent':
-				$cond[] = 'c.ml_sent > 0';
+				$cond[] = 'c.ml_sent > 0 AND NOT (r.newsletter = 0 AND c.ml_unsub > 0)';
+				break;
+			case 'unsubscribed':
+				$cond[] = 'r.newsletter = 0 AND c.ml_unsub > 0';
 				break;
 			case 'pending':
 				$cond[] = 'c.ml_sent = 0 AND c.ml_pending > 0';
@@ -73,7 +77,7 @@ class Resandpay_Customers {
 				$cond[] = 'c.ml_sent = 0 AND c.ml_pending = 0 AND c.ml_error = 0 AND r.newsletter = 1';
 				break;
 			case 'no_consent':
-				$cond[] = 'c.ml_sent = 0 AND c.ml_pending = 0 AND c.ml_error = 0 AND r.newsletter = 0';
+				$cond[] = 'c.ml_sent = 0 AND c.ml_pending = 0 AND c.ml_error = 0 AND c.ml_unsub = 0 AND r.newsletter = 0';
 				break;
 		}
 		if ( $cond ) {
@@ -117,7 +121,7 @@ class Resandpay_Customers {
 		$items = $wpdb->get_results( "SELECT c.*, r.customer_name, r.email, r.phone, r.newsletter FROM {$from} ORDER BY {$orderby} {$order}, c.email_key ASC{$limit}", ARRAY_A );
 		$paid  = self::paid_by_currency( wp_list_pluck( $items, 'email_key' ) );
 		foreach ( $items as &$it ) {
-			foreach ( array( 'total', 'active', 'closed', 'last_id', 'newsletter', 'ml_sent', 'ml_pending', 'ml_error' ) as $k ) {
+			foreach ( array( 'total', 'active', 'closed', 'last_id', 'newsletter', 'ml_sent', 'ml_pending', 'ml_error', 'ml_unsub' ) as $k ) {
 				$it[ $k ] = (int) $it[ $k ];
 			}
 			$it['paid']        = (float) $it['paid'];
