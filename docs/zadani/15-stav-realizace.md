@@ -19,7 +19,7 @@ Vývoj probíhá na webu slehkouhlavou.cz (WordPress 7.1, PHP 8.5, MySQL 8.4, Ac
 
 ## 15.1 Kniha rozvoje
 
-> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R27 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
+> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R28 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
 
 Funkce navržené k dalšímu rozvoji pluginu. Položka se po schválení podrobného zadání přesune do příslušné kapitoly a do tabulky stavu realizace.
 
@@ -405,3 +405,19 @@ Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, po
 - Zákazník = e-mail profilu: záznamy logu s tímto e-mailem (stažení přes osobní odkaz) i záznamy účtů se stejným e-mailem (po přihlášení). Nepočítají se ukázky, neúspěšné pokusy (limit) ani technické záznamy vodoznaku.
 - Profil nově ukazuje i materiály, ke kterým zákazník nemá záznam o nároku, ale **stáhl si je** (typicky „Jen pro přihlášené“ zdarma): po přihlášení se stažením, přes osobní odkaz s historií a „Ke stažení po přihlášení“, bez přístupu „Materiál už nemáte k dispozici“, znepřístupněné s textem z nastavení.
 - Historie se řídí uchováváním logu (Uchovávat záznamy o stažení, výchozí 365 dní). Funkce Resandpay_Materials::download_history(), downloaded_ids().
+
+### R28 – Fotky z proběhlé akce a hláška „akce již proběhla“
+
+**Pozn.: Navrženo a schváleno 19. 11. 2026 ([Issue #45](https://github.com/ludektelecky/resandpay/issues/45)), implementováno ve verzi pluginu 0.30.0.**
+
+- **Hláška podle stavu akce:** během akce (od začátku do konce) „Rezervace již není možná – akce už začala.“, po skončení „Rezervace není možná – akce již proběhla.“ (chyba `over` v Resandpay_Events::check_bookable). Akce bez vyplněného konce (při uložení se konec vyplní začátkem) končí o půlnoci po dni konání. Texty v Nastavení → Web a vzhled → Detail akce (event_started_text, event_over_text).
+- **Fotky z akce** – samostatná komponenta vedle galerie v záhlaví (ta se nemění), jen u akcí (ne u termínů služeb). Editor akce → Parametry akce → záložka **Fotky z akce**:
+  - **Kdo fotky uvidí** (meta `_rap_photos_vis`): *Jen účastníci akce* (výchozí) · *Přihlášení uživatelé* · *Veřejné*. Účastník = zákazník se **zaplacenou** rezervací (i zaplacenou na místě; zrušené, propadlé a nezaplacené ne), podle účtu nebo e-mailu (i e-mailu účtu). Správce akce vidí fotky vždy.
+  - **Nahrání** více fotek najednou: v prohlížeči se zmenší (delší strana 2048 px) a znovu uloží jako JPEG – odstraní se EXIF včetně polohy (GPS). Server vytvoří čtvercový náhled 480 × 480 (bez knihovny pro úpravu obrázků se použije fotka). Nejvýše 500 fotek, pořadí přetažením, odebrání (smaže soubory) – uloží se s akcí (meta `_rap_photos`, pole `rap_photos_order`).
+  - **Ochrana** stejně jako materiály: soubory v chráněné složce (`resandpay-protected/e{ID}-…`, přímý přístup zakázán), náhledy i fotky posílá plugin přes podepsaný odkaz `?rap_ph=` vázaný na návštěvníka (účet / e-mail) s platností 6–7 h; přístup se ověří u každého obrázku znovu (po zrušení rezervace odkaz přestane fungovat). U veřejných fotek odkaz bez omezení doby, po změně na omezený přístup přestane platit.
+  - **E-mail účastníkům:** po skončení akce tlačítko „Poslat účastníkům e-mail, že jsou fotky k dispozici (N)“ – jeden e-mail na adresu, šablona Nastavení → E-maily → Fotky z akce (`tpl_event_photos_*`, proměnná `{photos_url}` = stránka akce s osobním odkazem, bez přihlášení). Zaznamená se datum a počet (meta `_rap_photos_notified`).
+- **Stránka akce po skončení** (vzhled s galerií): v záhlaví místo „Rezervovat místo →“ tlačítko **„Fotky z akce ↓“** (jen jsou-li fotky a návštěvník je smí vidět), bez odpočtu; v pravém sloupci karta s hláškou a odkazem na fotky; pod popisem akce **přes celou šířku** sekce „Fotky z akce (N)“ (`#rap-photos`): mřížka čtvercových náhledů (na mobilu 3 v řadě), prvních 24 hned, další tlačítkem „Zobrazit další“, líné načítání. Jednoduchý vzhled a shortcode formuláře: hláška a sekce fotek na místě formuláře.
+- **Bez přístupu:** místo mřížky text z nastavení (photos_locked_text / photos_login_text), tlačítko Přihlásit se, odkaz Moje rezervace a po odeslání e-mailu „Účastníkům jsme poslali odkaz e-mailem“. Stránka otevřená osobním odkazem se neukládá do mezipaměti.
+- **Prohlížeč fotek** (jen prohlížení, bez stažení): přes celou obrazovku na tmavém pozadí, šipky a klávesy ←/→, tah prstem, počítadlo „3 / 24“, Esc / křížek, bez externích knihoven (assets/js/event-photos.js, třídy `rap-photos*`, `rap-lightbox*`).
+- **Profil zákazníka:** u zaplacené rezervace proběhlé akce s fotkami odkaz „Fotky z akce →“ (přes osobní odkaz s tokenem).
+- Funkce Resandpay_Event_Photos (add, set_order, can_view, is_attendee, url, authorize, section, notify), administrace Resandpay_Admin_Event_Photos. Bez změny databáze.

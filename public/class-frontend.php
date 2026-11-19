@@ -242,6 +242,7 @@ class Resandpay_Frontend {
 		$brow    = ( $cats && ! is_wp_error( $cats ) ) ? implode( ' · ', wp_list_pluck( $cats, 'name' ) ) : ( Resandpay_Events::type_labels()[ $ev['type'] ] ?? '' );
 		$is_slot = 'slot' === $ev['type'] && $ev['capacity'] <= 1;
 		$open    = ! $ev['cancelled'] && Resandpay_Events::is_open( $ev );
+		$over    = ! $ev['cancelled'] && Resandpay_Event_Photos::is_over( $ev );
 		$photos  = Resandpay_Events::photos( $event_id );
 		$excerpt = has_excerpt( $event_id ) ? get_the_excerpt( $event_id ) : '';
 
@@ -294,7 +295,9 @@ class Resandpay_Frontend {
 		echo '<div class="rap-event__cta">';
 		echo '<p class="rap-event__price">' . self::price_html( $ev, 'multiday' === $ev['type'] ? __( 'za celou akci', 'reserveandpay' ) : __( '/ osoba', 'reserveandpay' ) ) . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno v price_html().
 		$egate = $open ? Resandpay_Events::gate( $ev ) : true;
-		if ( $open && is_wp_error( $egate ) && 'not_open' === $egate->get_error_code() ) {
+		if ( $over ) {
+			echo Resandpay_Event_Photos::cta( $ev ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
+		} elseif ( $open && is_wp_error( $egate ) && 'not_open' === $egate->get_error_code() ) {
 			echo '<span class="rap-event__opens">' . esc_html( $egate->get_error_message() ) . '</span>';
 		} elseif ( $open && ( true === $egate || ! $ev['external'] ) ) {
 			echo '<a class="rap-button" href="' . esc_url( $ev['external'] && true === $egate ? $ev['external']['url'] : '#rap-booking' ) . '"' . ( true === $egate ? Resandpay_Views::book_attrs( $ev ) : '' ) . '>' . esc_html( Resandpay_Views::book_label( $ev, __( 'Rezervovat místo →', 'reserveandpay' ) ) ) . '</a>'; // phpcs:ignore WordPress.Security.EscapeOutput -- pevné atributy.
@@ -323,6 +326,10 @@ class Resandpay_Frontend {
 		echo self::render_booking( $event_id, true ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
 		echo '</aside>';
 		echo '</div>';
+		// Fotky z proběhlé akce přes celou šířku pod popisem (#45).
+		if ( $over ) {
+			echo Resandpay_Event_Photos::section( $event_id ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
+		}
 
 		echo '</div>';
 		return ob_get_clean();
@@ -605,6 +612,22 @@ class Resandpay_Frontend {
 		if ( $done && (int) $done['event_id'] === (int) $event_id ) {
 			self::render_confirmation( $done, $ev );
 			echo '</section>';
+			return ob_get_clean();
+		}
+
+		// Proběhlá akce (#45): místo formuláře hláška; v kartě odkaz na fotky pod popisem, jinak fotky rovnou zde.
+		if ( ! $ev['cancelled'] && Resandpay_Event_Photos::is_over( $ev ) ) {
+			if ( $card ) {
+				echo '<p class="rap-eyebrow">' . esc_html__( 'Rezervace', 'reserveandpay' ) . '</p>';
+			}
+			echo '<p class="rap-notice rap-notice--over">' . esc_html( (string) Resandpay_Settings::get( 'event_over_text' ) ) . '</p>';
+			if ( $card ) {
+				echo Resandpay_Event_Photos::cta( $ev, 'rap-button rap-button--ghost' ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
+			}
+			echo '</section>';
+			if ( ! $card ) {
+				echo Resandpay_Event_Photos::section( $event_id ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
+			}
 			return ob_get_clean();
 		}
 

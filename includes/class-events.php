@@ -635,7 +635,11 @@ class Resandpay_Events {
 			return new WP_Error( 'no_date', __( 'Akce nemá nastavený termín.', 'reserveandpay' ) );
 		}
 		if ( $now >= $start ) {
-			return new WP_Error( 'started', __( 'Rezervace již není možná – akce už začala.', 'reserveandpay' ) );
+			// Během akce „už začala“, po jejím konci „již proběhla“ (#45); texty v Nastavení → Detail akce.
+			if ( Resandpay_Event_Photos::is_over( $ev, $now ) ) {
+				return new WP_Error( 'over', (string) Resandpay_Settings::get( 'event_over_text' ) ?: __( 'Rezervace není možná – akce již proběhla.', 'reserveandpay' ) );
+			}
+			return new WP_Error( 'started', (string) Resandpay_Settings::get( 'event_started_text' ) ?: __( 'Rezervace již není možná – akce už začala.', 'reserveandpay' ) );
 		}
 		if ( ! $ignore_close && $ev['close_hours'] > 0 && $now > $start - (int) round( $ev['close_hours'] * HOUR_IN_SECONDS ) ) {
 			return new WP_Error( 'closed', __( 'Rezervace na tuto akci jsou již uzavřeny.', 'reserveandpay' ) );

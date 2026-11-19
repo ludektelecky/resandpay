@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.29.1** · zadání: [`docs/zadani/`](docs/zadani/README.md) (odpovídá aktuální verzi pluginu) · rozvojové požadavky: [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) · změny: [DEVLOG](docs/DEVLOG.md)
+> **Aktuální verze pluginu: 0.30.0** · zadání: [`docs/zadani/`](docs/zadani/README.md) (odpovídá aktuální verzi pluginu) · rozvojové požadavky: [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) · změny: [DEVLOG](docs/DEVLOG.md)
 
 ### Název a označení
 
@@ -26,6 +26,7 @@ Technické identifikátory se nemění (slug a textdomain `reserveandpay`, před
   - pevná délka termínu a pauza jako nastavitelné parametry služby (výchozí 60 + 15 min)
   - generátor termínů (dny v týdnu, časové okno, období) s náhledem a hromadným rušením
 - Stránka akce s galerií: záhlaví (kategorie, nadpis, perex z úryvku, termín, místo, cena, „Rezervovat místo →“) vedle fotek z Knihovny médií, pod ním popis akce a vedle něj rezervační karta s počtem volných míst a uzávěrkou; volba „Jednoduchý“ vrací dřívější vzhled (Nastavení → Detail akce)
+- Fotky z proběhlé akce: po skončení akce se místo rezervačního formuláře zobrazí „Rezervace není možná – akce již proběhla.“ a pod popisem akce sekce **Fotky z akce** (mřížka náhledů, prohlížeč přes celou obrazovku). U akce volba, kdo fotky uvidí: jen účastníci (zaplacená rezervace) · přihlášení · veřejné; fotky leží v chráněné složce jako materiály, účastník bez účtu je otevře osobním odkazem z e-mailu (tlačítko „Poslat účastníkům e-mail“ v editoru akce)
 - Časté dotazy (FAQ) u akce i služby: otázka vždy vidět, odpověď rozbalovací (výchozí vše sbalené), termín bez vlastních dotazů přebírá dotazy služby; strukturovaná data FAQPage pro Google
 - Překrývání akcí je povoleno – systém pouze upozorní
 - Hlídání kapacity: jedna rezervace = jedno místo = vlastní variabilní symbol; atomická kontrola proti přeplnění
@@ -212,6 +213,7 @@ Jedna paleta platí pro **web, e-maily, platební pokyn a slevový poukaz (PDF)*
 | `.rap-button` | tlačítko (`.rap-button--block` na celou šířku) |
 | `.rap-event`, `.rap-event__cta`, `.rap-event__price` | detail akce: záhlaví, cena a tlačítko |
 | `.rap-booking`, `.rap-booking--card`, `.rap-form`, `.rap-field` | rezervační karta a formulář |
+| `.rap-photos`, `.rap-photos__grid`, `.rap-photos__item`, `.rap-photos__locked`, `.rap-lightbox` | fotky z proběhlé akce: sekce, mřížka, náhled, výzva k přihlášení, prohlížeč fotek |
 | `.rap-list`, `.rap-item`, `.rap-item__title` | výpis akcí `[reserveandpay_program]` |
 | `.rap-calendar`, `.rap-agenda` | kalendářový pohled |
 | `.rap-slots`, `.rap-slot`, `.rap-slots__date` | volné termíny služby `[reserveandpay_slots]` |

@@ -4,6 +4,18 @@
 >
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
+## 0.30.0 – Fotky z proběhlé akce a hláška „akce již proběhla“ (19. 11. 2026)
+
+- **R28 – fotky z proběhlé akce** ([Issue #45](https://github.com/ludektelecky/resandpay/issues/45), schváleno a implementováno):
+  - po skončení akce zmizí rezervační formulář; v záhlaví tlačítko **„Fotky z akce ↓“**, v kartě hláška a odkaz, pod popisem akce **přes celou šířku** sekce **Fotky z akce (N)** – mřížka náhledů, „Zobrazit další“ nad 24 fotek
+  - **prohlížeč fotek** přes celou obrazovku: šipky, klávesy ←/→, tah prstem, počítadlo, Esc (jen prohlížení)
+  - editor akce → záložka **Fotky z akce**: kdo fotky uvidí (**jen účastníci** se zaplacenou rezervací · **přihlášení** · **veřejné**), nahrání více fotek najednou (v prohlížeči se zmenší na 2048 px a odstraní se poloha GPS), pořadí přetažením, odebrání
+  - fotky v **chráněné složce** jako materiály, posílá je plugin přes podepsaný odkaz s kontrolou přístupu u každého obrázku
+  - tlačítko **„Poslat účastníkům e-mail, že jsou fotky k dispozici“** s osobním odkazem (bez přihlášení), šablona v Nastavení → E-maily → Fotky z akce
+  - v profilu „Moje rezervace“ u proběhlé akce odkaz „Fotky z akce →“
+- **Hláška podle stavu akce:** během akce „Rezervace již není možná – akce už začala.“, po skončení nově „Rezervace není možná – akce již proběhla.“; akce bez konce končí o půlnoci po dni konání. Obě hlášky a texty u fotek jsou v Nastavení → Web a vzhled → Detail akce.
+- Bez změny databáze. Testy: 869 kontrol + souběh
+
 ## 0.29.1 – Oprava: chybějící QR kód při IBAN bez „CZ“ (19. 11. 2026)
 
 - **Chyba:** na jiném webu se v e-mailech ani v platebním pokynu (PDF) negeneroval QR kód. Příčina: IBAN byl v nastavení zadaný jen jako 20 číslic bez „CZ“ a kontrolních číslic, plugin ho vyhodnotil jako neplatný a QR tiše vynechal.

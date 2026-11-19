@@ -323,6 +323,11 @@ class Resandpay_Profile {
 		} elseif ( $mat && Resandpay_Reservations::PAID === $r['status'] && class_exists( 'Resandpay_Materials' ) && Resandpay_Materials::my_url() ) {
 			$out .= '<p><a href="' . esc_url( Resandpay_Materials::my_url() ) . '">' . esc_html__( 'Stáhnout v Moje materiály →', 'reserveandpay' ) . '</a></p>';
 		}
+		// Proběhlá akce s fotkami (#45): odkaz na fotky (přes osobní odkaz i bez přihlášení).
+		if ( ! $mat && $ev && $url && Resandpay_Reservations::PAID === $r['status'] && Resandpay_Event_Photos::supported( $ev ) && Resandpay_Event_Photos::is_over( $ev ) && Resandpay_Event_Photos::photos( $ev['id'] ) ) {
+			$purl = ( $via_link ? self::link_with_token( $url, $r ) : $url ) . '#rap-photos';
+			$out .= '<p><a href="' . esc_url( $purl ) . '">' . esc_html( (string) Resandpay_Settings::get( 'photos_title' ) ) . ' →</a></p>';
+		}
 		return $out . '</li>';
 	}
 

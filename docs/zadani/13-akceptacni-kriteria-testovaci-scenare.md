@@ -16,6 +16,7 @@
 - Vygenerovaný QR kód rozpozná bankovní aplikace (min. Raiffeisenbank a ještě jedna další banka) a předvyplní částku, účet i VS.
 - Parser správně zpracuje vzorové avízo Raiffeisenbank (částka 5 000,00 Kč, VS bez úvodních nul, protiúčet) a odmítne podvržené avízo, avízo na jiný účet a odchozí platbu.
 - E-mail s platebním pokynem dorazí do 1 minuty jako HTML v barvách webu s QR kódem v těle a PDF v příloze; odkaz na PDF funguje i po několika dnech; textová verze obsahuje platební údaje.
+- Proběhlá akce: místo formuláře hláška „akce již proběhla“ (během akce „už začala“); fotky z akce vidí jen ten, komu to volba u akce dovolí (účastník se zaplacenou rezervací přes účet nebo osobní odkaz, přihlášený, kdokoli); odkaz na fotku nefunguje pro jiného návštěvníka, po úpravě, po vypršení ani po zrušení rezervace (0.30.0).
 - QR kód přečte zpět stejný SPD řetězec (automatický test); zpráva pro příjemce je jen v ASCII a nejvýš 60 znaků; bez platného IBAN (ani dopočítaného z čísla účtu) nebo u jiné měny než CZK se QR negeneruje; IBAN bez „CZ“ a kontrolních číslic se doplní (0.29.1).
 - Odbavení: načtení QR kódu kamerou telefonu zobrazí kartu správné rezervace.
 - Testovací platba s korektním VS a částkou je v automatickém režimu spárována nejpozději do uplynutí nastaveného intervalu (standardně 60 min); v ručním režimu po stisknutí „Zkontrolovat platby nyní“.
