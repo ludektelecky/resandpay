@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.31.0** · zadání: [`docs/zadani/`](docs/zadani/README.md) (odpovídá aktuální verzi pluginu) · rozvojové požadavky: [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) · změny: [DEVLOG](docs/DEVLOG.md)
+> **Aktuální verze pluginu: 0.32.0** · zadání: [`docs/zadani/`](docs/zadani/README.md) (odpovídá aktuální verzi pluginu) · rozvojové požadavky: [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) · změny: [DEVLOG](docs/DEVLOG.md)
 
 ### Název a označení
 
@@ -61,6 +61,8 @@ Technické identifikátory se nemění (slug a textdomain `reserveandpay`, před
 - Objednávka placeného materiálu stejným platebním tokem jako rezervace (VS, QR, kontrola plateb, kupóny) se souhlasem s okamžitým poskytnutím digitálního obsahu
 - Chráněná složka **RaP-Pf** (`wp-content/uploads/resandpay-protected/`) mimo Knihovnu médií, nahrávání po částech (i velká videa), podepsané časově omezené odkazy, HTTP Range, limit a log stažení
 - Katalog, detail s přehrávačem videa a audia, stránka „Moje materiály“
+- U videa a audia volba **„Jen přehrát“** (bez tlačítka Stáhnout, stažení server odmítne) a **vodoznak přes video** podle nastavení vodoznaku PDF (u audia „Licencováno pro: …“)
+- **Externí video z YouTube** v materiálu: tlačítko „Přehrát na YouTube“ jen pro zákazníky s přístupem, přes podepsaný odkaz s ověřením přístupu a zápisem přehrání do historie
 
 ### Napojení
 - **Ultimate Member** – po zaplacení založení účtu / přidání role

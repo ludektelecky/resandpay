@@ -144,6 +144,7 @@ class Resandpay_Materials {
 			'access_days' => '' === $days ? (int) Resandpay_Settings::get( 'mat_access_days' ) : max( 0, (int) $days ),
 			'links'       => array_values( array_filter( array_map( 'absint', explode( ',', (string) $m( 'mat_links' ) ) ) ) ),
 			'files'       => self::files( $post->ID ),
+			'videos'      => self::videos( $post->ID ),
 			// Znepřístupněno (#26) = zmizí z katalogu a nikdo ho nestáhne; zahrnuje i „staženo z nabídky“.
 			'disabled'    => (bool) (int) $m( 'mat_disabled', 0 ),
 			'withdrawn'   => (bool) (int) $m( 'mat_withdrawn', 0 ) || (bool) (int) $m( 'mat_disabled', 0 ),
@@ -266,9 +267,80 @@ class Resandpay_Materials {
 				'size'   => (int) ( $f['size'] ?? 0 ),
 				'mime'   => (string) ( $f['mime'] ?? 'application/octet-stream' ),
 				'sample' => ! empty( $f['sample'] ),
+				'play_only' => ! empty( $f['play_only'] ) && self::is_media( (string) ( $f['mime'] ?? '' ) ),
 			);
 		}
 		return $out;
+	}
+
+	/** Video nebo audio (přehrávač na webu). */
+	public static function is_media( $mime ) {
+		return 0 === strpos( (string) $mime, 'video/' ) || 0 === strpos( (string) $mime, 'audio/' );
+	}
+
+	/**
+	 * Externí videa materiálu (#51) – zatím jen YouTube. Zákazník s přístupem je otevře tlačítkem
+	 * „Přehrát na YouTube“ přes podepsaný odkaz pluginu (ověření přístupu, zápis přehrání, přesměrování).
+	 *
+	 * @return array[] id, label, url, sample
+	 */
+	public static function videos( $material_id ) {
+		$raw  = get_post_meta( $material_id, '_rap_mat_videos', true );
+		$list = is_array( $raw ) ? $raw : ( json_decode( (string) $raw, true ) ?: array() );
+		$out  = array();
+		foreach ( $list as $v ) {
+			$url = self::youtube_url( (string) ( $v['url'] ?? '' ) );
+			$id  = preg_replace( '/[^a-z0-9]/', '', strtolower( (string) ( $v['id'] ?? '' ) ) );
+			if ( '' === $url || '' === $id ) {
+				continue;
+			}
+			$out[] = array(
+				'id'     => $id,
+				'label'  => (string) ( $v['label'] ?? '' ),
+				'url'    => $url,
+				'sample' => ! empty( $v['sample'] ),
+			);
+		}
+		return $out;
+	}
+
+	public static function save_videos( $material_id, array $videos ) {
+		update_post_meta( $material_id, '_rap_mat_videos', wp_slash( wp_json_encode( array_values( $videos ) ) ) );
+	}
+
+	public static function video( $material_id, $video_id ) {
+		foreach ( self::videos( $material_id ) as $v ) {
+			if ( $v['id'] === $video_id ) {
+				return $v;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Adresa videa YouTube v jednotném tvaru https://www.youtube.com/watch?v=ID (i neveřejná videa,
+	 * youtu.be, shorts, live, embed); jiná adresa = ''.
+	 */
+	public static function youtube_url( $url ) {
+		$url = trim( (string) $url );
+		if ( ! preg_match( '#^https://#i', $url ) ) {
+			return '';
+		}
+		$p    = wp_parse_url( $url );
+		$host = strtolower( (string) ( $p['host'] ?? '' ) );
+		$path = (string) ( $p['path'] ?? '' );
+		$id   = '';
+		if ( 'youtu.be' === $host ) {
+			$id = trim( $path, '/' );
+		} elseif ( in_array( $host, array( 'youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtube-nocookie.com', 'www.youtube-nocookie.com' ), true ) ) {
+			if ( '/watch' === rtrim( $path, '/' ) ) {
+				parse_str( (string) ( $p['query'] ?? '' ), $q );
+				$id = (string) ( $q['v'] ?? '' );
+			} elseif ( preg_match( '#^/(shorts|live|embed)/([^/?]+)#', $path, $m ) ) {
+				$id = $m[2];
+			}
+		}
+		return preg_match( '/^[A-Za-z0-9_-]{11}$/', $id ) ? 'https://www.youtube.com/watch?v=' . $id : '';
 	}
 
 	public static function save_files( $material_id, array $files ) {
@@ -1377,6 +1449,19 @@ class Resandpay_Materials {
 		$user_id = null === $user_id ? get_current_user_id() : (int) $user_id;
 		$mat     = self::get( $t['material'] );
 		$file    = $mat ? self::file( $mat['id'], $t['file'] ) : null;
+		$video   = $mat && ! $file ? self::video( $mat['id'], $t['file'] ) : null; // Externí video (#51).
+		if ( $video ) {
+			$file = array(
+				'id'        => $video['id'],
+				'label'     => $video['label'],
+				'name'      => '',
+				'path'      => '',
+				'size'      => 0,
+				'mime'      => 'video/x-youtube',
+				'sample'    => $video['sample'],
+				'play_only' => true,
+			);
+		}
 		if ( ! $mat || ! $file ) {
 			return new WP_Error( 'not_found', __( 'Soubor už není k dispozici.', 'reserveandpay' ), array( 'status' => 404 ) );
 		}
@@ -1394,6 +1479,23 @@ class Resandpay_Materials {
 				$msg = 'login' === $acc['reason'] ? (string) Resandpay_Settings::get( 'mat_login_text' ) : ( 'disabled' === $acc['reason'] ? (string) Resandpay_Settings::get( 'mat_disabled_text' ) : __( 'K tomuto materiálu nemáte přístup.', 'reserveandpay' ) );
 				return new WP_Error( 'disabled' === $acc['reason'] ? 'disabled' : 'denied', $msg, array( 'status' => 403 ) );
 			}
+		}
+		if ( $video ) {
+			return array(
+				'file'     => $file,
+				'abs'      => '',
+				'redirect' => $video['url'],
+				'material' => $mat,
+				'kind'     => $sample ? 'sample' : 'play',
+				'user'     => $user_id,
+				'inline'   => true,
+				'wm_error' => '',
+				'email'    => $email,
+			);
+		}
+		// Jen přehrát (#50): soubor se na webu jen přehrává – odkaz ke stažení se odmítne (správci ano).
+		if ( $file['play_only'] && ! $t['inline'] && ! ( $user_id && user_can( $user_id, resandpay_cap_reservations() ) ) ) {
+			return new WP_Error( 'play_only', __( 'Tento soubor lze jen přehrát na stránce materiálu, stažení není povoleno.', 'reserveandpay' ), array( 'status' => 403 ) );
 		}
 		$abs = self::abs_path( $file['path'] );
 		if ( ! $abs || ! is_readable( $abs ) ) {
@@ -1442,6 +1544,13 @@ class Resandpay_Materials {
 			$status = (int) ( $auth->get_error_data()['status'] ?? 403 );
 			$back   = wp_get_referer() ?: home_url( '/' );
 			wp_die( '<p>' . esc_html( $auth->get_error_message() ) . '</p><p><a href="' . esc_url( $back ) . '">' . esc_html__( '← Zpět', 'reserveandpay' ) . '</a></p>', esc_html__( 'Stažení materiálu', 'reserveandpay' ), array( 'response' => $status ) );
+		}
+		if ( ! empty( $auth['redirect'] ) ) { // Externí video (#51): zápis přehrání a přesměrování.
+			self::log_download( $auth['user'], $auth['material']['id'], $auth['file']['id'], $auth['kind'], 'ok', $auth['email'] );
+			nocache_headers();
+			header( 'X-Robots-Tag: noindex, nofollow' );
+			wp_redirect( $auth['redirect'], 302, 'ReserveAndPay' ); // phpcs:ignore WordPress.Security.SafeRedirect -- jen ověřená adresa YouTube.
+			exit;
 		}
 		$size = (int) filesize( $auth['abs'] );
 		$rng  = self::parse_range( $range, $size );

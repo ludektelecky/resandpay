@@ -298,24 +298,40 @@ class Resandpay_Materials_Views {
 		if ( ! empty( $mat['disabled'] ) && $locked ) {
 			return ''; // Znepřístupněný materiál: ani názvy souborů, ani ukázky.
 		}
-		if ( ! $mat['files'] ) {
+		$videos = $mat['videos'] ?? array();
+		if ( ! $mat['files'] && ! $videos ) {
 			return $locked ? '' : '<p class="rap-small">' . esc_html__( 'Soubory se připravují.', 'reserveandpay' ) . '</p>';
 		}
 		$uid = '' !== $email ? 0 : get_current_user_id(); // Bez přihlášení: odkazy vázané na e-mail (#29).
+		// Vodoznak přes video / u audia (#50): text a umístění jako u PDF, jen u známého zákazníka.
+		$wm  = ( $uid || '' !== $email ) && Resandpay_Watermark::enabled_for( $mat ) ? Resandpay_Watermark::text( $mat, $uid, null, $email ) : '';
+		$pos = (string) Resandpay_Settings::get( 'mat_wm_position' );
+		$pos = isset( Resandpay_Watermark::positions()[ $pos ] ) ? $pos : 'footer';
 		$out = '<ul class="rap-mat-files">';
 		foreach ( $mat['files'] as $f ) {
 			$label = $f['label'] ?: $f['name'];
-			$meta  = strtoupper( pathinfo( $f['name'], PATHINFO_EXTENSION ) ) . ' · ' . Resandpay_Materials::format_size( $f['size'] );
+			$media = 0 === strpos( $f['mime'], 'video/' ) ? 'video' : ( 0 === strpos( $f['mime'], 'audio/' ) ? 'audio' : '' );
+			$only  = $media && ! empty( $f['play_only'] );
+			$meta  = strtoupper( pathinfo( $f['name'], PATHINFO_EXTENSION ) ) . ' · ' . ( $only ? ( 'video' === $media ? __( 'ke sledování online', 'reserveandpay' ) : __( 'k poslechu online', 'reserveandpay' ) ) : Resandpay_Materials::format_size( $f['size'] ) );
 			$out  .= '<li class="rap-mat-file' . ( $locked && ! $f['sample'] ? ' is-locked' : '' ) . '"><span class="rap-mat-file__name">' . esc_html( $label ) . ( $f['sample'] ? ' <span class="rap-tag">' . esc_html__( 'ukázka', 'reserveandpay' ) . '</span>' : '' ) . '<small>' . esc_html( $meta ) . '</small></span>';
 			if ( ! $locked || $f['sample'] ) {
-				$media = 0 === strpos( $f['mime'], 'video/' ) ? 'video' : ( 0 === strpos( $f['mime'], 'audio/' ) ? 'audio' : '' );
 				if ( $media ) {
 					$src  = Resandpay_Materials::download_url( $mat['id'], $f['id'], true, $uid, null, $email );
-					$out .= 'video' === $media
-						? '<video class="rap-mat-player" controls preload="metadata" controlsList="nodownload" src="' . esc_url( $src ) . '"></video>'
-						: '<audio class="rap-mat-player" controls preload="metadata" controlsList="nodownload" src="' . esc_url( $src ) . '"></audio>';
+					$out .= self::player( $media, $src, $only, $wm, $pos );
 				}
-				$out .= '<a class="rap-button rap-button--ghost rap-mat-file__dl" href="' . esc_url( Resandpay_Materials::download_url( $mat['id'], $f['id'], false, $uid, null, $email ) ) . '" rel="nofollow">' . esc_html__( 'Stáhnout', 'reserveandpay' ) . '</a>';
+				if ( ! $only ) {
+					$out .= '<a class="rap-button rap-button--ghost rap-mat-file__dl" href="' . esc_url( Resandpay_Materials::download_url( $mat['id'], $f['id'], false, $uid, null, $email ) ) . '" rel="nofollow">' . esc_html__( 'Stáhnout', 'reserveandpay' ) . '</a>';
+				}
+			} else {
+				$out .= '<span class="rap-mat-file__lock" aria-label="' . esc_attr__( 'zamčeno', 'reserveandpay' ) . '">🔒</span>';
+			}
+			$out .= '</li>';
+		}
+		foreach ( $videos as $v ) {
+			$out .= '<li class="rap-mat-file rap-mat-file--ext' . ( $locked && ! $v['sample'] ? ' is-locked' : '' ) . '"><span class="rap-mat-file__name">' . esc_html( $v['label'] ?: __( 'Video', 'reserveandpay' ) ) . ( $v['sample'] ? ' <span class="rap-tag">' . esc_html__( 'ukázka', 'reserveandpay' ) . '</span>' : '' ) . '<small>' . esc_html__( 'YouTube · video online', 'reserveandpay' ) . '</small></span>';
+			if ( ! $locked || $v['sample'] ) {
+				// Adresa videa se do stránky nevypisuje – odkaz přes web ověří přístup a zapíše přehrání (#51).
+				$out .= '<a class="rap-button rap-mat-file__yt" href="' . esc_url( Resandpay_Materials::download_url( $mat['id'], $v['id'], true, $uid, null, $email ) ) . '" target="_blank" rel="noopener nofollow">' . esc_html__( 'Přehrát na YouTube ↗', 'reserveandpay' ) . '</a>';
 			} else {
 				$out .= '<span class="rap-mat-file__lock" aria-label="' . esc_attr__( 'zamčeno', 'reserveandpay' ) . '">🔒</span>';
 			}
@@ -324,7 +340,35 @@ class Resandpay_Materials_Views {
 		return $out . '</ul>';
 	}
 
-	/** Platební údaje nezaplacené objednávky (QR, VS, splatnost, PDF). */
+	/**
+	 * Přehrávač videa / audia. Jen přehrát (#50): bez stažení v nabídce přehrávače a bez kontextové
+	 * nabídky; vodoznak přes video (překryv v HTML, i na celou obrazovku přes tlačítko pluginu).
+	 */
+	public static function player( $media, $src, $only, $wm, $pos ) {
+		$attrs = ' class="rap-mat-player" controls preload="metadata" controlsList="nodownload' . ( 'video' === $media && '' !== $wm ? ' nofullscreen' : '' ) . '"' . ( $only ? ' oncontextmenu="return false;"' : '' ) . ( $only && 'video' === $media ? ' disablepictureinpicture' : '' ) . ' src="' . esc_url( $src ) . '"';
+		if ( 'audio' === $media ) {
+			$out = '<audio' . $attrs . '></audio>';
+			if ( '' !== $wm ) {
+				/* translators: %s: text vodoznaku (jméno, e-mail…) */
+				$out .= '<p class="rap-small rap-mat-licence">' . esc_html( sprintf( __( 'Licencováno pro: %s', 'reserveandpay' ), $wm ) ) . '</p>';
+			}
+			return $out;
+		}
+		if ( '' === $wm ) {
+			return '<video' . $attrs . '></video>';
+		}
+		wp_enqueue_script( 'reserveandpay-player', RESANDPAY_URL . 'assets/js/material-player.js', array(), RESANDPAY_VERSION, true );
+		$marks = '';
+		if ( in_array( $pos, array( 'footer', 'both' ), true ) ) {
+			$marks .= '<span class="rap-mat-wm rap-mat-wm--footer">' . esc_html( $wm ) . '</span>';
+		}
+		if ( in_array( $pos, array( 'diagonal', 'both' ), true ) ) {
+			$marks .= '<span class="rap-mat-wm rap-mat-wm--diagonal"><span>' . esc_html( $wm ) . '</span></span>';
+		}
+		return '<div class="rap-mat-video" data-rap-player>' . '<video' . $attrs . ' playsinline></video>' . '<span class="rap-mat-wm-layer" aria-hidden="true">' . $marks . '</span>'
+			. '<button type="button" class="rap-mat-video__fs" aria-label="' . esc_attr__( 'Celá obrazovka', 'reserveandpay' ) . '" title="' . esc_attr__( 'Celá obrazovka', 'reserveandpay' ) . '">⛶</button></div>';
+	}
+
 	public static function render_payment( array $r ) {
 		$s   = Resandpay_Settings::all();
 		$out = '<p>' . esc_html__( 'Materiál máte objednaný. Odemkne se po přijetí platby.', 'reserveandpay' ) . '</p><div class="rap-paybox">';
@@ -351,8 +395,13 @@ class Resandpay_Materials_Views {
 			return '<p class="rap-small rap-mat-history__none">' . esc_html__( 'Zatím nestaženo.', 'reserveandpay' ) . '</p>';
 		}
 		$files = array();
+		$yt    = array();
 		foreach ( $mat['files'] as $f ) {
 			$files[ $f['id'] ] = $f['label'] ?: $f['name'];
+		}
+		foreach ( $mat['videos'] ?? array() as $v ) {
+			$files[ $v['id'] ] = $v['label'] ?: __( 'Video', 'reserveandpay' );
+			$yt[ $v['id'] ]    = true;
 		}
 		$last = $h['rows'] ? wp_date( 'j. n. Y G:i', Resandpay_Events::ts( $h['rows'][0]['created_at'] ) ) : '';
 		/* translators: 1: počet, 2: datum */
@@ -362,7 +411,7 @@ class Resandpay_Materials_Views {
 		}
 		$out = '<details class="rap-mat-history"><summary class="rap-small">' . esc_html( $sum ) . '</summary><ul>';
 		foreach ( $h['rows'] as $row ) {
-			$out .= '<li>' . esc_html( wp_date( 'j. n. Y G:i', Resandpay_Events::ts( $row['created_at'] ) ) . ' – ' . ( $files[ $row['file_id'] ] ?? $row['file_id'] ) . ' (' . ( 'play' === $row['kind'] ? __( 'přehrání', 'reserveandpay' ) : __( 'stažení', 'reserveandpay' ) ) . ')' ) . '</li>';
+			$out .= '<li>' . esc_html( wp_date( 'j. n. Y G:i', Resandpay_Events::ts( $row['created_at'] ) ) . ' – ' . ( $files[ $row['file_id'] ] ?? $row['file_id'] ) . ' (' . ( 'play' === $row['kind'] ? ( isset( $yt[ $row['file_id'] ] ) ? __( 'přehrání na YouTube', 'reserveandpay' ) : __( 'přehrání', 'reserveandpay' ) ) : __( 'stažení', 'reserveandpay' ) ) . ')' ) . '</li>';
 		}
 		if ( $h['total'] > count( $h['rows'] ) ) {
 			/* translators: %d: počet */

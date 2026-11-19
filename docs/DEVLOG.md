@@ -4,6 +4,18 @@
 >
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
+## 0.32.0 – Video jen k přehrání, vodoznak ve videu a externí video z YouTube (19. 11. 2026)
+
+- **R30 – jen přehrát a vodoznak ve videu** ([Issue #50](https://github.com/ludektelecky/resandpay/issues/50), schváleno a implementováno):
+  - editor materiálu → Soubory: u každého **videa a audia** v RaP-Pf nový sloupec **„Jen přehrát“** (bez stažení); výchozí vypnuto
+  - na webu u takového souboru jen přehrávač – **bez tlačítka „Stáhnout“**, bez kontextové nabídky a obrazu v obraze; místo velikosti „ke sledování online“ / „k poslechu online“; **odkaz ke stažení server odmítne** (403), správci si soubor stáhnou
+  - **vodoznak přes video** podle stávajícího nastavení vodoznaku (Nastavení → Materiály ke stažení: text, umístění zápatí / šikmo / obojí; zapnutí výchozí / u materiálu „Vodoznak v PDF a videu“): překryv nad přehrávačem u všech videí materiálu, i na celé obrazovce (tlačítko ⛶ a dvojklik přepínají celou obrazovku obalu s vodoznakem); u **audia** text „Licencováno pro: …“ pod přehrávačem; ukázky bez přihlášení bez vodoznaku
+- **R31 – externí video z YouTube** ([Issue #51](https://github.com/ludektelecky/resandpay/issues/51), schváleno a implementováno):
+  - editor materiálu → Soubory → **Externí videa (YouTube)**: název, adresa (watch, youtu.be, shorts, live, embed – uloží se v jednotném tvaru; neplatná adresa se neuloží s upozorněním), ukázka, odstranění, „+ další video“
+  - na webu tlačítko **„Přehrát na YouTube ↗“** (nové okno) jen pro zákazníky s přístupem, bez přístupu zámek 🔒; **adresa videa se do stránky nevypisuje** – odkaz vede přes web (podepsaný odkaz jako u souborů), který ověří přístup, **zapíše přehrání do historie** („přehrání na YouTube“, statistika materiálu) a přesměruje na YouTube
+  - bez vloženého přehrávače → na stránce nejsou cookies YouTube
+- Bez změny databáze (nová meta `_rap_mat_videos`, u souboru příznak `play_only`). Testy: 911 kontrol + souběh
+
 ## 0.31.0 – Skrytí volných míst na webu (19. 11. 2026)
 
 - **R29 – jen celková kapacita na webu** ([Issue #47](https://github.com/ludektelecky/resandpay/issues/47), schváleno a implementováno): u **akce** (Parametry akce → Termín a místo → Místo a kapacita) a u **služby** (Parametry služby → Termíny a místo → Počet míst na termín) nová volba **„Na webu nezobrazovat volná místa“**.

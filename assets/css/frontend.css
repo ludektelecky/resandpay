@@ -551,3 +551,18 @@ body.rap-lightbox-open { overflow: hidden; }
 	.rap-lightbox__prev, .rap-lightbox__next { top: auto; bottom: 12px; transform: none; }
 }
 @media (prefers-reduced-motion: reduce) { .rap-photos__item img { transition: none; } }
+
+/* Přehrávač s vodoznakem (#50) a externí video (#51) */
+.rap-mat-video { position: relative; flex: 1 1 100%; width: 100%; background: #000; line-height: 0; }
+.rap-mat-video .rap-mat-player { display: block; width: 100%; }
+.rap-mat-video:fullscreen, .rap-mat-video:-webkit-full-screen { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+.rap-mat-video:fullscreen .rap-mat-player, .rap-mat-video:-webkit-full-screen .rap-mat-player { max-height: 100%; height: 100%; object-fit: contain; }
+.rap-mat-wm-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; line-height: 1.3; }
+.rap-mat-wm { color: #fff; font-family: inherit; user-select: none; }
+.rap-mat-wm--footer { position: absolute; left: 12px; right: 12px; bottom: 56px; font-size: 13px; opacity: .55; text-shadow: 0 1px 2px rgba(0,0,0,.7); text-align: right; }
+.rap-mat-wm--diagonal { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.rap-mat-wm--diagonal span { transform: rotate(-25deg); font-size: clamp(16px, 4vw, 44px); font-weight: 600; opacity: .18; white-space: nowrap; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+.rap-mat-video__fs { position: absolute; top: 8px; right: 8px; z-index: 2; width: 36px; height: 36px; border: 0; border-radius: 4px; background: rgba(0,0,0,.55); color: #fff; font-size: 18px; line-height: 36px; cursor: pointer; padding: 0; }
+.rap-mat-video__fs:hover, .rap-mat-video__fs:focus-visible { background: rgba(0,0,0,.8); }
+.rap-mat-licence { flex: 1 1 100%; margin: 0; color: var(--rap-ink-soft); }
+.rap-mat-file__yt { padding: .45rem .9rem; font-size: 14px; }

@@ -19,7 +19,7 @@ Vývoj probíhá na webu slehkouhlavou.cz (WordPress 7.1, PHP 8.5, MySQL 8.4, Ac
 
 ## 15.1 Kniha rozvoje
 
-> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R29 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
+> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R31 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
 
 Funkce navržené k dalšímu rozvoji pluginu. Položka se po schválení podrobného zadání přesune do příslušné kapitoly a do tabulky stavu realizace.
 
@@ -140,7 +140,7 @@ Sekce webu pro stahování eBooků, videí a dalších elektronických instrukt�
 
 | **Otázka** | **Rozhodnutí (31. 10. 2026)** |
 |---|---|
-| R11-a Videa | Soubory přímo na webu (chráněná složka). Na stránce materiálu se video i audio přehrává v prohlížeči a lze ho stáhnout; externí přehrávače (Vimeo, YouTube) se nezavádějí. |
+| R11-a Videa | Soubory přímo na webu (chráněná složka RaP-Pf). Na stránce materiálu se video i audio přehrává v prohlížeči a lze ho stáhnout; od 0.32.0 volba „Jen přehrát“ a vodoznak ve videu (R30) a externí video z YouTube s tlačítkem „Přehrát na YouTube“ (R31). |
 | R11-b Kdo může objednat | Přihlášený uživatel (jméno a e-mail z účtu); od 0.24.0 (R22) i zákazník bez účtu podle e-mailu. |
 | R11-c Doba přístupu | Nastavitelná u každého materiálu: počet dní, 0 = natrvalo; výchozí hodnota v nastavení (0). |
 | R11-d Materiály pro účastnice | Ano – u materiálu lze vybrat akce a služby; zaplacená rezervace dává materiál zdarma. |
@@ -431,3 +431,23 @@ Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, po
 - **Plně obsazená akce / termín dál ukazuje „Obsazeno“** a další rezervaci nepustí (kontrola kapacity beze změny); obsazený termín služby se ve výběru nenabízí.
 - Externí akce a služby (kap. 3.11) se řídí svou volbou „Zobrazit celkovou kapacitu“. Administrace, Statistika, odbavení a e-maily (proměnná `{free}` v upozornění správci) beze změny.
 - Funkce Resandpay_Events::hides_free(), public_capacity(), save_hide_free_meta() (ukládá jen se značkou `rap_hide_free_field`, takže generátor ani jiné uložení volbu nepřepíše), hide_free_field(). Bez změny databáze.
+
+### R30 – Video a audio jen k přehrání, vodoznak ve videu
+
+**Pozn.: Navrženo a schváleno 19. 11. 2026 ([Issue #50](https://github.com/ludektelecky/resandpay/issues/50)), implementováno ve verzi pluginu 0.32.0.**
+
+- Editor materiálu → Soubory: u každého video / audio souboru v RaP-Pf sloupec **„Jen přehrát“** (příznak `play_only` v `_rap_mat_files`; u jiných typů se nenabízí ani neuloží). Výchozí vypnuto.
+- Web (stránka materiálu, Moje materiály, profil zákazníka): u souboru „jen přehrát“ jen přehrávač bez tlačítka „Stáhnout“ (`controlsList="nodownload"`, bez kontextové nabídky, u videa bez obrazu v obraze), místo velikosti „ke sledování online“ / „k poslechu online“. Server odkaz ke stažení (bez příznaku přehrávání) odmítne – chyba `play_only`, HTTP 403; uživatel s oprávněním ke správě rezervací si soubor stáhne. Platí i pro ukázky.
+- **Vodoznak přes video:** zapíná se stejně jako vodoznak v PDF (Nastavení → Materiály ke stažení → „Vodoznak v PDF a videu – výchozí“, u materiálu výchozí / ano / ne), text „Text vodoznaku“ ({date} = datum přehrání), umístění „Umístění vodoznaku“: zápatí = malý poloprůhledný text dole přes obraz, šikmo = velký světlý text přes střed, obojí. Překryv v HTML nad přehrávačem (soubor se nemění) u všech videí materiálu; celou obrazovku přepíná tlačítko ⛶ a dvojklik na obalu videa (nativní celá obrazovka videa je vypnutá, `nofullscreen`), aby vodoznak zůstal vidět (assets/js/material-player.js, třídy `rap-mat-video`, `rap-mat-wm*`). Na iPhonu (bez celé obrazovky prvku) zůstává video v okně stránky. **Audio:** pod přehrávačem „Licencováno pro: …“. Ukázky bez přihlášení jsou bez vodoznaku.
+- Omezení (nápověda v editoru): data se při přehrávání přenášejí do prohlížeče – stažení se výrazně ztíží, úplně se mu nezabrání (záznam obrazovky, nástroje prohlížeče); vodoznak záznam odradí.
+- Funkce Resandpay_Materials::is_media(), Resandpay_Materials_Views::player(). Bez změny databáze.
+
+### R31 – Externí video z YouTube v materiálu
+
+**Pozn.: Navrženo a schváleno 19. 11. 2026 ([Issue #51](https://github.com/ludektelecky/resandpay/issues/51)), implementováno ve verzi pluginu 0.32.0.** Rozhodnutí: v první verzi jen YouTube; přehrání do historie ano; tlačítko „Přehrát na YouTube“ (bez vloženého přehrávače).
+
+- Editor materiálu → Soubory → **Externí videa (YouTube)**: název na webu, adresa, ukázka (bez přihlášení), odstranění, tlačítko „+ další video“. Meta `_rap_mat_videos` (id `yt…`, label, url, sample). Přijímá https adresy youtube.com / www / m / youtube-nocookie.com (watch?v=, /shorts/, /live/, /embed/) a youtu.be s 11znakovým ID; ukládá se jednotně `https://www.youtube.com/watch?v=ID`. Neplatná adresa se neuloží (upozornění „video_bad“), u existujícího videa zůstane původní adresa.
+- Web: položka v seznamu souborů „YouTube · video online“; oprávněný zákazník (a u ukázky kdokoli) vidí tlačítko **„Přehrát na YouTube ↗“** (nové okno, `rel="noopener nofollow"`), bez přístupu zámek 🔒. Adresa videa se do stránky **nevypisuje** – tlačítko vede na podepsaný odkaz `?rap_dl=` (stejný jako u souborů, vázaný na návštěvníka a časově omezený); server ověří přístup, zapíše přehrání (`kind = play`, u ukázky `sample`) a přesměruje (302) na YouTube.
+- Historie zákazníka „přehrání na YouTube“, statistika materiálu (přehrání), poslední stažení v editoru „(YouTube)“; počet souborů v seznamu materiálů zahrnuje videa.
+- Omezení (nápověda): po otevření na YouTube zákazník adresu vidí a může ji přeposlat (neveřejné video přehraje kdokoli s odkazem) – přísněji chráněný obsah nahrát do RaP-Pf (R30). Bez vloženého přehrávače nejsou na stránce cookies YouTube. Vimeo / Bunny Stream případně později.
+- Funkce Resandpay_Materials::videos(), video(), youtube_url(), save_videos(). Bez změny databáze.
