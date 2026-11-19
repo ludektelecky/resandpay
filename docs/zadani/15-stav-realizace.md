@@ -114,7 +114,7 @@ Zákazník dostane před začátkem akce nebo termínu služby e-mail s připom�
 
 ### R9 – Kódy služeb a akcí jako preferovaný odkaz ve shortcodech
 
-**Pozn.: Zapsáno do knihy rozvoje 31. 10. 2026 na žádost vlastníka – zatím neimplementováno.**
+**Pozn.: Zapsáno do knihy rozvoje 31. 10. 2026 na žádost vlastníka; implementováno ve verzi pluginu 0.14.1 (nápovědy s kódy, tlačítko Kopírovat), příklady v README opraveny na kódy 19. 11. 2026 ([Issue #9](https://github.com/ludektelecky/resandpay/issues/9)).**
 
 - Ve všech nápovědách a příkladech shortcodů (editor služby – „Stránka s volnými termíny“, editor akce, dokumentace) uvádět jako preferovaný odkaz kód služby nebo akce (kap. 3.8), ne slug: např. [reserveandpay_slots service="SL-003" description="toggle"] místo [reserveandpay_slots service="parova-zvukova-lazen-s-restorativni-jogou-lidicka-brno" description="toggle"].
 - Důvod: kód je krátký, čitelný a nemění se při přejmenování služby / akce (slug se může změnit a shortcode by přestal fungovat).
