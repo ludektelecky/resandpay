@@ -58,7 +58,7 @@ function rap_person( $n ) {
 }
 
 require_once ABSPATH . 'wp-admin/includes/template.php';
-foreach ( array( 'class-admin.php', 'class-admin-events.php', 'class-admin-settings.php', 'class-admin-services.php', 'class-admin-shortcodes.php', 'class-admin-checkin.php', 'class-admin-payments.php', 'class-customers-table.php', 'class-admin-customers.php', 'class-admin-mailerlite.php', 'class-admin-materials.php' ) as $f ) {
+foreach ( array( 'class-admin.php', 'class-admin-events.php', 'class-admin-settings.php', 'class-admin-services.php', 'class-admin-shortcodes.php', 'class-admin-checkin.php', 'class-admin-payments.php', 'class-customers-table.php', 'class-admin-customers.php', 'class-admin-mailerlite.php', 'class-admin-materials.php', 'class-admin-event-photos.php' ) as $f ) {
 	require_once RESANDPAY_DIR . 'admin/' . $f;
 }
 
@@ -2727,6 +2727,177 @@ wp_delete_user( $hsU );
 wp_delete_post( $hsFree['id'], true );
 wp_delete_post( $hsEmail['id'], true );
 update_option( Resandpay_Settings::OPTION, $hsSaved, false );
+
+/** Údaje formuláře akce podle uložené akce (uložení editoru akce beze změny termínu). */
+function rap_event_form( $id ) {
+	$ev = Resandpay_Events::get( $id );
+	return array(
+		'rap_type'     => $ev['type'],
+		'rap_start'    => substr( $ev['start'], 0, 16 ),
+		'rap_end'      => substr( $ev['end'], 0, 16 ),
+		'rap_capacity' => $ev['capacity'],
+		'rap_price'    => (string) $ev['price'],
+		'rap_currency' => $ev['currency'],
+	);
+}
+echo "== 0.30.0: fotky z proběhlé akce a hláška „akce již proběhla“ (#45)\n";
+$phSaved = get_option( Resandpay_Settings::OPTION );
+Resandpay_Settings::update( array( 'test_mode' => 0 ) );
+// 2) Hláška podle stavu akce.
+$phRun  = rap_event( 'Probíhající akce', $now - HOUR_IN_SECONDS, $now + HOUR_IN_SECONDS, 5 );
+$phPast = rap_event( 'Proběhlá akce', $now - 3 * $day, $now - 3 * $day + 2 * HOUR_IN_SECONDS, 10 );
+$phNoEnd = rap_event( 'Proběhlá bez konce', $now - 2 * $day, 0, 5, array( 'rap_end' => '' ) );
+$bRun  = Resandpay_Events::check_bookable( $phRun );
+$bPast = Resandpay_Events::check_bookable( $phPast );
+rap_t( is_wp_error( $bRun ) && 'started' === $bRun->get_error_code() && 'Rezervace již není možná – akce už začala.' === $bRun->get_error_message(), 'během akce: „akce už začala“' );
+rap_t( is_wp_error( $bPast ) && 'over' === $bPast->get_error_code() && 'Rezervace není možná – akce již proběhla.' === $bPast->get_error_message(), 'po skončení: „akce již proběhla“' );
+$evNoEnd = Resandpay_Events::get( $phNoEnd );
+$midnight = ( new DateTimeImmutable( '@' . Resandpay_Events::ts( $evNoEnd['start'] ) ) )->setTimezone( wp_timezone() )->setTime( 0, 0 )->modify( '+1 day' )->getTimestamp();
+rap_t( $evNoEnd['end'] === $evNoEnd['start'] && $midnight === Resandpay_Event_Photos::ends_at( $evNoEnd ) && ! Resandpay_Event_Photos::is_over( $evNoEnd, $midnight - 1 ) && Resandpay_Event_Photos::is_over( $evNoEnd, $midnight ), 'akce bez konce: konec = půlnoc po dni konání' );
+Resandpay_Settings::update( array( 'event_over_text' => 'Akce skončila, díky!' ) );
+rap_t( 'Akce skončila, díky!' === Resandpay_Events::check_bookable( $phPast )->get_error_message(), 'hláška upravitelná v nastavení' );
+Resandpay_Settings::update( array( 'event_over_text' => 'Rezervace není možná – akce již proběhla.' ) );
+$htRun = Resandpay_Frontend::render_event_page( $phRun, '<p>Popis</p>' );
+rap_t( false !== strpos( $htRun, 'akce už začala' ) && false === strpos( $htRun, 'rap-photos' ), 'stránka probíhající akce: hláška „už začala“, bez fotek' );
+
+// Účastníci: zaplacená (i hotově na místě) ano, nezaplacená / zrušená ne.
+$phCreate = $now - 10 * $day;
+$phR1 = Resandpay_Reservations::create( $phPast, rap_person( 451 ), array( 'notify' => false, 'now' => $phCreate ) );
+$phR2 = Resandpay_Reservations::create( $phPast, rap_person( 452 ), array( 'notify' => false, 'now' => $phCreate ) );
+$phR3 = Resandpay_Reservations::create( $phPast, rap_person( 453 ), array( 'notify' => false, 'now' => $phCreate ) );
+$phR4 = Resandpay_Reservations::create( $phPast, rap_person( 451 ), array( 'notify' => false, 'now' => $phCreate ) ); // Druhé místo stejného zákazníka.
+rap_t( ! is_wp_error( $phR1 ) && ! is_wp_error( $phR4 ), 'rezervace na (později proběhlou) akci' );
+Resandpay_Reservations::set_status( $phR1['id'], Resandpay_Reservations::PAID, array( 'method' => 'transfer_manual', 'notify' => false ) );
+Resandpay_Reservations::set_status( $phR4['id'], Resandpay_Reservations::PAID, array( 'method' => 'cash', 'notify' => false ) );
+Resandpay_Reservations::set_status( $phR2['id'], Resandpay_Reservations::CANCELLED, array( 'notify' => false ) );
+rap_t( Resandpay_Event_Photos::is_attendee( $phPast, 0, 'OSOBA451@example.com ' ) && ! Resandpay_Event_Photos::is_attendee( $phPast, 0, 'osoba452@example.com' ) && ! Resandpay_Event_Photos::is_attendee( $phPast, 0, 'osoba453@example.com' ), 'účastník = zaplacená rezervace (zrušená a nezaplacená ne)' );
+rap_t( 1 === count( Resandpay_Event_Photos::attendees( $phPast ) ), 'účastníci: jeden záznam na e-mail' );
+
+// 1) Nahrání fotek do chráněné složky.
+$phMk = function ( $w, $h ) {
+	$im = imagecreatetruecolor( $w, $h );
+	imagefill( $im, 0, 0, imagecolorallocate( $im, 120, 160, 200 ) );
+	$f = wp_tempnam( 'rap-ph' );
+	imagejpeg( $im, $f, 80 );
+	return $f;
+};
+$phA = Resandpay_Event_Photos::add( $phPast, $phMk( 3000, 2000 ), 'IMG_0001.JPG' );
+$phB = Resandpay_Event_Photos::add( $phPast, $phMk( 800, 600 ), 'b.jpg' );
+$phC = Resandpay_Event_Photos::add( $phPast, $phMk( 640, 640 ), 'c.jpg' );
+$phTxt = wp_tempnam( 'rap-ph' );
+file_put_contents( $phTxt, 'neni fotka' );
+rap_t( ! is_wp_error( $phA ) && 2048 === $phA['w'] && 1365 === $phA['h'] && 'image/jpeg' === $phA['mime'], 'fotka zmenšená na 2048 px (' . ( is_wp_error( $phA ) ? $phA->get_error_message() : $phA['w'] . '×' . $phA['h'] ) . ')' );
+$phThumb = getimagesize( Resandpay_Event_Photos::abs_path( $phA['thumb'] ) );
+rap_t( 480 === $phThumb[0] && 480 === $phThumb[1] && $phA['thumb'] !== $phA['file'], 'čtvercový náhled 480 × 480' );
+rap_t( 0 === strpos( Resandpay_Event_Photos::abs_path( $phA['file'] ), Resandpay_Materials::base_dir() . '/e' . $phPast . '-' ) && file_exists( Resandpay_Materials::base_dir() . '/.htaccess' ), 'uloženo v chráněné složce (mimo Knihovnu médií)' );
+rap_t( is_wp_error( Resandpay_Event_Photos::add( $phPast, $phTxt, 'x.jpg' ) ) && is_wp_error( Resandpay_Event_Photos::add( $phRun + 999999, $phMk( 10, 10 ), 'x.jpg' ) ), 'jiný soubor než fotka / neexistující akce → chyba' );
+rap_t( '' === Resandpay_Event_Photos::abs_path( '../wp-config.php' ) && '' === Resandpay_Event_Photos::abs_path( 'm1-abcdefghij/x.jpg' ), 'cesta jen uvnitř složky fotek' );
+rap_t( 3 === count( Resandpay_Event_Photos::photos( $phPast ) ), 'tři fotky u akce' );
+
+// Přístup podle volby „Kdo fotky uvidí“.
+$phUser  = wp_insert_user( array( 'user_login' => 'ph45user', 'user_email' => 'ph45.cizi@example.cz', 'user_pass' => 'x' . wp_generate_password() ) );
+$phUserA = wp_insert_user( array( 'user_login' => 'ph45ucast', 'user_email' => 'osoba451@example.com', 'user_pass' => 'x' . wp_generate_password() ) );
+rap_t( Resandpay_Event_Photos::VIS_ATTENDEES === Resandpay_Event_Photos::visibility( $phPast ), 'výchozí volba: jen účastníci' );
+rap_t( Resandpay_Event_Photos::can_view( $phPast, 0, 'osoba451@example.com' ) && Resandpay_Event_Photos::can_view( $phPast, $phUserA ) && ! Resandpay_Event_Photos::can_view( $phPast, $phUser ) && ! Resandpay_Event_Photos::can_view( $phPast, 0 ), 'jen účastníci: účastník (e-mail i účet se stejným e-mailem) ano, jiný přihlášený a anonym ne' );
+Resandpay_Event_Photos::save_meta( $phPast, array( 'rap_photos_vis' => 'logged' ) );
+rap_t( Resandpay_Event_Photos::can_view( $phPast, $phUser ) && ! Resandpay_Event_Photos::can_view( $phPast, 0 ), 'přihlášení: každý přihlášený ano, anonym ne' );
+Resandpay_Event_Photos::save_meta( $phPast, array( 'rap_photos_vis' => 'public' ) );
+rap_t( Resandpay_Event_Photos::can_view( $phPast, 0 ), 'veřejné: i anonym' );
+Resandpay_Event_Photos::save_meta( $phPast, array( 'rap_photos_vis' => 'nesmysl' ) );
+rap_t( Resandpay_Event_Photos::VIS_ATTENDEES === Resandpay_Event_Photos::visibility( $phPast ), 'neplatná volba → jen účastníci' );
+
+// Podepsané odkazy na obrázky – přístup se ověří znovu u každého obrázku.
+$phTok = function ( $url ) {
+	parse_str( (string) wp_parse_url( $url, PHP_URL_QUERY ), $q );
+	return $q['rap_ph'] ?? '';
+};
+$uOk   = Resandpay_Event_Photos::url( $phPast, $phA['id'], 'l', 0, 'osoba451@example.com' );
+$uThumb = Resandpay_Event_Photos::url( $phPast, $phA['id'], 't', 0, 'osoba451@example.com' );
+$uCizi = Resandpay_Event_Photos::url( $phPast, $phA['id'], 'l', $phUser );
+$aOk   = Resandpay_Event_Photos::authorize( $phTok( $uOk ) );
+rap_t( ! is_wp_error( $aOk ) && Resandpay_Event_Photos::abs_path( $phA['file'] ) === $aOk['abs'] && ! $aOk['public'], 'účastník: fotka se pošle' );
+rap_t( Resandpay_Event_Photos::abs_path( $phA['thumb'] ) === Resandpay_Event_Photos::authorize( $phTok( $uThumb ) )['abs'], 'náhled: jiný (menší) soubor' );
+rap_t( 'denied' === Resandpay_Event_Photos::authorize( $phTok( $uCizi ) )->get_error_code(), 'jiný přihlášený u „jen účastníci“: odepřeno' );
+rap_t( 'bad' === Resandpay_Event_Photos::authorize( substr( $phTok( $uOk ), 0, -2 ) . 'xx' )->get_error_code(), 'upravený odkaz: neplatný' );
+rap_t( 'expired' === Resandpay_Event_Photos::authorize( $phTok( $uOk ), $now + 8 * HOUR_IN_SECONDS )->get_error_code(), 'odkaz po 7 h vyprší' );
+Resandpay_Reservations::set_status( $phR1['id'], Resandpay_Reservations::CANCELLED, array( 'notify' => false ) );
+Resandpay_Reservations::set_status( $phR4['id'], Resandpay_Reservations::CANCELLED, array( 'notify' => false ) );
+rap_t( 'denied' === Resandpay_Event_Photos::authorize( $phTok( $uOk ) )->get_error_code(), 'po zrušení rezervace už platný odkaz nefunguje' );
+$GLOBALS['wpdb']->update( Resandpay_Reservations::table(), array( 'status' => 'paid' ), array( 'id' => $phR1['id'] ) );
+Resandpay_Event_Photos::save_meta( $phPast, array( 'rap_photos_vis' => 'public' ) );
+$uPub = Resandpay_Event_Photos::url( $phPast, $phA['id'], 'l', 0 );
+rap_t( ! is_wp_error( Resandpay_Event_Photos::authorize( $phTok( $uPub ), $now + 400 * $day ) ) && Resandpay_Event_Photos::authorize( $phTok( $uPub ) )['public'], 'veřejné: odkaz bez omezení doby' );
+Resandpay_Event_Photos::save_meta( $phPast, array( 'rap_photos_vis' => 'attendees' ) );
+rap_t( 'denied' === Resandpay_Event_Photos::authorize( $phTok( $uPub ) )->get_error_code(), 'po změně na „jen účastníci“ veřejný odkaz nefunguje' );
+
+// Stránka proběhlé akce.
+wp_set_current_user( 0 );
+$htGuest = Resandpay_Frontend::render_event_page( $phPast, '<p>Popis</p>' );
+rap_t( false === strpos( $htGuest, 'rap-form' ) && false !== strpos( $htGuest, 'akce již proběhla' ), 'proběhlá akce: místo formuláře hláška „akce již proběhla“' );
+rap_t( false !== strpos( $htGuest, 'id="rap-photos"' ) && false !== strpos( $htGuest, 'Fotky z akce (3)' ) && false !== strpos( $htGuest, 'dostupné účastníkům' ) && false === strpos( $htGuest, 'rap_ph=' ) && false === strpos( $htGuest, 'href="#rap-photos"' ), 'anonym: sekce s výzvou, bez fotek a bez tlačítka „Fotky z akce ↓“' );
+rap_t( strpos( $htGuest, 'rap-event__body' ) < strpos( $htGuest, 'id="rap-photos"' ) && strpos( $htGuest, '</aside>' ) < strpos( $htGuest, 'id="rap-photos"' ), 'sekce fotek přes celou šířku pod popisem akce' );
+$_REQUEST['rap_p'] = Resandpay_Profile::token_for( $phR1 );
+$htLink = Resandpay_Frontend::render_event_page( $phPast, '<p>Popis</p>' );
+unset( $_REQUEST['rap_p'] );
+rap_t( 6 === substr_count( $htLink, 'rap_ph=' ) && false !== strpos( $htLink, 'rap-photos__grid' ) && 2 === substr_count( $htLink, 'href="#rap-photos"' ), 'účastník přes osobní odkaz: 3 náhledy + 3 fotky, tlačítko v záhlaví i v kartě' );
+wp_set_current_user( $phUserA );
+$htAcc = Resandpay_Frontend::render_event_page( $phPast, '<p>Popis</p>' );
+wp_set_current_user( $phUser );
+$htCizi = Resandpay_Frontend::render_event_page( $phPast, '<p>Popis</p>' );
+wp_set_current_user( 0 );
+rap_t( false !== strpos( $htAcc, 'rap-photos__grid' ) && false === strpos( $htCizi, 'rap-photos__grid' ) && false !== strpos( $htCizi, 'dostupné účastníkům' ), 'přihlášený účastník fotky vidí, jiný přihlášený ne' );
+$htBasic = Resandpay_Frontend::render_booking( $phPast );
+rap_t( false !== strpos( $htBasic, 'akce již proběhla' ) && false !== strpos( $htBasic, 'id="rap-photos"' ) && false === strpos( $htBasic, 'rap-form' ), 'jednoduchý vzhled / shortcode: hláška a fotky na místě formuláře' );
+rap_t( false !== strpos( Resandpay_Frontend::render_booking( $phNoEnd ), 'akce již proběhla' ) && false === strpos( Resandpay_Frontend::render_booking( $phNoEnd ), 'rap-photos' ), 'proběhlá akce bez fotek: jen hláška' );
+// Víc než 24 fotek: další skryté a tlačítko „Zobrazit další“.
+for ( $i = 0; $i < 23; $i++ ) {
+	Resandpay_Event_Photos::add( $phPast, $phMk( 40, 30 ), 'm.jpg' );
+}
+Resandpay_Event_Photos::save_meta( $phPast, array( 'rap_photos_vis' => 'public' ) );
+$htMany = Resandpay_Event_Photos::section( $phPast );
+rap_t( 2 === substr_count( $htMany, '<li class="rap-photos__cell" hidden>' ) && false !== strpos( $htMany, 'data-rap-more="24"' ) && false !== strpos( $htMany, 'loading="lazy"' ), 'nad 24 fotek: další skryté, „Zobrazit další“, líné načítání' );
+
+// Pořadí a odebrání (uložení akce).
+$phIds = wp_list_pluck( Resandpay_Event_Photos::photos( $phPast ), 'id' );
+$keep  = array( $phC['id'], $phA['id'] );
+$phAbsB = Resandpay_Event_Photos::abs_path( $phB['file'] );
+Resandpay_Admin_Events::save_event_meta( $phPast, array_merge( rap_event_form( $phPast ), array( 'rap_photos_order' => implode( ',', $keep ) ) ) );
+rap_t( $keep === wp_list_pluck( Resandpay_Event_Photos::photos( $phPast ), 'id' ) && ! file_exists( $phAbsB ) && 26 === count( $phIds ), 'uložení akce: nové pořadí, odebrané fotky smazané z disku' );
+Resandpay_Event_Photos::save_meta( $phPast, array( 'rap_photos_vis' => 'public' ) );
+rap_t( 2 === count( Resandpay_Event_Photos::photos( $phPast ) ), 'formulář bez pole fotek fotky nemění' );
+
+// Administrace: záložka jen u akcí.
+ob_start();
+Resandpay_Admin_Events::box_event( get_post( $phPast ) );
+$box = ob_get_clean();
+rap_t( false !== strpos( $box, 'data-rap-tab="fotky"' ) && false !== strpos( $box, 'name="rap_photos_vis"' ) && false !== strpos( $box, 'resandpay_photos_notify' ), 'editor akce: záložka Fotky z akce s volbou a tlačítkem e-mailu' );
+rap_t( ! isset( Resandpay_Admin_Events::tabs( array( 'id' => $phRun, 'type' => 'slot' ) )['fotky'] ), 'termín služby: bez záložky fotek' );
+
+// E-mail účastníkům.
+Resandpay_Event_Photos::save_meta( $phPast, array( 'rap_photos_vis' => 'attendees' ) );
+$GLOBALS['rap_mails'] = array();
+$phSent = Resandpay_Event_Photos::notify( $phPast );
+$phMail = $GLOBALS['rap_mails'][0] ?? array();
+rap_t( 1 === $phSent && 1 === count( $GLOBALS['rap_mails'] ) && 'osoba451@example.com' === $phMail['to'] && false !== strpos( $phMail['subject'], 'Fotky z akce: Proběhlá akce' ), 'e-mail jen zaplaceným účastníkům, jednou na e-mail' );
+rap_t( false !== strpos( $phMail['message'], 'rap_p=' ) && false !== strpos( $phMail['message'], '#rap-photos' ) && 1 === get_post_meta( $phPast, '_rap_photos_notified', true )['count'], 'osobní odkaz na fotky v e-mailu, záznam o odeslání' );
+rap_t( is_wp_error( Resandpay_Event_Photos::notify( $phRun ) ), 'bez fotek se e-mail neposílá' );
+$htLocked = Resandpay_Event_Photos::section( $phPast );
+rap_t( false !== strpos( $htLocked, 'poslali odkaz e-mailem' ), 'výzva: „Účastníkům jsme poslali odkaz e-mailem“' );
+
+// Profil zákazníka: odkaz na fotky.
+$phCard = Resandpay_Profile::card( Resandpay_Reservations::get( $phR1['id'] ), true );
+rap_t( false !== strpos( $phCard, 'Fotky z akce →' ) && false !== strpos( $phCard, 'rap_p=' ), 'profil: u proběhlé akce odkaz „Fotky z akce“ s osobním odkazem' );
+
+// Smazání akce smaže fotky.
+$phAbsA = Resandpay_Event_Photos::abs_path( $phA['file'] );
+wp_delete_post( $phPast, true );
+rap_t( ! file_exists( $phAbsA ) && ! is_dir( dirname( $phAbsA ) ), 'smazání akce smaže i její fotky' );
+wp_delete_user( $phUser );
+wp_delete_user( $phUserA );
+foreach ( array( $phRun, $phNoEnd ) as $x ) {
+	wp_delete_post( $x, true );
+}
+update_option( Resandpay_Settings::OPTION, $phSaved, false );
 
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 

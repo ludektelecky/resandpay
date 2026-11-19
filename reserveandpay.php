@@ -3,7 +3,7 @@
  * Plugin Name:       ReserveAndPay
  * Plugin URI:        https://github.com/ludektelecky/resandpay
  * Description:       Rezervace akcí a termínů s platbou převodem (QR) a kontrolou plateb z bankovních avíz.
- * Version:           0.29.1
+ * Version:           0.30.0
  * Requires at least: 6.4
  * Requires PHP:      8.0
  * Author:            INSYSTEMS
@@ -15,7 +15,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'RESANDPAY_VERSION', '0.29.1' );
+define( 'RESANDPAY_VERSION', '0.30.0' );
 define( 'RESANDPAY_DB_VERSION', '16' );
 define( 'RESANDPAY_FILE', __FILE__ );
 define( 'RESANDPAY_DIR', plugin_dir_path( __FILE__ ) );
@@ -47,6 +47,7 @@ require_once RESANDPAY_DIR . 'includes/class-style.php';
 require_once RESANDPAY_DIR . 'includes/class-stats.php';
 require_once RESANDPAY_DIR . 'includes/class-stats-materials.php';
 require_once RESANDPAY_DIR . 'includes/class-materials.php';
+require_once RESANDPAY_DIR . 'includes/class-event-photos.php';
 require_once RESANDPAY_DIR . 'includes/class-watermark.php';
 require_once RESANDPAY_DIR . 'includes/class-faq.php';
 require_once RESANDPAY_DIR . 'includes/class-countdown.php';
@@ -71,6 +72,7 @@ if ( is_admin() ) {
 	require_once RESANDPAY_DIR . 'admin/class-admin-payments.php';
 	require_once RESANDPAY_DIR . 'admin/class-admin-coupons.php';
 	require_once RESANDPAY_DIR . 'admin/class-admin-materials.php';
+	require_once RESANDPAY_DIR . 'admin/class-admin-event-photos.php';
 }
 
 register_activation_hook( __FILE__, array( 'Resandpay_Install', 'activate' ) );
@@ -96,6 +98,7 @@ function resandpay_init() {
 	Resandpay_Checkin::init();
 	Resandpay_Stats::init();
 	Resandpay_Materials::init();
+	Resandpay_Event_Photos::init();
 	Resandpay_FAQ::init();
 	Resandpay_Countdown::init();
 	Resandpay_Updater::init();
@@ -118,6 +121,7 @@ function resandpay_init() {
 		Resandpay_Admin_Payments::init();
 		Resandpay_Admin_Coupons::init();
 		Resandpay_Admin_Materials::init();
+		Resandpay_Admin_Event_Photos::init();
 	}
 }
 

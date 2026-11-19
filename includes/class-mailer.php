@@ -492,6 +492,7 @@ class Resandpay_Mailer {
 			'free'          => __( 'Rezervace zdarma potvrzena', 'reserveandpay' ),
 			'event_reminder' => __( 'Připomínka akce', 'reserveandpay' ),
 			'event_summary'  => __( 'Přehled účastníků (správce)', 'reserveandpay' ),
+			'event_photos'   => __( 'Fotky z akce', 'reserveandpay' ),
 			'mat_grant'      => __( 'Materiál zpřístupněn', 'reserveandpay' ),
 			'profile_link'   => __( 'Odkaz na profil zákazníka', 'reserveandpay' ),
 			'mat_grant_guest' => __( 'Materiál zpřístupněn (bez účtu)', 'reserveandpay' ),

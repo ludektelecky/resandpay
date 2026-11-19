@@ -75,6 +75,11 @@ class Resandpay_Admin_Settings {
 			__( 'Detail akce', 'reserveandpay' )       => array(
 				'detail_layout'    => array( __( 'Vzhled stránky akce', 'reserveandpay' ), 'select', __( 'S galerií: nahoře název, termín, cena a fotky, pod nimi popis akce a vedle něj rezervační formulář. Jednoduchý: údaje, text a formulář pod sebou (vzhled do verze 0.6).', 'reserveandpay' ), array( 'full' => __( 'S galerií a rezervační kartou', 'reserveandpay' ), 'basic' => __( 'Jednoduchý', 'reserveandpay' ) ) ),
 				'time_display_default' => array( __( 'Zobrazení času akcí a termínů', 'reserveandpay' ), 'select', __( 'Výchozí volba; u každé akce a služby ji lze změnit v „Další nastavení“. Jen datum: na webu, v e-mailech a na platebním pokynu bez času. Administrace čas zobrazuje vždy.', 'reserveandpay' ), array( 'show' => __( 'Zobrazovat čas', 'reserveandpay' ), 'date' => __( 'Jen datum (bez času)', 'reserveandpay' ) ) ),
+				'event_started_text' => array( __( 'Hláška – akce právě probíhá', 'reserveandpay' ), 'text', __( 'Místo rezervačního formuláře od začátku do konce akce.', 'reserveandpay' ) ),
+				'event_over_text'    => array( __( 'Hláška – akce již proběhla', 'reserveandpay' ), 'text', __( 'Po konci akce (bez vyplněného konce od půlnoci po dni konání). Pod ní se zobrazí fotky z akce, jsou-li nahrané.', 'reserveandpay' ) ),
+				'photos_title'       => array( __( 'Fotky z akce – nadpis', 'reserveandpay' ), 'text' ),
+				'photos_locked_text' => array( __( 'Fotky z akce – jen pro účastníky', 'reserveandpay' ), 'text', __( 'Zobrazí se návštěvníkovi, který fotky vidět nesmí (volba u akce „Jen účastníci akce“).', 'reserveandpay' ) ),
+				'photos_login_text'  => array( __( 'Fotky z akce – jen pro přihlášené', 'reserveandpay' ), 'text', __( 'Zobrazí se nepřihlášenému návštěvníkovi (volba u akce „Přihlášení uživatelé“).', 'reserveandpay' ) ),
 				'detail_own_title' => array( __( 'Nadpis akce v záhlaví pluginu', 'reserveandpay' ), 'checkbox', __( 'Platí pro vzhled s galerií. Nadpis se zobrazí v záhlaví vedle fotek a titulek šablony GeneratePress se skryje. U jiné šablony vypněte, pokud se nadpis zobrazí dvakrát.', 'reserveandpay' ) ),
 			),
 			__( 'Odpočet', 'reserveandpay' )           => array(
@@ -195,6 +200,8 @@ class Resandpay_Admin_Settings {
 				'tpl_overdue_body'      => array( __( 'Připomínka platby po splatnosti – text', 'reserveandpay' ), 'textarea' ),
 				'tpl_event_reminder_subject' => array( __( 'Připomínka akce – předmět', 'reserveandpay' ), $text ),
 				'tpl_event_reminder_body'    => array( __( 'Připomínka akce – text', 'reserveandpay' ), 'textarea', __( 'Posílá se N hodin před začátkem (Připomínky akcí). {reminder_note} = text u akce / služby, {payment_note} = stav platby, {where} = „Kde: místo“ (jen je-li místo zadané), {map_url} = odkaz na mapu místa.', 'reserveandpay' ) ),
+				'tpl_event_photos_subject'   => array( __( 'Fotky z akce – předmět', 'reserveandpay' ), $text ),
+				'tpl_event_photos_body'      => array( __( 'Fotky z akce – text', 'reserveandpay' ), 'textarea', __( 'Posílá se účastníkům tlačítkem v editoru akce (záložka Fotky z akce). {photos_url} = osobní odkaz na fotky (bez přihlášení).', 'reserveandpay' ) ),
 				'tpl_event_summary_subject'  => array( __( 'Přehled účastníků – předmět', 'reserveandpay' ), $text, __( '{date} = datum, {count} = počet rezervací.', 'reserveandpay' ) ),
 				'tpl_event_summary_body'     => array( __( 'Přehled účastníků – úvodní text', 'reserveandpay' ), 'textarea', __( 'Pod text se automaticky připojí seznam akcí a účastníků.', 'reserveandpay' ) ),
 				'tpl_reminder_subject'  => array( __( 'Připomínka před splatností – předmět', 'reserveandpay' ), $text ),
@@ -416,7 +423,7 @@ class Resandpay_Admin_Settings {
 				echo self::style_preview(); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
 			}
 			if ( __( 'E-maily', 'reserveandpay' ) === $title ) {
-				echo '<p class="description">' . esc_html__( 'Proměnné:', 'reserveandpay' ) . ' <code>{name} {email} {phone} {note} {event} {date} {location} {amount} {vs} {proforma} {due_date} {account} {iban} {company} {free} {reason} {last_minute_note} {pay_choice} {event_code} {event_url} {total} {paid} {remaining} {last_payment} {amount_now} {due_now} {part1} {part1_due} {final_due} {split_note} {price_full} {discount} {discount_label} {coupon} {reminder_note} {payment_note} {where} {map_url} {profile_url}</code></p>';
+				echo '<p class="description">' . esc_html__( 'Proměnné:', 'reserveandpay' ) . ' <code>{name} {email} {phone} {note} {event} {date} {location} {amount} {vs} {proforma} {due_date} {account} {iban} {company} {free} {reason} {last_minute_note} {pay_choice} {event_code} {event_url} {total} {paid} {remaining} {last_payment} {amount_now} {due_now} {part1} {part1_due} {final_due} {split_note} {price_full} {discount} {discount_label} {coupon} {reminder_note} {payment_note} {where} {map_url} {profile_url} {photos_url}</code></p>';
 			}
 			echo '<table class="form-table">';
 			foreach ( $section as $key => $def ) {

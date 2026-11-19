@@ -132,13 +132,16 @@ class Resandpay_Admin_Events {
 	}
 
 	/** Záložky Parametrů akce (#38). */
-	public static function tabs() {
+	public static function tabs( $ev = null ) {
 		$tabs = array(
 			'termin'     => __( 'Termín a místo', 'reserveandpay' ),
 			'cena'       => __( 'Cena a platba', 'reserveandpay' ),
 			'rezervace'  => __( 'Rezervace', 'reserveandpay' ),
 			'pripominky' => __( 'Připomínka a odpočet', 'reserveandpay' ),
 		);
+		if ( $ev && Resandpay_Event_Photos::supported( $ev ) ) {
+			$tabs['fotky'] = __( 'Fotky z akce', 'reserveandpay' );
+		}
 		if ( Resandpay_MailerLite::enabled() ) {
 			$tabs['mailerlite'] = __( 'MailerLite', 'reserveandpay' );
 		}
@@ -160,7 +163,7 @@ class Resandpay_Admin_Events {
 		$svc_id  = (int) get_post_meta( $post->ID, '_rap_service', true );
 		$svc     = $svc_id ? Resandpay_Services::get( $svc_id ) : null;
 		$from_svc = $svc ? ' <span class="rap-hint">' . esc_html( sprintf( /* translators: %s: služba */ __( 'ze služby %s', 'reserveandpay' ), $svc['title'] ) ) . ' – <a href="' . esc_url( (string) get_edit_post_link( $svc_id ) ) . '">' . esc_html__( 'upravit službu', 'reserveandpay' ) . '</a></span>' : '';
-		echo Resandpay_Admin::tabs_open( 'event', self::tabs() ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
+		echo Resandpay_Admin::tabs_open( 'event', self::tabs( $ev ) ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
 		?>
 		<table class="form-table rap-params" role="presentation">
 			<tr<?php echo Resandpay_Admin::tab( 'termin' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><?php esc_html_e( 'Termín', 'reserveandpay' ); ?></th>
@@ -250,6 +253,9 @@ class Resandpay_Admin_Events {
 				echo '<li><a href="' . esc_url( get_edit_post_link( $o['id'] ) ) . '">' . esc_html( $o['title'] ) . '</a> – ' . esc_html( Resandpay_Events::format_date_full( $o ) ) . '</li>';
 			}
 			echo '</ul><span class="rap-hint">' . esc_html__( 'Překrývání je povoleno, jde jen o informaci.', 'reserveandpay' ) . '</span></div>';
+		}
+		if ( $ev && Resandpay_Event_Photos::supported( $ev ) ) {
+			echo Resandpay_Admin_Event_Photos::panel( $post ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
 		}
 		if ( Resandpay_MailerLite::enabled() ) {
 			echo '<div' . Resandpay_Admin::tab( 'mailerlite' ) . ' class="rap-tabs__ml">'; // phpcs:ignore WordPress.Security.EscapeOutput
@@ -511,6 +517,7 @@ class Resandpay_Admin_Events {
 	/** Uložení údajů akce (sdílené s testy a generátorem termínů). */
 	public static function save_event_meta( $post_id, array $in ) {
 		Resandpay_Events::save_meta( $post_id, $in );
+		Resandpay_Event_Photos::save_meta( $post_id, $in );
 	}
 
 	public static function save_location( $post_id ) {
