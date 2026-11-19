@@ -59,7 +59,7 @@ Technické identifikátory se nemění (slug a textdomain `reserveandpay`, před
 - eBooky, videa, audio a další materiály (typ obsahu Materiál, kód MA-NNN) – stažení jen po přihlášení, ukázky i bez přihlášení
 - Přístup zdarma pro přihlášené / placený / jen vybrané role; doba přístupu u každého materiálu; zdarma pro účastnice navázaných akcí a služeb; ruční zpřístupnění
 - Objednávka placeného materiálu stejným platebním tokem jako rezervace (VS, QR, kontrola plateb, kupóny) se souhlasem s okamžitým poskytnutím digitálního obsahu
-- Chráněná složka mimo Knihovnu médií, nahrávání po částech (i velká videa), podepsané časově omezené odkazy, HTTP Range, limit a log stažení
+- Chráněná složka **RaP-Pf** (`wp-content/uploads/resandpay-protected/`) mimo Knihovnu médií, nahrávání po částech (i velká videa), podepsané časově omezené odkazy, HTTP Range, limit a log stažení
 - Katalog, detail s přehrávačem videa a audia, stránka „Moje materiály“
 
 ### Napojení
@@ -265,9 +265,9 @@ V `docs/DEVLOG.md` je u verze, která po aktualizaci vyžaduje zásah, na začá
 | Shortcode | Popis |
 |---|---|
 | `[reserveandpay_program]` | Přehled akcí s přepínačem Seznam / Kalendář a filtrem kategorií (doporučeno pro stránku „Termíny“) |
-| `[reserveandpay_events limit="50" category="slug" filter="yes"]` | Seznam nadcházejících akcí (bez individuálních termínů) |
-| `[reserveandpay_calendar category="slug"]` | Samotný měsíční kalendář |
-| `[reserveandpay_slots service="bukalni-masaz" days="21"]` | Volné termíny služby (např. masáže) po dnech; pod nimi časté dotazy služby (`faq="no"` je skryje) |
+| `[reserveandpay_events limit="50" category="slug-kategorie" filter="yes"]` | Seznam nadcházejících akcí (bez individuálních termínů) |
+| `[reserveandpay_calendar category="slug-kategorie"]` | Samotný měsíční kalendář |
+| `[reserveandpay_slots service="SL-001" days="21"]` | Volné termíny služby (např. masáže) po dnech – doporučeno uvádět kód služby (nemění se při přejmenování; slug a ID fungují dál); pod nimi časté dotazy služby (`faq="no"` je skryje) |
 | `[reserveandpay_faq id="AK-2026-0001"]` | Časté dotazy akce nebo služby (kód nebo ID); na stránce akce a pod termíny služby se vkládají automaticky |
 | `[reserveandpay_countdown id="AK-2026-0001"]` | Odpočet akce (kód akce; bez id aktuální akce) – do zahájení prodeje, konce slevy nebo ukončení prodeje podle zapnutí v Parametrech akce → Odpočet; v detailu akce a rezervační kartě se vkládá automaticky |
 | `[reserveandpay_upcoming limit="3" first_service="yes" category="" more="yes"]` | Krátký přehled pro úvodní stránku: na 1. místě nejbližší služba s volným termínem, pak nadcházející akce podle data, celkem max. `limit`; zrušené a probíhající akce vynechá; `more` = odkaz „Zobrazit všechny termíny →“ |
@@ -277,7 +277,7 @@ V `docs/DEVLOG.md` je u verze, která po aktualizaci vyžaduje zásah, na začá
 | `[reserveandpay_checkin]` | Odbavení na místě na webu (od 0.25.0): hledání podle VS / QR kódu, zaplaceno hotově, QR kód k zaplacení, kontrola platby v bance, znovu poslat platební údaje, přehled dne; jen pro role z Nastavení → Rezervace → Odbavení na místě |
 | `[reserveandpay_stats]` | Statistika pro přihlášené s oprávněním (role v Nastavení): termíny akcí a služeb, od 0.22.0 i materiály (objednávky, tržby, stažení, graf), export CSV |
 | `[reserveandpay_my_reservations]` | Profil zákazníka „Moje rezervace“ – všechny rezervace, stav plateb, platební pokyny, materiály ke stažení (i bez účtu, od 0.24.0), souhlas s novinkami; přihlášení nebo osobní odkaz z e-mailu (stránku vyberte v Nastavení → Rezervace → Profil zákazníka) |
-| `[reserveandpay_booking id="123"]` | Detail a rezervační formulář akce (na stránce akce se vkládá automaticky) |
+| `[reserveandpay_booking id="AK-2026-0001"]` | Detail a rezervační formulář akce – kód akce (ID funguje dál); na stránce akce se vkládá automaticky |
 
 Šablona webu může výpis vložit i bez shortcodu v obsahu stránky (`do_shortcode()` nebo data z `Resandpay_Views::upcoming_feed()`); styly pluginu na takové stránce zapne filtr `resandpay_enqueue_assets`, např. `add_filter( 'resandpay_enqueue_assets', fn( $on ) => $on || is_front_page() );`.
 
