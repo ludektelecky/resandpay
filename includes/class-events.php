@@ -178,6 +178,7 @@ class Resandpay_Events {
 			'reminder_hours' => self::resolve_reminder_hours( $m( 'reminder_hours', '' ), (int) $m( 'service', 0 ) ),
 			'reminder_note'  => trim( (string) $m( 'reminder_note', '' ) ) ?: ( (int) $m( 'service', 0 ) ? trim( (string) get_post_meta( (int) $m( 'service', 0 ), '_rap_reminder_note', true ) ) : '' ),
 			'external'      => self::external( $event_id, (int) $m( 'service', 0 ), (string) $m( 'start' ) ),
+			'hide_free'     => '1' === (string) get_post_meta( (int) $m( 'service', 0 ) ?: $event_id, '_rap_hide_free', true ),
 		);
 		$ev['members_only'] = 'all' !== $ev['access']['mode'];
 		return $ev;
@@ -398,6 +399,35 @@ class Resandpay_Events {
 	/** Kapacita externího termínu k zobrazení (0 = nezobrazovat). */
 	public static function external_capacity( array $ev ) {
 		return ! empty( $ev['external']['show_capacity'] ) ? max( 0, (int) $ev['capacity'] ) : 0;
+	}
+
+	/**
+	 * Volná místa skrytá před veřejností (#47): u akce / služby volba „Na webu nezobrazovat volná místa“.
+	 * Web pak ukáže jen celkovou kapacitu; obsazená akce dál „Obsazeno“. Externí termíny se řídí svou volbou.
+	 */
+	public static function hides_free( array $ev ) {
+		return empty( $ev['external'] ) && ! empty( $ev['hide_free'] );
+	}
+
+	/** Kapacita k zobrazení na webu místo volných míst (externí termín s kapacitou, nebo skrytá volná místa); 0 = nezobrazovat. */
+	public static function public_capacity( array $ev ) {
+		if ( ! empty( $ev['external'] ) ) {
+			return self::external_capacity( $ev );
+		}
+		return self::hides_free( $ev ) ? max( 0, (int) $ev['capacity'] ) : 0;
+	}
+
+	/** Uloží volbu „Na webu nezobrazovat volná místa“ (jen když ji formulář posílá – značka rap_hide_free_field). */
+	public static function save_hide_free_meta( $post_id, array $in ) {
+		if ( ! empty( $in['rap_hide_free_field'] ) ) {
+			update_post_meta( $post_id, '_rap_hide_free', empty( $in['rap_hide_free'] ) ? '0' : '1' );
+		}
+	}
+
+	/** Pole volby do editoru akce / služby. */
+	public static function hide_free_field( $post_id, $hint = '' ) {
+		echo '<input type="hidden" name="rap_hide_free_field" value="1"><label class="rap-inline"><input type="checkbox" name="rap_hide_free" value="1"' . checked( '1' === (string) get_post_meta( $post_id, '_rap_hide_free', true ), true, false ) . '> ' . esc_html__( 'Na webu nezobrazovat volná místa', 'reserveandpay' ) . '</label>';
+		echo '<span class="rap-hint">' . esc_html( $hint ? $hint : __( 'Veřejnost uvidí jen celkovou kapacitu („Kapacita: N míst“), ne počet přihlášených ani volných míst. Plně obsazená akce dál ukáže „Obsazeno“. V administraci a Statistice se obsazenost zobrazuje beze změny.', 'reserveandpay' ) ) . '</span>';
 	}
 
 	/** „Kapacita: 1 místo / 3 místa / 20 míst“. */
@@ -774,6 +804,9 @@ class Resandpay_Events {
 		self::save_part1_meta( $post_id, $in );
 		self::save_time_display_meta( $post_id, $in );
 		self::save_booking_meta( $post_id, $in, 'slot' === $type && (int) get_post_meta( $post_id, '_rap_service', true ) );
+		if ( ! ( 'slot' === $type && (int) get_post_meta( $post_id, '_rap_service', true ) ) ) {
+			self::save_hide_free_meta( $post_id, $in ); // Termín služby přebírá volbu ze služby.
+		}
 		self::save_reminder_meta( $post_id, $in );
 		Resandpay_Discounts::save_early_meta( $post_id, $in );
 		update_post_meta( $post_id, '_rap_close_hours', max( 0, (float) str_replace( ',', '.', (string) ( $in['rap_close_hours'] ?? 0 ) ) ) );

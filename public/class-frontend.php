@@ -285,8 +285,8 @@ class Resandpay_Frontend {
 			}
 			echo '</dd>';
 		}
-		if ( ! $ev['cancelled'] && Resandpay_Events::external_capacity( $ev ) ) {
-			echo '<dt>' . esc_html__( 'Kapacita', 'reserveandpay' ) . '</dt><dd>' . esc_html( preg_replace( '/^[^:]+:\s*/u', '', Resandpay_Events::capacity_label( Resandpay_Events::external_capacity( $ev ) ) ) ) . '</dd>';
+		if ( ! $ev['cancelled'] && Resandpay_Events::public_capacity( $ev ) && ( $ev['external'] || ! $is_slot ) ) {
+			echo '<dt>' . esc_html__( 'Kapacita', 'reserveandpay' ) . '</dt><dd>' . esc_html( preg_replace( '/^[^:]+:\s*/u', '', Resandpay_Events::capacity_label( Resandpay_Events::public_capacity( $ev ) ) ) ) . '</dd>';
 		}
 		if ( $is_slot && ! $ev['external'] ) {
 			echo '<dt>' . esc_html__( 'Termín', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev['cancelled'] ? __( 'zrušen', 'reserveandpay' ) : ( $free > 0 ? __( 'volný', 'reserveandpay' ) : __( 'obsazený', 'reserveandpay' ) ) ) . '</dd>';
@@ -379,7 +379,10 @@ class Resandpay_Frontend {
 		$taken = max( 0, $cap - (int) $free );
 		$out   = '<div class="rap-seats">';
 		$out  .= '<p class="rap-seats__row"><span>';
-		if ( $free > 0 ) {
+		$hide  = Resandpay_Events::hides_free( $ev ); // #47: jen kapacita, bez volných míst a teček.
+		if ( $free > 0 && $hide ) {
+			$out .= '<strong>' . esc_html( Resandpay_Events::capacity_label( $cap ) ) . '</strong>';
+		} elseif ( $free > 0 ) {
 			/* translators: 1: „5 volných míst“, 2: kapacita */
 			$out .= wp_kses( sprintf( __( '%1$s z %2$d', 'reserveandpay' ), '<strong>' . esc_html( Resandpay_Views::places_label( $free ) ) . '</strong>', $cap ), array( 'strong' => array() ) );
 			if ( $free <= 3 && $cap > 3 ) {
@@ -395,7 +398,7 @@ class Resandpay_Frontend {
 			$out .= '<span class="rap-small">' . esc_html( sprintf( __( 'Uzávěrka %s', 'reserveandpay' ), wp_date( 'j. n. G:i', $start - (int) round( $ev['close_hours'] * HOUR_IN_SECONDS ) ) ) ) . '</span>';
 		}
 		$out .= '</p>';
-		if ( $cap > 0 && $cap <= 40 ) {
+		if ( $cap > 0 && $cap <= 40 && ! $hide ) {
 			$out .= '<p class="rap-seats__dots" aria-hidden="true">' . str_repeat( '<i class="is-taken"></i>', $taken ) . str_repeat( '<i></i>', max( 0, $cap - $taken ) ) . '</p>';
 		}
 		$out .= '</div>';
@@ -529,6 +532,8 @@ class Resandpay_Frontend {
 			}
 		} elseif ( 'slot' === $ev['type'] && $ev['capacity'] <= 1 ) {
 			echo '<dt>' . esc_html__( 'Termín', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev['cancelled'] ? __( 'zrušen', 'reserveandpay' ) : ( $free > 0 ? __( 'volný', 'reserveandpay' ) : __( 'obsazený', 'reserveandpay' ) ) ) . '</dd>';
+		} elseif ( ! $ev['cancelled'] && $free > 0 && Resandpay_Events::hides_free( $ev ) ) {
+			echo '<dt>' . esc_html__( 'Kapacita', 'reserveandpay' ) . '</dt><dd>' . esc_html( preg_replace( '/^[^:]+:\s*/u', '', Resandpay_Events::capacity_label( $ev['capacity'] ) ) ) . '</dd>';
 		} else {
 			echo '<dt>' . esc_html__( 'Volná místa', 'reserveandpay' ) . '</dt><dd>' . esc_html( $ev['cancelled'] ? __( 'akce zrušena', 'reserveandpay' ) : ( $free > 0 ? sprintf( /* translators: 1: volno, 2: kapacita */ __( '%1$d z %2$d', 'reserveandpay' ), $free, $ev['capacity'] ) : __( 'obsazeno', 'reserveandpay' ) ) ) . '</dd>';
 		}

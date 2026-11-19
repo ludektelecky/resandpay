@@ -55,7 +55,8 @@ class Resandpay_Admin_Services {
 					<p class="description"><?php esc_html_e( '1 = individuální služba (např. masáž). Více = skupinová lekce (např. Sound Healing 15) – termín zůstává volný, dokud se nezaplní.', 'reserveandpay' ); ?></p>
 					<?php if ( 'auto-draft' !== $post->post_status ) : ?>
 					<label><input type="checkbox" name="rap_capacity_apply" value="1"> <?php esc_html_e( 'Změnu promítnout i do nadcházejících termínů', 'reserveandpay' ); ?></label>
-					<?php endif; ?></td></tr>
+					<?php endif; ?>
+					<p><?php Resandpay_Events::hide_free_field( $post->ID, __( 'Jen u více míst na termín. Ve výběru termínů se u časů neukáže počet volných míst, v záhlaví zůstane „max. N osob“; v detailu termínu „Kapacita: N míst“. Obsazený termín se nenabízí. Platí pro všechny termíny služby (i již vypsané).', 'reserveandpay' ) ); ?></p></td></tr>
 			<tr<?php echo Resandpay_Admin::tab( 'cena' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><label for="rap_price"><?php esc_html_e( 'Cena za místo', 'reserveandpay' ); ?></label></th>
 				<td><input type="number" min="0" step="any" id="rap_price" name="rap_price" value="<?php echo esc_attr( $svc['price'] ); ?>" class="regular-text" style="width:10em">
 					<input type="text" name="rap_currency" value="<?php echo esc_attr( $svc['currency'] ); ?>" class="small-text" maxlength="3" aria-label="<?php esc_attr_e( 'Měna', 'reserveandpay' ); ?>"></td></tr>
@@ -178,6 +179,7 @@ class Resandpay_Admin_Services {
 		Resandpay_Events::save_time_display_meta( $post_id, $in );
 		Resandpay_Discounts::save_early_meta( $post_id, $in );
 		Resandpay_Events::save_booking_meta( $post_id, $in );
+		Resandpay_Events::save_hide_free_meta( $post_id, $in );
 		Resandpay_Events::save_reminder_meta( $post_id, $in );
 		Resandpay_Events::save_access_meta( $post_id, $in );
 		if ( array_key_exists( 'rap_desc_mode', $in ) ) {
