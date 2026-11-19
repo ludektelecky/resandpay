@@ -132,7 +132,7 @@ class Resandpay_Mailer {
 			'{proforma}'         => $r['proforma_no'],
 			'{due_date}'         => $r['due_at'] ? wp_date( 'j. n. Y G:i', Resandpay_Events::ts( $r['due_at'] ) ) : '',
 			'{account}'          => $s['bank_account'],
-			'{iban}'             => $s['iban'],
+			'{iban}'             => Resandpay_QR::iban_display( $s ),
 			'{company}'          => $s['company_name'] ?: get_bloginfo( 'name' ),
 			'{free}'             => (string) Resandpay_Events::free_places( $r['event_id'] ),
 			'{reason}'           => $r['cancel_reason'] ? "\n" . __( 'Důvod:', 'reserveandpay' ) . ' ' . $r['cancel_reason'] . "\n" : '',
@@ -280,7 +280,7 @@ class Resandpay_Mailer {
 			$label                                      => Resandpay_Events::format_price( Resandpay_Reservations::amount_now( $r ), $r['currency'] ),
 			__( 'Variabilní symbol', 'reserveandpay' ) => $r['vs'],
 			__( 'Číslo účtu', 'reserveandpay' )        => $s['bank_account'],
-			__( 'IBAN', 'reserveandpay' )              => $s['iban'],
+			__( 'IBAN', 'reserveandpay' )              => Resandpay_QR::iban_display( $s ),
 		);
 		$due = Resandpay_Reservations::due_now( $r );
 		if ( 'cash' !== ( $r['pay_choice'] ?? '' ) && $due ) {

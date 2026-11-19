@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.29.0** · zadání: [`docs/zadani/`](docs/zadani/README.md) (odpovídá aktuální verzi pluginu) · rozvojové požadavky: [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) · změny: [DEVLOG](docs/DEVLOG.md)
+> **Aktuální verze pluginu: 0.29.1** · zadání: [`docs/zadani/`](docs/zadani/README.md) (odpovídá aktuální verzi pluginu) · rozvojové požadavky: [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) · změny: [DEVLOG](docs/DEVLOG.md)
 
 ### Název a označení
 
@@ -77,7 +77,7 @@ Technické identifikátory se nemění (slug a textdomain `reserveandpay`, před
 
 **Fáze 1 – plugin pro slehkouhlavou.cz**, psaný podle pravidel připravenosti na zobecnění:
 
-- identifikace provozovatele (jméno, IČ, adresa, IBAN, logo) v nastavení, ne v kódu
+- identifikace provozovatele (jméno, IČ, adresa, IBAN, logo) v nastavení, ne v kódu; IBAN se pro QR platbu kontroluje a případně dopočítá z čísla účtu
 - bankovní schránka a přístupy v nastavení
 - čtení avíz přes rozhraní **bankovní adaptér** (fáze 1: Raiffeisenbank)
 - měna ukládána u akcí, rezervací i avíz od začátku (výchozí CZK)

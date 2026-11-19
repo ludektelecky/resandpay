@@ -34,7 +34,7 @@ class Resandpay_Admin_Settings {
 				'company_ic'      => array( __( 'IČ', 'reserveandpay' ), $text ),
 				'company_address' => array( __( 'Adresa', 'reserveandpay' ), $text ),
 				'bank_account'    => array( __( 'Číslo účtu', 'reserveandpay' ), $text, __( 'Např. 123456789/2700', 'reserveandpay' ) ),
-				'iban'            => array( __( 'IBAN', 'reserveandpay' ), $text ),
+				'iban'            => array( __( 'IBAN', 'reserveandpay' ), $text, __( 'Např. CZ08 2700 0000 0001 2345 6789. Pro QR platbu; když zůstane prázdný, dopočítá se z čísla účtu.', 'reserveandpay' ) ),
 				'admin_email'     => array( __( 'E-mail pro upozornění na nové rezervace', 'reserveandpay' ), 'email' ),
 				'notify_admin'    => array( __( 'Posílat upozornění na nové rezervace', 'reserveandpay' ), 'checkbox' ),
 			),
@@ -340,7 +340,17 @@ class Resandpay_Admin_Settings {
 			$vs_tpl = (string) Resandpay_Settings::get( 'vs_prefix' );
 		}
 		$out['vs_prefix'] = $vs_tpl;
-		$out['iban']      = strtoupper( preg_replace( '/\s+/', '', $out['iban'] ) );
+		$out['iban']      = Resandpay_QR::normalize_iban( $out['iban'] );
+		if ( function_exists( 'add_settings_error' ) ) {
+			if ( '' !== $out['iban'] && ! Resandpay_QR::valid_iban( $out['iban'] ) ) {
+				add_settings_error( Resandpay_Settings::OPTION, 'iban', Resandpay_QR::iban_from_account( $out['bank_account'] )
+					/* translators: %s: IBAN dopočítaný z čísla účtu */
+					? sprintf( __( 'IBAN není platný (zkontrolujte číslice) – pro QR platbu se použije IBAN dopočítaný z čísla účtu: %s.', 'reserveandpay' ), Resandpay_QR::iban_from_account( $out['bank_account'] ) )
+					: __( 'IBAN není platný (zkontrolujte číslice) – QR platba se v e-mailech a platebních pokynech nezobrazí.', 'reserveandpay' ) );
+			} elseif ( '' === Resandpay_QR::iban( $out ) && ( '' !== $out['iban'] || '' !== $out['bank_account'] ) ) {
+				add_settings_error( Resandpay_Settings::OPTION, 'iban', __( 'Z čísla účtu nejde sestavit IBAN – vyplňte IBAN, jinak se QR platba nezobrazí.', 'reserveandpay' ) );
+			}
+		}
 		$out['imap_port']        = max( 1, min( 65535, (int) $out['imap_port'] ) ) ?: 993;
 		$out['payment_batch']    = max( 1, min( 500, (int) $out['payment_batch'] ) );
 		$out['payment_interval'] = max( 15, (int) $out['payment_interval'] );

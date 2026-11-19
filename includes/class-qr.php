@@ -33,8 +33,8 @@ class Resandpay_QR {
 	 */
 	public static function spd( array $r, $amount = null, $due = null ) {
 		$s    = Resandpay_Settings::all();
-		$iban = strtoupper( preg_replace( '/\s+/', '', (string) $s['iban'] ) );
-		if ( ! preg_match( '/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/', $iban ) || 'CZK' !== strtoupper( (string) $r['currency'] ) ) {
+		$iban = self::iban( $s );
+		if ( '' === $iban || 'CZK' !== strtoupper( (string) $r['currency'] ) ) {
 			return '';
 		}
 		$parts = array(
@@ -58,6 +58,77 @@ class Resandpay_QR {
 		}
 		$parts[] = 'X-VS:' . preg_replace( '/\D/', '', (string) $r['vs'] );
 		return implode( '*', $parts );
+	}
+
+	/** Je IBAN platný (formát a kontrolní číslice mod 97)? */
+	public static function valid_iban( $iban ) {
+		$iban = strtoupper( preg_replace( '/[\s\-]+/', '', (string) $iban ) );
+		if ( ! preg_match( '/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/', $iban ) ) {
+			return false;
+		}
+		return 1 === self::mod97( substr( $iban, 4 ) . substr( $iban, 0, 4 ) );
+	}
+
+	/** Zbytek po dělení 97 pro řetězec IBAN (písmena → čísla A=10 … Z=35). */
+	private static function mod97( $s ) {
+		$num = '';
+		foreach ( str_split( $s ) as $ch ) {
+			$num .= ctype_alpha( $ch ) ? (string) ( ord( $ch ) - 55 ) : $ch;
+		}
+		$rest = 0;
+		foreach ( str_split( $num, 7 ) as $part ) {
+			$rest = (int) ( $rest . $part ) % 97;
+		}
+		return $rest;
+	}
+
+	/** Český IBAN z 20místného BBAN (banka 4 + předčíslí 6 + číslo 10). */
+	private static function cz_iban( $bban ) {
+		return 'CZ' . str_pad( (string) ( 98 - self::mod97( $bban . 'CZ00' ) ), 2, '0', STR_PAD_LEFT ) . $bban;
+	}
+
+	/**
+	 * IBAN z českého čísla účtu „[předčíslí-]číslo/banka“ (např. 19-123456789/0100).
+	 * Prázdný, když číslo účtu nemá tento tvar.
+	 */
+	public static function iban_from_account( $account ) {
+		$a = preg_replace( '/\s+/', '', (string) $account );
+		if ( ! preg_match( '#^(?:(\d{1,6})-)?(\d{1,10})/(\d{4})$#', $a, $m ) || ! ltrim( $m[2], '0' ) ) {
+			return '';
+		}
+		return self::cz_iban( $m[3] . str_pad( $m[1], 6, '0', STR_PAD_LEFT ) . str_pad( $m[2], 10, '0', STR_PAD_LEFT ) );
+	}
+
+	/**
+	 * Opraví IBAN zadaný v nastavení: mezery pryč, velká písmena; český IBAN zadaný bez „CZ“
+	 * a kontrolních číslic (jen 20 číslic, např. z výpisu banky) doplní. Neplatný vrátí beze změny.
+	 */
+	public static function normalize_iban( $iban ) {
+		$i = strtoupper( preg_replace( '/[\s\-]+/', '', (string) $iban ) );
+		if ( preg_match( '/^\d{20}$/', $i ) ) {
+			return self::cz_iban( $i );
+		}
+		return $i;
+	}
+
+	/**
+	 * IBAN pro QR platbu: platný IBAN z nastavení (i zadaný bez „CZ“), jinak dopočítaný
+	 * z čísla účtu. Prázdný, když nejde sestavit – QR kód se pak negeneruje.
+	 */
+	public static function iban( ?array $s = null ) {
+		$s    = $s ?? Resandpay_Settings::all();
+		$iban = self::normalize_iban( $s['iban'] ?? '' );
+		if ( self::valid_iban( $iban ) ) {
+			return $iban;
+		}
+		return self::iban_from_account( $s['bank_account'] ?? '' );
+	}
+
+	/** IBAN k zobrazení v e-mailu a PDF (opravený, jinak tak, jak je v nastavení). */
+	public static function iban_display( ?array $s = null ) {
+		$s    = $s ?? Resandpay_Settings::all();
+		$iban = self::iban( $s );
+		return '' !== $iban ? $iban : (string) ( $s['iban'] ?? '' );
 	}
 
 	/** Matice QR kódu (pole řádků s 0/1). */
