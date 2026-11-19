@@ -58,4 +58,10 @@ Plugin se v textech, administraci a dokumentaci označuje jednotně podle těcht
 | ResAndPay | Krátký název – kde je omezené místo, ale má jít o čitelné jméno | Položka v levém menu administrace (ResAndPay → Rezervace, Platby, Odbavení, Nastavení…), repozitář ludektelecky/resandpay |
 | RAP | Zkratka – jen kde je potřeba nejkratší označení | Předmět e-mailů v testovacím režimu „[RAP TEST → příjemce]“, technické záznamy v logu serveru, technické předpony v kódu (CSS proměnné --rap-*, pole formulářů rap_*, metadata _rap_*) |
 
+**Označení částí pluginu (zkratky do komunikace a dokumentace):**
+
+| **Zkratka** | **Význam** | **Technicky** |
+|---|---|---|
+| RaP-Pf | Chráněná složka (ResAndPay protected folder) – soubory materiálů ke stažení a fotky z proběhlé akce mimo Knihovnu médií, přímý přístup zakázán, soubory posílá jen plugin přes podepsaný odkaz (kap. 15.1 R11.5, R28) | `wp-content/uploads/resandpay-protected/` (název složky se nemění) |
+
 **Pozn.:** Technické identifikátory se nemění, protože by změna rozbila uložená nastavení, data a obsah stránek: složka a slug pluginu i textová doména „reserveandpay“, předpona funkcí, tabulek a voleb „resandpay_“, shortcody [reserveandpay_…]. Zákaznicím se název pluginu nezobrazuje – web, e-maily a platební pokyn vystupují pod značkou provozovatele („S lehkou hlavou…“).

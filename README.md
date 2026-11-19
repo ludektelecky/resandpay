@@ -59,7 +59,7 @@ Technické identifikátory se nemění (slug a textdomain `reserveandpay`, před
 - eBooky, videa, audio a další materiály (typ obsahu Materiál, kód MA-NNN) – stažení jen po přihlášení, ukázky i bez přihlášení
 - Přístup zdarma pro přihlášené / placený / jen vybrané role; doba přístupu u každého materiálu; zdarma pro účastnice navázaných akcí a služeb; ruční zpřístupnění
 - Objednávka placeného materiálu stejným platebním tokem jako rezervace (VS, QR, kontrola plateb, kupóny) se souhlasem s okamžitým poskytnutím digitálního obsahu
-- Chráněná složka mimo Knihovnu médií, nahrávání po částech (i velká videa), podepsané časově omezené odkazy, HTTP Range, limit a log stažení
+- Chráněná složka **RaP-Pf** (`wp-content/uploads/resandpay-protected/`) mimo Knihovnu médií, nahrávání po částech (i velká videa), podepsané časově omezené odkazy, HTTP Range, limit a log stažení
 - Katalog, detail s přehrávačem videa a audia, stránka „Moje materiály“
 
 ### Napojení

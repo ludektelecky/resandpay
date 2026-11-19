@@ -32,3 +32,4 @@
 - **ResAndPay** – název v menu administrace a repozitář; cesty v textech psát „ResAndPay → Platby“.
 - **RAP** – jen kde je nutné nejkratší označení (předmět testovacích e-mailů, log, technické předpony).
 - Technické identifikátory neměnit (reserveandpay, resandpay_, shortcody).
+- **RaP-Pf** = chráněná složka `wp-content/uploads/resandpay-protected/` (soubory materiálů, fotky z akcí); zkratka jen v komunikaci a dokumentaci, název složky se nemění.
