@@ -3070,6 +3070,61 @@ wp_delete_post( $pvM, true );
 wp_delete_user( $pvUser );
 update_option( Resandpay_Settings::OPTION, $pvSaved, false );
 
+echo "== 0.33.0: upravitelné texty prázdných výpisů (#53)\n";
+$etSaved = get_option( Resandpay_Settings::OPTION );
+$etD = Resandpay_Settings::defaults();
+rap_t( 'Termíny zatím nejsou vypsané.' === $etD['slots_none_text'] && 'Všechny termíny jsou obsazené.' === $etD['slots_full_text'] && 'V tomto období nejsou volné termíny. Zkuste další týdny.' === $etD['slots_period_text'] && 'Momentálně nejsou vypsané žádné termíny.' === $etD['list_empty_text'], 'nová instalace: neutrální výchozí texty' );
+// Migrace DB 17: stávající web si ponechá dosavadní texty, uložené hodnoty se nemění.
+$etOpt = $etSaved;
+foreach ( array( 'slots_none_text', 'slots_full_text', 'slots_period_text', 'list_empty_text' ) as $k ) {
+	unset( $etOpt[ $k ] );
+}
+$etOpt['slots_full_text'] = 'Vlastní obsazeno.';
+update_option( Resandpay_Settings::OPTION, $etOpt, false );
+Resandpay_Install::keep_legacy_empty_texts();
+rap_t( 0 === strpos( Resandpay_Settings::get( 'slots_none_text' ), 'V tomto období nejsou volné termíny. Zkuste další týdny, nebo mi napište' ) && 'Vlastní obsazeno.' === Resandpay_Settings::get( 'slots_full_text' ) && 'Momentálně nejsou vypsané žádné termíny. Sledujte novinky – brzy přibudou.' === Resandpay_Settings::get( 'list_empty_text' ), 'migrace: dosavadní texty zachovány, uložená hodnota se nepřepíše' );
+update_option( Resandpay_Settings::OPTION, $etSaved, false );
+Resandpay_Settings::update( array( 'slots_none_text' => 'Nic u {service}, pište na {contact}.', 'slots_full_text' => 'Plno.', 'slots_period_text' => 'Jinde.', 'list_empty_text' => 'Prázdno – <a href="https://example.cz/novinky">novinky</a>.', 'contact_email' => 'info@example.cz' ) );
+// Služba bez termínů.
+$etS = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::SERVICE, 'post_status' => 'publish', 'post_title' => 'Prázdná služba' ) );
+Resandpay_Admin_Services::save_service_meta( $etS, array( 'rap_duration' => 60, 'rap_pause' => 0, 'rap_capacity' => 1, 'rap_price' => '500' ) );
+$_GET = array();
+$etH = Resandpay_Views::render_slots( array( 'service' => $etS, 'days' => 21 ) );
+rap_t( false !== strpos( $etH, 'Nic u Prázdná služba, pište na <a href="mailto:info@example.cz">info@example.cz</a>.' ) && false !== strpos( $etH, 'rap-empty--none' ), 'nevypsané: text z Nastavení s {service} a {contact} (odkaz mailto)' );
+// Termín existuje, ale je obsazený.
+$etSp = Resandpay_Services::preview( $etS, array( 'weekdays' => array( (int) wp_date( 'N', $now + 3 * $day ) ), 'time_from' => '10:00', 'time_to' => '11:00', 'date_from' => wp_date( 'Y-m-d', $now + 3 * $day ), 'date_to' => wp_date( 'Y-m-d', $now + 3 * $day ) ) );
+Resandpay_Services::create_slots( $etS, wp_list_pluck( $etSp, 'start' ) );
+$etSl = array_values( Resandpay_Services::slots( $etS, new DateTimeImmutable( 'now', $tzz ), ( new DateTimeImmutable( 'now', $tzz ) )->modify( '+30 days' ) ) );
+rap_t( 1 === count( $etSl ), 'služba má jeden budoucí termín' );
+Resandpay_Reservations::create( $etSl[0]['id'], rap_person( 530 ), array( 'notify' => false ) );
+$etH = Resandpay_Views::render_slots( array( 'service' => $etS, 'days' => 21 ) );
+rap_t( false !== strpos( $etH, 'Plno.' ) && false !== strpos( $etH, 'rap-empty--full' ) && Resandpay_Services::has_upcoming( $etS ), 'obsazené: text „všechny termíny jsou obsazené“' );
+// Vlastní texty služby mají přednost (i s HTML; nepovolené značky se odstraní).
+Resandpay_Admin_Services::save_service_meta( $etS, array( 'rap_duration' => 60, 'rap_pause' => 0, 'rap_capacity' => 1, 'rap_price' => '500', 'rap_slots_texts_field' => '1', 'rap_slots_none_text' => 'Vypíšeme v lednu.', 'rap_slots_full_text' => '<strong>Plno</strong> – napište na {contact}<script>alert(1)</script>' ) );
+$etH = Resandpay_Views::render_slots( array( 'service' => $etS, 'days' => 21 ) );
+rap_t( false !== strpos( $etH, '<strong>Plno</strong> – napište na <a href="mailto:info@example.cz">info@example.cz</a>' ) && false === strpos( $etH, '<script>alert' ) && false === strpos( $etH, 'Plno.' ), 'vlastní text služby (obsazené) má přednost, HTML ošetřeno' );
+// V tomto období nic: volný termín existuje až za zobrazeným obdobím.
+$etS2 = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::SERVICE, 'post_status' => 'publish', 'post_title' => 'Vzdálená služba' ) );
+Resandpay_Admin_Services::save_service_meta( $etS2, array( 'rap_duration' => 60, 'rap_pause' => 0, 'rap_capacity' => 1, 'rap_price' => '500' ) );
+$etFar = $now + 60 * $day;
+$etSp2 = Resandpay_Services::preview( $etS2, array( 'weekdays' => array( (int) wp_date( 'N', $etFar ) ), 'time_from' => '10:00', 'time_to' => '11:00', 'date_from' => wp_date( 'Y-m-d', $etFar ), 'date_to' => wp_date( 'Y-m-d', $etFar ) ) );
+Resandpay_Services::create_slots( $etS2, wp_list_pluck( $etSp2, 'start' ) );
+$_GET['rap_from'] = wp_date( 'Y-m-d', $now + 2 * $day );
+$etH2 = Resandpay_Views::render_slots( array( 'service' => $etS2, 'days' => 14 ) );
+unset( $_GET['rap_from'] );
+rap_t( false !== strpos( $etH2, 'Jinde.' ) && false !== strpos( $etH2, 'rap-empty--period' ), 'v období nic (volno později): text „v tomto období“' );
+// Prázdný výpis akcí.
+$etL = Resandpay_Views::render_list( array( 'limit' => 5, 'category' => 'neexistujici-kategorie-53' ) );
+rap_t( false !== strpos( $etL, 'Prázdno – <a href="https://example.cz/novinky">novinky</a>.' ), 'prázdný výpis akcí: text z Nastavení s odkazem' );
+rap_t( false !== strpos( Resandpay_Views::render_upcoming( array( 'limit' => 3, 'category' => 'neexistujici-kategorie-53', 'first_service' => 'yes', 'more' => 'no' ) ), 'Prázdno –' ), 'krátký přehled: stejný text' );
+rap_t( 'odkaz <a href="https://example.cz">x</a>' === Resandpay_Settings::kses_text( 'odkaz <a href="https://example.cz" onclick="x()">x</a><img src="x">' ) && false === strpos( Resandpay_Settings::kses_text( '<a href="javascript:alert(1)">x</a>' ), 'javascript' ), 'HTML v textech: jen povolené značky a protokoly' );
+foreach ( array_merge( $etSl, array_values( Resandpay_Services::slots( $etS2, new DateTimeImmutable( 'now', $tzz ), ( new DateTimeImmutable( 'now', $tzz ) )->modify( '+90 days' ) ) ) ) as $x ) {
+	wp_delete_post( $x['id'], true );
+}
+wp_delete_post( $etS, true );
+wp_delete_post( $etS2, true );
+update_option( Resandpay_Settings::OPTION, $etSaved, false );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );

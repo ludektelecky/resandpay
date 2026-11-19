@@ -270,7 +270,7 @@ class Resandpay_Views {
 		);
 		$services = ( isset( $args['services'] ) && 'no' === $args['services'] ) ? array() : self::service_summaries( $args['category'] );
 		if ( ! $events && ! $services ) {
-			return '<p class="rap-empty">' . esc_html__( 'Momentálně nejsou vypsané žádné termíny. Sledujte novinky – brzy přibudou.', 'reserveandpay' ) . '</p>';
+			return '<p class="rap-empty">' . self::empty_text( 'list_empty_text' ) . '</p>';
 		}
 		$rows = array();
 		foreach ( $events as $ev ) {
@@ -351,7 +351,7 @@ class Resandpay_Views {
 		);
 		$out = '<div class="rap-upcoming">';
 		if ( ! $items ) {
-			$out .= '<p class="rap-empty">' . esc_html__( 'Momentálně nejsou vypsané žádné termíny. Sledujte novinky – brzy přibudou.', 'reserveandpay' ) . '</p>';
+			$out .= '<p class="rap-empty">' . self::empty_text( 'list_empty_text' ) . '</p>';
 		} else {
 			$out .= '<div class="rap-list">';
 			foreach ( $items as $it ) {
@@ -548,6 +548,32 @@ class Resandpay_Views {
 	 *
 	 * @param array $args service (ID/slug), days (počet dní dopředu na stránku).
 	 */
+	/**
+	 * Text prázdného výpisu (#53) z Nastavení → Web a vzhled → Prázdné výpisy; u služby má přednost
+	 * vlastní text (nevypsané / obsazené). Proměnné {service}, {contact}; jednoduché HTML (wp_kses).
+	 *
+	 * @param string     $key slots_none_text | slots_full_text | slots_period_text | list_empty_text.
+	 * @param array|null $svc Služba (Resandpay_Services::get).
+	 */
+	public static function empty_text( $key, $svc = null ) {
+		$text = '';
+		if ( $svc && in_array( $key, array( 'slots_none_text', 'slots_full_text' ), true ) ) {
+			$text = trim( (string) get_post_meta( $svc['id'], '_rap_' . $key, true ) );
+		}
+		if ( '' === $text ) {
+			$text = (string) Resandpay_Settings::get( $key );
+		}
+		$mail = (string) Resandpay_Settings::get( 'contact_email' );
+		$text = strtr(
+			$text,
+			array(
+				'{service}' => $svc ? esc_html( $svc['title'] ) : '',
+				'{contact}' => '' !== $mail ? '<a href="mailto:' . esc_attr( $mail ) . '">' . esc_html( $mail ) . '</a>' : '',
+			)
+		);
+		return Resandpay_Settings::kses_text( $text );
+	}
+
 	/** „1 volné místo“ / „3 volná místa“ / „12 volných míst“ (české skloňování). */
 	public static function places_label( $n ) {
 		$n = (int) $n;
@@ -692,7 +718,9 @@ class Resandpay_Views {
 			) . '</p>';
 		}
 		if ( ! $by ) {
-			echo '<p class="rap-empty">' . esc_html__( 'V tomto období nejsou volné termíny. Zkuste další týdny, nebo mi napište – rádi se domluvíme.', 'reserveandpay' ) . '</p>';
+			// Důvod (#53): volné termíny jinde v čase / termíny existují, ale vše obsazeno / nic nevypsáno.
+			$why = Resandpay_Services::first_free( $svc['id'], new DateTimeImmutable( 'now', $tz ) ) ? 'slots_period_text' : ( Resandpay_Services::has_upcoming( $svc['id'] ) ? 'slots_full_text' : 'slots_none_text' );
+			echo '<p class="rap-empty rap-empty--' . esc_attr( str_replace( array( 'slots_', '_text' ), '', $why ) ) . '">' . self::empty_text( $why, $svc ) . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput -- wp_kses v empty_text().
 		}
 		foreach ( $by as $day => $items ) {
 			$d = date_create_immutable( $day . ' 00:00:00', $tz );

@@ -82,6 +82,12 @@ class Resandpay_Admin_Settings {
 				'photos_login_text'  => array( __( 'Fotky z akce – jen pro přihlášené', 'reserveandpay' ), 'text', __( 'Zobrazí se nepřihlášenému návštěvníkovi (volba u akce „Přihlášení uživatelé“).', 'reserveandpay' ) ),
 				'detail_own_title' => array( __( 'Nadpis akce v záhlaví pluginu', 'reserveandpay' ), 'checkbox', __( 'Platí pro vzhled s galerií. Nadpis se zobrazí v záhlaví vedle fotek a titulek šablony GeneratePress se skryje. U jiné šablony vypněte, pokud se nadpis zobrazí dvakrát.', 'reserveandpay' ) ),
 			),
+			__( 'Prázdné výpisy', 'reserveandpay' )    => array(
+				'slots_none_text'   => array( __( 'Výběr termínů služby – termíny nejsou vypsané', 'reserveandpay' ), 'html', __( 'Služba nemá žádný budoucí termín. U služby lze nastavit vlastní text (Parametry služby → Web a shortcody). Proměnné: {service} = název služby, {contact} = e-mail v kontaktech. Povolený odkaz (https, mailto, tel), <strong>, <em>, <br>.', 'reserveandpay' ) ),
+				'slots_full_text'   => array( __( 'Výběr termínů služby – všechny termíny jsou obsazené', 'reserveandpay' ), 'html', __( 'Budoucí termíny existují, ale všechny jsou obsazené nebo po uzávěrce. U služby lze nastavit vlastní text. Proměnné a HTML jako výše.', 'reserveandpay' ) ),
+				'slots_period_text' => array( __( 'Výběr termínů služby – v tomto období nic', 'reserveandpay' ), 'html', __( 'Volné termíny existují, ale mimo zobrazené období (např. po kliknutí na „Další termíny →“). Proměnné a HTML jako výše.', 'reserveandpay' ) ),
+				'list_empty_text'   => array( __( 'Výpis akcí – žádné termíny', 'reserveandpay' ), 'html', __( 'Přehled akcí a krátký přehled na úvodní stránce, když nejsou vypsané žádné akce ani volné termíny služeb. Proměnná {contact}; HTML jako výše.', 'reserveandpay' ) ),
+			),
 			__( 'Odpočet', 'reserveandpay' )           => array(
 				'countdown_days'          => array( __( 'Odpočet nejvýš (dní předem)', 'reserveandpay' ), 'number', __( 'Odpočet se zapíná u akce (Parametry akce → Odpočet). Je-li cíl dál než tento počet dní, ukáže se místo odpočtu jen datum. Výchozí 30.', 'reserveandpay' ) ),
 				'countdown_open_text'     => array( __( 'Text – do zahájení prodeje', 'reserveandpay' ), 'text', __( 'Nad odpočtem dny · hodiny · minuty.', 'reserveandpay' ) ),
@@ -317,6 +323,9 @@ class Resandpay_Admin_Settings {
 					case 'textarea':
 						$out[ $key ] = sanitize_textarea_field( (string) $val );
 						break;
+					case 'html':
+						$out[ $key ] = Resandpay_Settings::kses_text( (string) $val );
+						break;
 					case 'svg':
 						$out[ $key ] = self::sanitize_svg( (string) $val );
 						break;
@@ -436,6 +445,9 @@ class Resandpay_Admin_Settings {
 					case 'checkbox':
 						echo '<input type="checkbox" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" value="1" ' . checked( ! empty( $val ), true, false ) . '>';
 						break;
+					case 'html':
+						echo '<input type="text" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" value="' . esc_attr( $val ) . '" class="large-text">';
+						break;
 					case 'textarea':
 						echo '<textarea id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '" rows="8" class="large-text code">' . esc_textarea( $val ) . '</textarea>';
 						break;
@@ -529,7 +541,7 @@ class Resandpay_Admin_Settings {
 		return array(
 			'provozovatel' => array( __( 'Provozovatel', 'reserveandpay' ), array( __( 'Provozovatel', 'reserveandpay' ), __( 'Platební pokyn a QR platba', 'reserveandpay' ) ) ),
 			'rezervace'    => array( __( 'Rezervace', 'reserveandpay' ), array( __( 'Rezervace a platby', 'reserveandpay' ), __( 'Odbavení na místě', 'reserveandpay' ), __( 'Profil zákazníka', 'reserveandpay' ), __( 'Připomínky akcí', 'reserveandpay' ), __( 'Ochrana formuláře proti robotům', 'reserveandpay' ) ) ),
-			'web'          => array( __( 'Web a vzhled', 'reserveandpay' ), array( __( 'Vzhled', 'reserveandpay' ), __( 'Detail akce', 'reserveandpay' ), __( 'Odpočet', 'reserveandpay' ) ) ),
+			'web'          => array( __( 'Web a vzhled', 'reserveandpay' ), array( __( 'Vzhled', 'reserveandpay' ), __( 'Detail akce', 'reserveandpay' ), __( 'Prázdné výpisy', 'reserveandpay' ), __( 'Odpočet', 'reserveandpay' ) ) ),
 			'emaily'       => array( __( 'E-maily', 'reserveandpay' ), array( __( 'E-maily', 'reserveandpay' ), __( 'Testovací režim', 'reserveandpay' ) ) ),
 			'platby'       => array( __( 'Kontrola plateb', 'reserveandpay' ), array( __( 'Kontrola plateb', 'reserveandpay' ) ) ),
 			'materialy'    => array( __( 'Materiály', 'reserveandpay' ), array( __( 'Materiály ke stažení', 'reserveandpay' ) ) ),

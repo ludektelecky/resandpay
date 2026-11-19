@@ -19,7 +19,7 @@ Vývoj probíhá na webu slehkouhlavou.cz (WordPress 7.1, PHP 8.5, MySQL 8.4, Ac
 
 ## 15.1 Kniha rozvoje
 
-> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R31 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
+> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R32 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
 
 Funkce navržené k dalšímu rozvoji pluginu. Položka se po schválení podrobného zadání přesune do příslušné kapitoly a do tabulky stavu realizace.
 
@@ -451,3 +451,13 @@ Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, po
 - Historie zákazníka „přehrání na YouTube“, statistika materiálu (přehrání), poslední stažení v editoru „(YouTube)“; počet souborů v seznamu materiálů zahrnuje videa.
 - Omezení (nápověda): po otevření na YouTube zákazník adresu vidí a může ji přeposlat (neveřejné video přehraje kdokoli s odkazem) – přísněji chráněný obsah nahrát do RaP-Pf (R30). Bez vloženého přehrávače nejsou na stránce cookies YouTube. Vimeo / Bunny Stream případně později.
 - Funkce Resandpay_Materials::videos(), video(), youtube_url(), save_videos(). Bez změny databáze.
+
+### R32 – Upravitelné texty, když služba nemá volné termíny
+
+**Pozn.: Navrženo a schváleno 19. 11. 2026 ([Issue #53](https://github.com/ludektelecky/resandpay/issues/53)), implementováno ve verzi pluginu 0.33.0.**
+
+- **Rozlišení důvodu** ve výběru termínů služby (`Resandpay_Views::render_slots()`), když v zobrazeném období není volný termín: existuje volný termín jinde v čase (`Resandpay_Services::first_free()`) → **v tomto období nic** (`slots_period_text`); jinak existuje budoucí nezrušený termín (`Resandpay_Services::has_upcoming()`) → **obsazené** (`slots_full_text`); jinak **nevypsané** (`slots_none_text`). Odstavec má třídu `rap-empty rap-empty--none | --full | --period`.
+- **Nastavení → Web a vzhled → Prázdné výpisy:** čtyři texty (typ pole `html`) – nevypsané, obsazené, v tomto období nic a **prázdný výpis akcí** (`list_empty_text`; `[reserveandpay_program]` / `[reserveandpay_events]` / `[reserveandpay_upcoming]`). Výchozí (nové instalace): „Termíny zatím nejsou vypsané.“, „Všechny termíny jsou obsazené.“, „V tomto období nejsou volné termíny. Zkuste další týdny.“, „Momentálně nejsou vypsané žádné termíny.“
+- **Služba** → Parametry služby → Web a shortcody → „Text bez termínů“: vlastní text pro **nevypsané** a **obsazené** (meta `_rap_slots_none_text`, `_rap_slots_full_text`); prázdné = text z Nastavení (v poli šedě).
+- Proměnné `{service}` (název služby) a `{contact}` (Nastavení → E-mail v kontaktech, vloží se jako odkaz mailto). Povolené HTML přes `Resandpay_Settings::kses_text()`: `a` (href, target, rel; protokoly https, mailto, tel), `strong`, `b`, `em`, `i`, `br`; ostatní značky a atributy se odstraní.
+- **Migrace DB 17** (`Resandpay_Install::keep_legacy_empty_texts()`, vzor `keep_legacy_brand()`): stávajícím webům se doplní dosavadní texty napevno z kódu (u služby ve všech třech případech „V tomto období nejsou volné termíny. Zkuste další týdny, nebo mi napište – rádi se domluvíme.“, u výpisu „Momentálně nejsou vypsané žádné termíny. Sledujte novinky – brzy přibudou.“); uložené hodnoty se nepřepíší.

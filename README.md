@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.32.0** · zadání: [`docs/zadani/`](docs/zadani/README.md) (odpovídá aktuální verzi pluginu) · rozvojové požadavky: [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) · změny: [DEVLOG](docs/DEVLOG.md)
+> **Aktuální verze pluginu: 0.33.0** · zadání: [`docs/zadani/`](docs/zadani/README.md) (odpovídá aktuální verzi pluginu) · rozvojové požadavky: [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) · změny: [DEVLOG](docs/DEVLOG.md)
 
 ### Název a označení
 
@@ -33,6 +33,7 @@ Technické identifikátory se nemění (slug a textdomain `reserveandpay`, před
 - Volba „Na webu nezobrazovat volná místa“ u akce i služby: veřejnost vidí jen celkovou kapacitu („Kapacita: 16 míst“), ne počet přihlášených; plně obsazená akce dál „Obsazeno“
 
 ### Rezervace
+- Texty prázdných výpisů v Nastavení → Web a vzhled → Prázdné výpisy (od 0.33.0): výběr termínů služby rozlišuje „termíny nejsou vypsané“ / „všechny termíny jsou obsazené“ / „v tomto období nic“, k tomu text prázdného výpisu akcí; proměnné {service}, {contact}, jednoduché HTML (odkaz, tučně); u služby vlastní text pro nevypsané i obsazené
 - Rezervační formulář v detailu akce / po výběru volného termínu
 - Kalendář a výpis akcí na webu, pohled „Volné termíny“ u služeb
 - Zobrazení času u akce i služby: zobrazovat čas, nebo jen datum (výchozí v nastavení)
