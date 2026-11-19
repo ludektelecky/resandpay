@@ -303,6 +303,17 @@ class Resandpay_Services {
 		return null;
 	}
 
+	/** Má služba nějaký budoucí nezrušený termín (i obsazený)? (#53) */
+	public static function has_upcoming( $service_id ) {
+		$now = new DateTimeImmutable( 'now', wp_timezone() );
+		foreach ( self::slots( $service_id, $now, $now->modify( '+20 years' ) ) as $ev ) {
+			if ( empty( $ev['cancelled'] ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/** Volné rezervovatelné termíny služby. */
 	public static function free_slots( $service_id, DateTimeImmutable $from, DateTimeImmutable $to ) {
 		return array_values(

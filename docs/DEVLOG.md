@@ -4,6 +4,16 @@
 >
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
+## 0.33.0 – Upravitelné texty, když služba nemá volné termíny (19. 11. 2026)
+
+- **R32 – texty prázdných výpisů** ([Issue #53](https://github.com/ludektelecky/resandpay/issues/53), schváleno a implementováno):
+  - výběr termínů služby (`[reserveandpay_slots]`) **rozlišuje důvod**, proč nejsou volné termíny: **nevypsané** (služba nemá žádný budoucí termín) · **obsazené** (termíny existují, ale vše obsazeno nebo po uzávěrce) · **v tomto období nic** (volné termíny jsou jinde v čase, např. po „Další termíny →“)
+  - texty v **Nastavení → Web a vzhled → Prázdné výpisy** včetně textu **prázdného výpisu akcí** (`[reserveandpay_program]`, `[reserveandpay_events]`, `[reserveandpay_upcoming]`); proměnné `{service}` (název služby) a `{contact}` (e-mail v kontaktech jako odkaz), povolené jednoduché HTML – odkaz (https, mailto, tel), tučně, kurzíva, zalomení
+  - u **služby** (Parametry služby → Web a shortcody → Text bez termínů) vlastní text zvlášť pro **nevypsané** a **obsazené**; prázdné = text z Nastavení
+  - nové instalace: neutrální výchozí texty („Termíny zatím nejsou vypsané.“, „Všechny termíny jsou obsazené.“, „V tomto období nejsou volné termíny. Zkuste další týdny.“, „Momentálně nejsou vypsané žádné termíny.“)
+- **Migrace (DB 17):** stávající weby si ponechají dosavadní texty („V tomto období nejsou volné termíny. Zkuste další týdny, nebo mi napište – rádi se domluvíme.“ a „Momentálně nejsou vypsané žádné termíny. Sledujte novinky – brzy přibudou.“) – po aktualizaci se na webu nic nezmění; texty lze nově upravit v Nastavení.
+- Testy: 921 kontrol + souběh
+
 ## 0.32.0 – Video jen k přehrání, vodoznak ve videu a externí video z YouTube (19. 11. 2026)
 
 - **R30 – jen přehrát a vodoznak ve videu** ([Issue #50](https://github.com/ludektelecky/resandpay/issues/50), schváleno a implementováno):

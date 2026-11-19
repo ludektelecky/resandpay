@@ -70,6 +70,11 @@ class Resandpay_Settings {
 			// Odpočet u akce (SWD kap. 15.1, R13): dál než N dní jen datum; texty (%s = datum a čas).
 			'event_started_text'      => 'Rezervace již není možná – akce už začala.',
 			'event_over_text'         => 'Rezervace není možná – akce již proběhla.',
+			// Prázdné výpisy (#53) – neutrální výchozí texty; stávající weby si ponechají dosavadní (migrace DB 17).
+			'slots_none_text'         => 'Termíny zatím nejsou vypsané.',
+			'slots_full_text'         => 'Všechny termíny jsou obsazené.',
+			'slots_period_text'       => 'V tomto období nejsou volné termíny. Zkuste další týdny.',
+			'list_empty_text'         => 'Momentálně nejsou vypsané žádné termíny.',
 			'photos_title'            => 'Fotky z akce',
 			'photos_locked_text'      => 'Fotky z akce jsou dostupné účastníkům. Přihlaste se, nebo otevřete odkaz z e-mailu.',
 			'photos_login_text'       => 'Fotky z akce jsou dostupné přihlášeným.',
@@ -251,6 +256,25 @@ class Resandpay_Settings {
 	 * Interní zápis hodnot (bez kontroly formuláře – ta je jen pro odeslaný formulář
 	 * a jinak by např. znovu zašifrovala už zašifrované heslo).
 	 */
+	/**
+	 * Text s jednoduchým HTML pro web (#53): odkaz (https, mailto, tel), tučně, kurzíva, zalomení řádku.
+	 */
+	public static function kses_text( $text ) {
+		$allowed = array(
+			'a'      => array(
+				'href'   => true,
+				'target' => true,
+				'rel'    => true,
+			),
+			'strong' => array(),
+			'b'      => array(),
+			'em'     => array(),
+			'i'      => array(),
+			'br'     => array(),
+		);
+		return trim( wp_kses( (string) $text, $allowed, array( 'https', 'mailto', 'tel' ) ) );
+	}
+
 	public static function update( array $values ) {
 		$all            = array_merge( self::all(), $values );
 		self::$internal = true;

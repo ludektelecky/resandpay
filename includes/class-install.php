@@ -44,6 +44,9 @@ class Resandpay_Install {
 			if ( $from && $from < 16 ) {
 				self::migrate_material_audience();
 			}
+			if ( $from && $from < 17 ) {
+				self::keep_legacy_empty_texts();
+			}
 			update_option( 'resandpay_codes_backfill', 1, false );
 		}
 	}
@@ -111,6 +114,27 @@ class Resandpay_Install {
 		$saved = get_option( Resandpay_Settings::OPTION, array() );
 		$saved = is_array( $saved ) ? $saved : array();
 		$add   = array_diff_key( self::LEGACY_BRAND, $saved );
+		if ( $add ) {
+			Resandpay_Settings::update( $add );
+		}
+	}
+
+	/** Texty prázdných výpisů před 0.33.0 (napevno v kódu). */
+	const LEGACY_EMPTY_TEXTS = array(
+		'slots_none_text'   => 'V tomto období nejsou volné termíny. Zkuste další týdny, nebo mi napište – rádi se domluvíme.',
+		'slots_full_text'   => 'V tomto období nejsou volné termíny. Zkuste další týdny, nebo mi napište – rádi se domluvíme.',
+		'slots_period_text' => 'V tomto období nejsou volné termíny. Zkuste další týdny, nebo mi napište – rádi se domluvíme.',
+		'list_empty_text'   => 'Momentálně nejsou vypsané žádné termíny. Sledujte novinky – brzy přibudou.',
+	);
+
+	/**
+	 * 0.33.0 (DB 17, #53): texty prázdných výpisů jsou v nastavení s neutrálními výchozími hodnotami.
+	 * Stávající web si ponechá dosavadní texty – doplní se jen chybějící (uložené hodnoty se nemění).
+	 */
+	public static function keep_legacy_empty_texts() {
+		$saved = get_option( Resandpay_Settings::OPTION, array() );
+		$saved = is_array( $saved ) ? $saved : array();
+		$add   = array_diff_key( self::LEGACY_EMPTY_TEXTS, $saved );
 		if ( $add ) {
 			Resandpay_Settings::update( $add );
 		}

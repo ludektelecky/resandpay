@@ -72,6 +72,13 @@ class Resandpay_Admin_Services {
 				<td><?php Resandpay_Discounts::early_fields( $post->ID ); ?><p class="description"><?php esc_html_e( 'Platí pro všechny termíny služby (i již vypsané).', 'reserveandpay' ); ?></p></td></tr>
 			<tr<?php echo Resandpay_Admin::tab( 'web' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><?php esc_html_e( 'Zobrazení', 'reserveandpay' ); ?></th>
 				<td><?php Resandpay_Events::time_display_field( get_post_meta( $post->ID, '_rap_time_display', true ), __( 'Platí pro všechny termíny služby (i již vypsané), pokud termín nemá vlastní volbu. Jen datum: na webu, v e-mailech a na platebním pokynu bez času; ve výběru volných termínů se pak u tlačítek místo času ukáže „Rezervovat“ – hodí se jen pro jeden termín denně.', 'reserveandpay' ) ); ?></td></tr>
+			<tr<?php echo Resandpay_Admin::tab( 'web' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><?php esc_html_e( 'Text bez termínů', 'reserveandpay' ); ?></th>
+				<td><input type="hidden" name="rap_slots_texts_field" value="1">
+					<p><label for="rap_slots_none_text"><?php esc_html_e( 'Termíny nejsou vypsané', 'reserveandpay' ); ?></label><br>
+					<input type="text" class="large-text" id="rap_slots_none_text" name="rap_slots_none_text" value="<?php echo esc_attr( (string) get_post_meta( $post->ID, '_rap_slots_none_text', true ) ); ?>" placeholder="<?php echo esc_attr( (string) Resandpay_Settings::get( 'slots_none_text' ) ); ?>"></p>
+					<p><label for="rap_slots_full_text"><?php esc_html_e( 'Všechny termíny jsou obsazené', 'reserveandpay' ); ?></label><br>
+					<input type="text" class="large-text" id="rap_slots_full_text" name="rap_slots_full_text" value="<?php echo esc_attr( (string) get_post_meta( $post->ID, '_rap_slots_full_text', true ) ); ?>" placeholder="<?php echo esc_attr( (string) Resandpay_Settings::get( 'slots_full_text' ) ); ?>"></p>
+					<p class="description"><?php esc_html_e( 'Zobrazí se ve výběru termínů služby, když nejsou žádné volné termíny. Prázdné = text z Nastavení → Web a vzhled → Prázdné výpisy (je v poli šedě). Proměnné: {service} = název služby, {contact} = e-mail v kontaktech; povolený odkaz (https, mailto, tel), <strong>, <em>, <br>. Např. Termíny na jaro vypíšeme v lednu – napište nám na {contact}.', 'reserveandpay' ); ?></p></td></tr>
 			<tr<?php echo Resandpay_Admin::tab( 'web' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><label for="rap_desc_mode"><?php esc_html_e( 'Popis na webu', 'reserveandpay' ); ?></label></th>
 				<td><?php $dm = (string) get_post_meta( $post->ID, '_rap_desc_mode', true ); ?>
 					<select id="rap_desc_mode" name="rap_desc_mode">
@@ -182,6 +189,11 @@ class Resandpay_Admin_Services {
 		Resandpay_Events::save_hide_free_meta( $post_id, $in );
 		Resandpay_Events::save_reminder_meta( $post_id, $in );
 		Resandpay_Events::save_access_meta( $post_id, $in );
+		if ( ! empty( $in['rap_slots_texts_field'] ) ) { // Vlastní texty bez termínů (#53).
+			foreach ( array( 'slots_none_text', 'slots_full_text' ) as $k ) {
+				update_post_meta( $post_id, '_rap_' . $k, Resandpay_Settings::kses_text( (string) ( $in[ 'rap_' . $k ] ?? '' ) ) );
+			}
+		}
 		if ( array_key_exists( 'rap_desc_mode', $in ) ) {
 			update_post_meta( $post_id, '_rap_desc_mode', in_array( $in['rap_desc_mode'], array( 'toggle', 'open' ), true ) ? $in['rap_desc_mode'] : '' );
 		}
