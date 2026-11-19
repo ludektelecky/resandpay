@@ -2956,6 +2956,120 @@ foreach ( $hfSl as $x ) {
 }
 wp_delete_post( $hfS, true );
 
+echo "== 0.32.0: jen přehrát, vodoznak ve videu (#50) a externí video YouTube (#51)\n";
+$pvSaved = get_option( Resandpay_Settings::OPTION );
+$pvUser  = wp_insert_user( array( 'user_login' => 'pv50', 'user_email' => 'pv50.zak@example.cz', 'user_pass' => wp_generate_password(), 'role' => 'subscriber', 'first_name' => 'Pavla', 'last_name' => 'Videová' ) );
+$pvM     = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::MATERIAL, 'post_status' => 'publish', 'post_title' => 'Videokurz' ) );
+Resandpay_Admin_Materials::save_meta( $pvM, array( 'rap_mat_access' => 'free' ) );
+Resandpay_Materials::ensure_dir();
+$pvSub = Resandpay_Materials::material_subdir( $pvM );
+wp_mkdir_p( Resandpay_Materials::base_dir() . '/' . $pvSub );
+foreach ( array( 'lekce.mp4', 'meditace.mp3', 'volne.mp4', 'skripta.pdf' ) as $pvN ) {
+	file_put_contents( Resandpay_Materials::base_dir() . '/' . $pvSub . '/' . $pvN, str_repeat( 'x', 64 ) );
+}
+$pvFiles = array(
+	'pa' => array( 'label' => 'Lekce 1', 'name' => 'lekce.mp4', 'play_only' => '1' ),
+	'pb' => array( 'label' => 'Meditace', 'name' => 'meditace.mp3', 'play_only' => '1' ),
+	'pc' => array( 'label' => 'Volné video', 'name' => 'volne.mp4' ),
+	'pd' => array( 'label' => 'Skripta', 'name' => 'skripta.pdf', 'play_only' => '1' ),
+);
+$pvIn = array( 'rap_mat_access' => 'free', 'rap_files_present' => '1', 'rap_files' => array() );
+$pvO  = 0;
+foreach ( $pvFiles as $pvId => $pvF ) {
+	$pvIn['rap_files'][ $pvId ] = array_merge( $pvF, array( 'order' => ++$pvO, 'data' => wp_json_encode( array( 'id' => $pvId, 'name' => $pvF['name'], 'path' => $pvSub . '/' . $pvF['name'], 'size' => 64, 'mime' => '' ) ) ) );
+}
+$pvIn['rap_videos_present'] = '1';
+$pvIn['rap_videos']         = array(
+	'new0' => array( 'label' => 'Úvodní video', 'url' => 'https://youtu.be/dQw4w9WgXcQ' ),
+	'new1' => array( 'label' => 'Ukázka', 'url' => 'https://www.youtube.com/watch?v=abcdefghijk&t=10', 'sample' => '1' ),
+	'new2' => array( 'label' => 'Špatně', 'url' => 'https://vimeo.com/123456' ),
+	'new3' => array( 'label' => '', 'url' => '' ),
+);
+wp_set_current_user( 1 );
+Resandpay_Admin_Materials::save_meta( $pvM, $pvIn );
+$pvMat = Resandpay_Materials::get( $pvM );
+$pvF   = array_column( $pvMat['files'], null, 'id' );
+rap_t( $pvF['pa']['play_only'] && $pvF['pb']['play_only'] && ! $pvF['pc']['play_only'] && ! $pvF['pd']['play_only'], 'jen přehrát: uloží se u videa a audia, u PDF ne' );
+rap_t( 2 === count( $pvMat['videos'] ) && 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' === $pvMat['videos'][0]['url'] && 'https://www.youtube.com/watch?v=abcdefghijk' === $pvMat['videos'][1]['url'] && $pvMat['videos'][1]['sample'] && 0 === strpos( $pvMat['videos'][0]['id'], 'yt' ), 'externí videa: jen platné adresy YouTube v jednotném tvaru, prázdný řádek a Vimeo ne' );
+rap_t( 'video_bad' === get_transient( 'rap_mat_notice_1' ), 'neplatná adresa: upozornění v editoru' );
+delete_transient( 'rap_mat_notice_1' );
+rap_t( 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' === Resandpay_Materials::youtube_url( 'https://www.youtube.com/shorts/dQw4w9WgXcQ' ) && '' === Resandpay_Materials::youtube_url( 'http://youtu.be/dQw4w9WgXcQ' ) && '' === Resandpay_Materials::youtube_url( 'https://evil.example.cz/watch?v=dQw4w9WgXcQ' ) && '' === Resandpay_Materials::youtube_url( 'https://youtu.be/kratke' ), 'adresa YouTube: shorts ano, http / cizí doména / špatné ID ne' );
+$pvV0 = $pvMat['videos'][0]['id'];
+$pvV1 = $pvMat['videos'][1]['id'];
+// Úprava bez změny id, neplatná úprava ponechá původní adresu.
+Resandpay_Admin_Materials::save_meta( $pvM, array_merge( $pvIn, array( 'rap_files' => $pvIn['rap_files'], 'rap_videos' => array( $pvV0 => array( 'label' => 'Úvod', 'url' => 'nesmysl' ), $pvV1 => array( 'label' => 'Ukázka', 'url' => 'https://youtu.be/abcdefghijk', 'sample' => '1' ) ) ) ) );
+$pvMat = Resandpay_Materials::get( $pvM );
+rap_t( 2 === count( $pvMat['videos'] ) && $pvV0 === $pvMat['videos'][0]['id'] && 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' === $pvMat['videos'][0]['url'], 'neplatná úprava adresy: video zůstane s původní adresou' );
+delete_transient( 'rap_mat_notice_1' );
+
+$pvTok = function ( $file, $inline, $uid ) use ( $pvM ) {
+	parse_str( (string) wp_parse_url( Resandpay_Materials::download_url( $pvM, $file, $inline, $uid ), PHP_URL_QUERY ), $q );
+	return $q['rap_dl'];
+};
+$pvD = Resandpay_Materials::authorize( $pvTok( 'pa', false, $pvUser ), $pvUser );
+rap_t( is_wp_error( $pvD ) && 'play_only' === $pvD->get_error_code() && 403 === $pvD->get_error_data()['status'], 'jen přehrát: odkaz ke stažení server odmítne (403)' );
+$pvP = Resandpay_Materials::authorize( $pvTok( 'pa', true, $pvUser ), $pvUser );
+rap_t( ! is_wp_error( $pvP ) && 'play' === $pvP['kind'] && $pvP['inline'], 'jen přehrát: odkaz pro přehrávač projde' );
+rap_t( ! is_wp_error( Resandpay_Materials::authorize( $pvTok( 'pc', false, $pvUser ), $pvUser ) ), 'video bez volby jde stáhnout dál' );
+rap_t( ! is_wp_error( Resandpay_Materials::authorize( $pvTok( 'pa', false, 1 ), 1 ) ), 'správce si soubor „jen přehrát“ stáhne' );
+
+// Web bez vodoznaku.
+wp_set_current_user( $pvUser );
+$pvH = Resandpay_Materials_Views::render_files( $pvMat, false );
+$pvLi = function ( $html, $label ) {
+	return preg_match( '#<li class="rap-mat-file[^"]*"><span class="rap-mat-file__name">' . preg_quote( $label, '#' ) . '.*?</li>#s', $html, $m ) ? $m[0] : '';
+};
+$pvLa = $pvLi( $pvH, 'Lekce 1' );
+$pvLc = $pvLi( $pvH, 'Volné video' );
+rap_t( false !== strpos( $pvLa, '<video' ) && false === strpos( $pvLa, 'Stáhnout' ) && false !== strpos( $pvLa, 'ke sledování online' ) && false !== strpos( $pvLa, 'oncontextmenu' ), 'web: „jen přehrát“ video – přehrávač bez tlačítka Stáhnout, bez kontextové nabídky' );
+rap_t( false !== strpos( $pvLi( $pvH, 'Meditace' ), '<audio' ) && false === strpos( $pvLi( $pvH, 'Meditace' ), 'Stáhnout' ) && false !== strpos( $pvLi( $pvH, 'Meditace' ), 'k poslechu online' ), 'web: „jen přehrát“ audio bez tlačítka Stáhnout' );
+rap_t( false !== strpos( $pvLc, '<video' ) && false !== strpos( $pvLc, 'Stáhnout' ) && false === strpos( $pvH, 'rap-mat-wm' ), 'web: video bez volby se stáhnout dá; vodoznak vypnutý = žádný překryv' );
+rap_t( false !== strpos( $pvH, 'Přehrát na YouTube' ) && false === strpos( $pvH, 'youtube.com' ) && false === strpos( $pvH, 'youtu.be' ) && false === strpos( $pvH, 'dQw4w9WgXcQ' ), 'web: tlačítko „Přehrát na YouTube“, adresa videa ve stránce není' );
+// Vodoznak zapnutý: zápatí i šikmo.
+Resandpay_Settings::update( array( 'mat_wm_text' => '{name} · {email}', 'mat_wm_position' => 'both' ) );
+update_post_meta( $pvM, '_rap_mat_wm', '1' );
+$pvMat = Resandpay_Materials::get( $pvM );
+$pvH   = Resandpay_Materials_Views::render_files( $pvMat, false );
+$pvLa  = $pvLi( $pvH, 'Lekce 1' );
+rap_t( false !== strpos( $pvLa, 'rap-mat-wm--footer' ) && false !== strpos( $pvLa, 'rap-mat-wm--diagonal' ) && false !== strpos( $pvLa, 'Pavla Videová · pv50.zak@example.cz' ) && false !== strpos( $pvLa, 'nofullscreen' ) && false !== strpos( $pvLa, 'rap-mat-video__fs' ), 'vodoznak přes video: text z nastavení, zápatí i šikmo, vlastní celá obrazovka' );
+rap_t( false !== strpos( $pvLi( $pvH, 'Volné video' ), 'rap-mat-wm' ), 'vodoznak i u videa, které lze stáhnout' );
+rap_t( false !== strpos( $pvLi( $pvH, 'Meditace' ), 'Licencováno pro: Pavla Videová · pv50.zak@example.cz' ), 'audio: „Licencováno pro: …“ pod přehrávačem' );
+Resandpay_Settings::update( array( 'mat_wm_position' => 'footer' ) );
+$pvLa = $pvLi( Resandpay_Materials_Views::render_files( $pvMat, false ), 'Lekce 1' );
+rap_t( false !== strpos( $pvLa, 'rap-mat-wm--footer' ) && false === strpos( $pvLa, 'rap-mat-wm--diagonal' ), 'umístění „zápatí“: jen text dole' );
+// Bez přístupu.
+wp_set_current_user( 0 );
+$pvMat = Resandpay_Materials::get( $pvM );
+$pvL   = Resandpay_Materials_Views::render_files( $pvMat, true );
+$pvLv  = $pvLi( $pvL, 'Úvod' );
+rap_t( false !== strpos( $pvLv, '🔒' ) && false === strpos( $pvLv, 'Přehrát na YouTube' ) && false !== strpos( $pvLi( $pvL, 'Ukázka' ), 'Přehrát na YouTube' ) && false === strpos( $pvL, 'dQw4w9WgXcQ' ) && false === strpos( $pvL, 'abcdefghijk' ) && false === strpos( $pvL, 'rap-mat-wm' ), 'bez přístupu: video se zámkem, ukázka jde přehrát, adresy ani vodoznak ve stránce nejsou' );
+
+// Přesměrování a historie.
+$pvY = Resandpay_Materials::authorize( $pvTok( $pvV0, true, $pvUser ), $pvUser );
+rap_t( ! is_wp_error( $pvY ) && 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' === $pvY['redirect'] && 'play' === $pvY['kind'], 'odkaz na video: s přístupem přesměrování na YouTube (přehrání)' );
+rap_t( is_wp_error( Resandpay_Materials::authorize( $pvTok( $pvV0, true, 0 ), 0 ) ), 'odkaz na video: bez přístupu odmítnut' );
+$pvYs = Resandpay_Materials::authorize( $pvTok( $pvV1, true, 0 ), 0 );
+rap_t( ! is_wp_error( $pvYs ) && 'sample' === $pvYs['kind'] && 'https://www.youtube.com/watch?v=abcdefghijk' === $pvYs['redirect'], 'ukázka videa: přehraje kdokoli' );
+rap_t( is_wp_error( Resandpay_Materials::authorize( $pvTok( $pvV0, true, $pvUser ), 0 ) ), 'cizí odkaz na video nefunguje pro jiného návštěvníka' );
+Resandpay_Materials::log_download( $pvUser, $pvM, $pvV0, $pvY['kind'], 'ok' );
+$pvHist = Resandpay_Materials::download_history( $pvM, 'pv50.zak@example.cz', $pvUser );
+rap_t( 1 === $pvHist['total'] && $pvV0 === $pvHist['rows'][0]['file_id'] && 'play' === $pvHist['rows'][0]['kind'], 'přehrání videa se zapíše do historie zákazníka' );
+wp_set_current_user( $pvUser );
+rap_t( false !== strpos( Resandpay_Materials_Views::render_history( $pvMat, 'pv50.zak@example.cz', $pvUser ), 'Úvod – přehrání na YouTube' ) || false !== strpos( Resandpay_Materials_Views::render_history( $pvMat, 'pv50.zak@example.cz', $pvUser ), 'přehrání na YouTube' ), 'historie: „přehrání na YouTube“' );
+$pvSt = array_values( array_filter( Resandpay_Stats_Materials::rows( array( 'from' => wp_date( 'Y-m-d' ), 'to' => wp_date( 'Y-m-d' ) ) ), fn( $r ) => (int) $r['id'] === (int) $pvM ) );
+rap_t( $pvSt && 1 === (int) $pvSt[0]['plays'], 'statistika materiálu: přehrání videa se počítá' );
+// Výchozí stav beze změny.
+$pvM2 = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::MATERIAL, 'post_status' => 'publish', 'post_title' => 'Starý materiál' ) );
+Resandpay_Admin_Materials::save_meta( $pvM2, array( 'rap_mat_access' => 'free' ) );
+Resandpay_Materials::save_files( $pvM2, array( array( 'id' => 'oa', 'label' => 'Video', 'name' => 'lekce.mp4', 'path' => $pvSub . '/lekce.mp4', 'size' => 64, 'mime' => 'video/mp4', 'sample' => 0 ) ) );
+$pvO2 = Resandpay_Materials::get( $pvM2 );
+rap_t( ! $pvO2['files'][0]['play_only'] && array() === $pvO2['videos'] && false !== strpos( Resandpay_Materials_Views::render_files( $pvO2, false ), 'Stáhnout' ), 'výchozí stav: stávající materiál beze změny (video jde stáhnout, žádná externí videa)' );
+wp_set_current_user( 0 );
+wp_delete_post( $pvM2, true );
+wp_delete_post( $pvM, true );
+wp_delete_user( $pvUser );
+update_option( Resandpay_Settings::OPTION, $pvSaved, false );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );

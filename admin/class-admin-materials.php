@@ -157,13 +157,13 @@ class Resandpay_Admin_Materials {
 				</select>
 					<p class="description"><?php esc_html_e( 'Kdo má zaplacenou rezervaci vybrané akce nebo termínu služby, má materiál zdarma (podle účtu nebo stejného e-mailu). Výběr více položek s Ctrl / Cmd.', 'reserveandpay' ); ?></p></td></tr>
 			<?php $wm = (string) get_post_meta( $post->ID, '_rap_mat_wm', true ); ?>
-			<tr<?php echo Resandpay_Admin::tab( 'soubory' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><label for="rap_mat_wm"><?php esc_html_e( 'Vodoznak v PDF', 'reserveandpay' ); ?></label></th>
+			<tr<?php echo Resandpay_Admin::tab( 'soubory' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><label for="rap_mat_wm"><?php esc_html_e( 'Vodoznak v PDF a videu', 'reserveandpay' ); ?></label></th>
 				<td><select id="rap_mat_wm" name="rap_mat_wm">
 					<option value="" <?php selected( $wm, '' ); ?>><?php echo esc_html( Resandpay_Settings::get( 'mat_wm_default' ) ? __( 'výchozí (ano)', 'reserveandpay' ) : __( 'výchozí (ne)', 'reserveandpay' ) ); ?></option>
 					<option value="1" <?php selected( $wm, '1' ); ?>><?php esc_html_e( 'ano', 'reserveandpay' ); ?></option>
 					<option value="0" <?php selected( $wm, '0' ); ?>><?php esc_html_e( 'ne', 'reserveandpay' ); ?></option>
 				</select>
-					<p class="description"><?php esc_html_e( 'Do staženého PDF se vloží údaje kupujícího (text a umístění v Nastavení → Materiály ke stažení) a zapíší se do metadat. Soubor na disku se nemění.', 'reserveandpay' ); ?></p>
+					<p class="description"><?php esc_html_e( 'Do staženého PDF se vloží údaje kupujícího (text a umístění v Nastavení → Materiály ke stažení) a zapíší se do metadat; přes video v přehrávači na webu se zobrazí stejný text, u audia „Licencováno pro: …“. Soubory na disku se nemění.', 'reserveandpay' ); ?></p>
 					<?php
 					if ( Resandpay_Watermark::enabled_for( $mat ) ) {
 						foreach ( Resandpay_Watermark::problems( $mat ) as $fname => $why ) {
@@ -198,7 +198,7 @@ class Resandpay_Admin_Materials {
 			echo '<div class="notice notice-error inline"><p>' . esc_html__( 'Pozor: chráněná složka je z webu dostupná (hosting nečte soubor .htaccess). Soubory nejsou chráněné – kontaktujte správce hostingu.', 'reserveandpay' ) . '</p></div>';
 		}
 		echo '<input type="hidden" name="rap_files_present" value="1">';
-		echo '<table class="widefat striped rap-mat-files-admin"><thead><tr><th>' . esc_html__( 'Název na webu', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Soubor', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Ukázka', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Pořadí', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Odstranit', 'reserveandpay' ) . '</th></tr></thead><tbody id="rap-mat-files">';
+		echo '<table class="widefat striped rap-mat-files-admin"><thead><tr><th>' . esc_html__( 'Název na webu', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Soubor', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Ukázka', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Jen přehrát', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Pořadí', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Odstranit', 'reserveandpay' ) . '</th></tr></thead><tbody id="rap-mat-files">';
 		foreach ( $files as $i => $f ) {
 			echo self::file_row( $f, $i ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
 		}
@@ -208,6 +208,35 @@ class Resandpay_Admin_Materials {
 		}
 		echo '<p style="margin-top:1em"><input type="file" id="rap-mat-upload" multiple data-post="' . (int) $post->ID . '"> <span id="rap-mat-progress" class="description"></span></p>';
 		echo '<p class="description">' . esc_html__( 'Soubory se ukládají mimo Knihovnu médií do chráněné složky a stahují se jen přes odkaz pro přihlášeného uživatele s přístupem. Velké soubory (videa) se nahrávají po částech – limit velikosti je dán jen místem na hostingu. Odstraněný soubor se smaže z disku po uložení materiálu.', 'reserveandpay' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'Jen přehrát (video a audio): na webu jen přehrávač bez tlačítka Stáhnout a odkaz ke stažení server odmítne. Stažení to výrazně ztíží, úplně mu nezabrání (záznam obrazovky, nástroje prohlížeče). Při zapnutém vodoznaku (Vodoznak v PDF a videu) se přes video zobrazí údaje zákazníka podle Nastavení → Materiály ke stažení, u audia text „Licencováno pro: …“ pod přehrávačem.', 'reserveandpay' ) . '</p>';
+		self::box_videos( $post );
+	}
+
+	/** Externí videa (#51) – zatím YouTube; tlačítko „Přehrát na YouTube“ jen pro zákazníky s přístupem. */
+	public static function box_videos( $post ) {
+		$videos = Resandpay_Materials::videos( $post->ID );
+		echo '<h4 style="margin-top:1.5em">' . esc_html__( 'Externí videa (YouTube)', 'reserveandpay' ) . '</h4>';
+		echo '<input type="hidden" name="rap_videos_present" value="1">';
+		echo '<table class="widefat striped rap-mat-videos-admin"><thead><tr><th>' . esc_html__( 'Název na webu', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Adresa videa na YouTube', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Ukázka', 'reserveandpay' ) . '</th><th>' . esc_html__( 'Odstranit', 'reserveandpay' ) . '</th></tr></thead><tbody id="rap-mat-videos">';
+		foreach ( $videos as $v ) {
+			echo self::video_row( $v['id'], $v ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
+		}
+		echo self::video_row( 'new0', array() ); // phpcs:ignore WordPress.Security.EscapeOutput -- escapováno uvnitř.
+		echo '</tbody></table>';
+		echo '<p><button type="button" class="button" id="rap-mat-video-add">' . esc_html__( '+ další video', 'reserveandpay' ) . '</button></p>';
+		echo '<p class="description">' . esc_html__( 'Adresa videa z YouTube (i neveřejného): https://www.youtube.com/watch?v=… nebo https://youtu.be/…. Zákazník s přístupem uvidí tlačítko „Přehrát na YouTube“ (otevře se v novém okně); odkaz vede přes web, který ověří přístup a zapíše přehrání do historie. Adresa videa se do stránky bez přístupu nevypíše. Po otevření na YouTube ji ale zákazník vidí a může ji přeposlat – pro přísnější ochranu nahrajte video jako soubor výše. Ukázka = přehraje kdokoli.', 'reserveandpay' ) . '</p>';
+		echo "<script>(function(){var b=document.getElementById('rap-mat-video-add'),t=document.getElementById('rap-mat-videos');if(!b||!t)return;var n=1;b.addEventListener('click',function(){var r=t.querySelector('tr[data-new]');if(!r)return;var c=r.cloneNode(true);var k='new'+(n++);c.querySelectorAll('input').forEach(function(i){i.name=i.name.replace(/\\[new\\d+\\]/,'['+k+']');if(i.type==='checkbox'){i.checked=false;}else{i.value='';}});t.appendChild(c);});})();</script>";
+	}
+
+	/** Řádek tabulky externích videí. */
+	public static function video_row( $id, array $v ) {
+		$n   = 'rap_videos[' . esc_attr( $id ) . ']';
+		$new = 0 === strpos( $id, 'new' );
+		$out = '<tr' . ( $new ? ' data-new="1"' : '' ) . '><td><input type="text" class="widefat" name="' . $n . '[label]" value="' . esc_attr( $v['label'] ?? '' ) . '"></td>';
+		$out .= '<td><input type="url" class="widefat" name="' . $n . '[url]" value="' . esc_attr( $v['url'] ?? '' ) . '" placeholder="https://www.youtube.com/watch?v=…"></td>';
+		$out .= '<td><label><input type="checkbox" name="' . $n . '[sample]" value="1" ' . checked( ! empty( $v['sample'] ), true, false ) . '> ' . esc_html__( 'bez přihlášení', 'reserveandpay' ) . '</label></td>';
+		$out .= '<td>' . ( $new ? '' : '<label><input type="checkbox" name="' . $n . '[remove]" value="1"> ' . esc_html__( 'odstranit', 'reserveandpay' ) . '</label>' ) . '</td></tr>';
+		return $out;
 	}
 
 	/** Řádek tabulky souborů (i pro nově nahraný soubor – JS vkládá stejnou strukturu). */
@@ -217,6 +246,7 @@ class Resandpay_Admin_Materials {
 		$out .= '<input type="hidden" name="' . $n . '[data]" value="' . esc_attr( wp_json_encode( array_intersect_key( $f, array_flip( array( 'id', 'name', 'path', 'size', 'mime' ) ) ) ) ) . '"></td>';
 		$out .= '<td>' . esc_html( $f['name'] ) . '<br><small>' . esc_html( Resandpay_Materials::format_size( $f['size'] ) . ' · ' . $f['mime'] ) . '</small></td>';
 		$out .= '<td><label><input type="checkbox" name="' . $n . '[sample]" value="1" ' . checked( $f['sample'], true, false ) . '> ' . esc_html__( 'bez přihlášení', 'reserveandpay' ) . '</label></td>';
+		$out .= '<td>' . ( Resandpay_Materials::is_media( $f['mime'] ) ? '<label><input type="checkbox" name="' . $n . '[play_only]" value="1" ' . checked( ! empty( $f['play_only'] ), true, false ) . '> ' . esc_html__( 'bez stažení', 'reserveandpay' ) . '</label>' : '—' ) . '</td>';
 		$out .= '<td><input type="number" class="small-text" name="' . $n . '[order]" value="' . (int) ( $i + 1 ) . '"></td>';
 		$out .= '<td><label><input type="checkbox" name="' . $n . '[remove]" value="1"> ' . esc_html__( 'odstranit', 'reserveandpay' ) . '</label></td></tr>';
 		return $out;
@@ -273,6 +303,9 @@ class Resandpay_Admin_Materials {
 		$names = array();
 		foreach ( $mat['files'] as $f ) {
 			$names[ $f['id'] ] = $f['label'] ?: $f['name'];
+		}
+		foreach ( $mat['videos'] as $v ) {
+			$names[ $v['id'] ] = ( $v['label'] ?: __( 'Video', 'reserveandpay' ) ) . ' (YouTube)';
 		}
 		$kinds   = array(
 			'download' => __( 'stažení', 'reserveandpay' ),
@@ -382,6 +415,7 @@ class Resandpay_Admin_Materials {
 					'size'   => (int) filesize( Resandpay_Materials::abs_path( $data['path'] ) ),
 					'mime'   => Resandpay_Materials::check_type( (string) ( $data['name'] ?? '' ) ) ?: 'application/octet-stream',
 					'sample' => ! empty( $row['sample'] ),
+					'play_only' => ! empty( $row['play_only'] ),
 					'order'  => (int) ( $row['order'] ?? 999 ),
 				);
 				unset( $old[ $id ] );
@@ -392,6 +426,41 @@ class Resandpay_Admin_Materials {
 			}
 			unset( $k );
 			Resandpay_Materials::save_files( $post_id, $keep );
+		}
+
+		// Externí videa (#51): jen platná adresa YouTube; neplatná se neuloží (upozornění).
+		if ( isset( $in['rap_videos'] ) || isset( $in['rap_videos_present'] ) ) {
+			$old  = array();
+			foreach ( Resandpay_Materials::videos( $post_id ) as $v ) {
+				$old[ $v['id'] ] = $v;
+			}
+			$keep = array();
+			$bad  = false;
+			foreach ( (array) ( $in['rap_videos'] ?? array() ) as $id => $row ) {
+				$id  = preg_replace( '/[^a-z0-9]/', '', strtolower( (string) $id ) );
+				$raw = trim( (string) ( $row['url'] ?? '' ) );
+				if ( ! empty( $row['remove'] ) || ( '' === $raw && 0 === strpos( $id, 'new' ) ) ) {
+					continue;
+				}
+				$url = Resandpay_Materials::youtube_url( $raw );
+				if ( '' === $url ) {
+					$bad = true;
+					if ( isset( $old[ $id ] ) ) {
+						$keep[] = $old[ $id ]; // Chybná úprava – ponechat původní adresu.
+					}
+					continue;
+				}
+				$keep[] = array(
+					'id'     => isset( $old[ $id ] ) ? $id : 'yt' . strtolower( wp_generate_password( 10, false, false ) ),
+					'label'  => sanitize_text_field( (string) ( $row['label'] ?? '' ) ),
+					'url'    => $url,
+					'sample' => ! empty( $row['sample'] ),
+				);
+			}
+			Resandpay_Materials::save_videos( $post_id, $keep );
+			if ( $bad ) {
+				set_transient( 'rap_mat_notice_' . get_current_user_id(), 'video_bad', 120 );
+			}
 		}
 	}
 
@@ -462,6 +531,10 @@ class Resandpay_Admin_Materials {
 
 	public static function notices() {
 		$note = get_transient( 'rap_mat_notice_' . get_current_user_id() );
+		if ( 'video_bad' === $note ) {
+			delete_transient( 'rap_mat_notice_' . get_current_user_id() );
+			echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html__( 'Některá adresa externího videa není platná adresa videa na YouTube (https://www.youtube.com/watch?v=… nebo https://youtu.be/…) – neuložila se.', 'reserveandpay' ) . '</p></div>';
+		}
 		if ( 'audience_refused' === $note ) {
 			delete_transient( 'rap_mat_notice_' . get_current_user_id() );
 			echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__( 'Přístup „Odeslat na e-mail“ nelze uložit bez stránky profilu zákazníka (Nastavení → Rezervace → Profil zákazníka) – ponechán dosavadní přístup.', 'reserveandpay' ) . '</p></div>';
@@ -526,7 +599,7 @@ class Resandpay_Admin_Materials {
 				}
 				break;
 			case 'rap_files':
-				echo (int) count( $mat['files'] );
+				echo (int) count( $mat['files'] ) + count( $mat['videos'] );
 				break;
 			case 'rap_orders':
 				$c = Resandpay_Materials::counts( $post_id );
