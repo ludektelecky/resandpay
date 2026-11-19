@@ -132,7 +132,7 @@ class Resandpay_Views {
 				<?php elseif ( 'closed' === $state ) : ?>
 					<a class="rap-button rap-button--ghost" href="<?php echo esc_url( $url ); ?>"><?php esc_html_e( 'Zobrazit detail →', 'reserveandpay' ); ?></a>
 				<?php else : ?>
-					<?php if ( ! $ev['external'] ) : ?><p class="rap-item__free"><?php echo esc_html( sprintf( /* translators: 1: volno, 2: kapacita */ __( 'Volná místa: %1$d z %2$d', 'reserveandpay' ), $free, $ev['capacity'] ) ); ?></p><?php elseif ( Resandpay_Events::external_capacity( $ev ) ) : ?><p class="rap-item__free"><?php echo esc_html( Resandpay_Events::capacity_label( Resandpay_Events::external_capacity( $ev ) ) ); ?></p><?php endif; ?>
+					<?php if ( ! $ev['external'] && ! Resandpay_Events::hides_free( $ev ) ) : ?><p class="rap-item__free"><?php echo esc_html( sprintf( /* translators: 1: volno, 2: kapacita */ __( 'Volná místa: %1$d z %2$d', 'reserveandpay' ), $free, $ev['capacity'] ) ); ?></p><?php elseif ( Resandpay_Events::public_capacity( $ev ) ) : ?><p class="rap-item__free"><?php echo esc_html( Resandpay_Events::capacity_label( Resandpay_Events::public_capacity( $ev ) ) ); ?></p><?php endif; ?>
 					<a class="rap-button" href="<?php echo esc_url( $ext_blocked ? $url : self::book_href( $ev ) ); ?>"<?php echo $ext_blocked ? '' : self::book_attrs( $ev ); // phpcs:ignore WordPress.Security.EscapeOutput -- pevné atributy. ?>><?php echo esc_html( self::book_label( $ev, __( 'Rezervovat termín →', 'reserveandpay' ) ) ); ?></a>
 				<?php endif; ?>
 			</div>
@@ -234,9 +234,13 @@ class Resandpay_Views {
 				<?php if ( ! $next['external'] ) : ?>
 				<p class="rap-item__free"><?php
 				if ( $next['capacity'] > 1 ) {
-					$n = Resandpay_Events::free_places( $next['id'] );
-					/* translators: 1: volná místa, 2: kapacita */
-					echo esc_html( sprintf( __( 'Nejbližší: volno %1$d z %2$d', 'reserveandpay' ), $n, $next['capacity'] ) );
+					if ( Resandpay_Events::hides_free( $next ) ) {
+						echo esc_html( Resandpay_Events::capacity_label( $next['capacity'] ) );
+					} else {
+						$n = Resandpay_Events::free_places( $next['id'] );
+						/* translators: 1: volná místa, 2: kapacita */
+						echo esc_html( sprintf( __( 'Nejbližší: volno %1$d z %2$d', 'reserveandpay' ), $n, $next['capacity'] ) );
+					}
 					if ( $it['free'] > 1 ) {
 						/* translators: %d: počet termínů */
 						echo '<br>' . esc_html( sprintf( __( 'Termínů s volnem: %d', 'reserveandpay' ), $it['free'] ) );
@@ -698,7 +702,7 @@ class Resandpay_Views {
 				$t     = $show ? date_create_immutable( $ev['start'], $tz )->format( 'G:i' ) : __( 'Rezervovat', 'reserveandpay' );
 				$label = $show ? sprintf( /* translators: 1: den, 2: čas */ __( 'Rezervovat %1$s v %2$s', 'reserveandpay' ), $d->format( 'j. n.' ), $t ) : sprintf( /* translators: %s: den */ __( 'Rezervovat %s', 'reserveandpay' ), $d->format( 'j. n.' ) );
 				$places = '';
-				if ( $ev['capacity'] > 1 && ! $ev['external'] ) {
+				if ( $ev['capacity'] > 1 && ! $ev['external'] && ! Resandpay_Events::hides_free( $ev ) ) {
 					$places = self::places_label( Resandpay_Events::free_places( $ev['id'] ) );
 					$label .= ', ' . $places;
 				}

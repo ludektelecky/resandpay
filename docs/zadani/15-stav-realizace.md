@@ -19,7 +19,7 @@ Vývoj probíhá na webu slehkouhlavou.cz (WordPress 7.1, PHP 8.5, MySQL 8.4, Ac
 
 ## 15.1 Kniha rozvoje
 
-> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R28 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
+> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R29 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
 
 Funkce navržené k dalšímu rozvoji pluginu. Položka se po schválení podrobného zadání přesune do příslušné kapitoly a do tabulky stavu realizace.
 
@@ -421,3 +421,13 @@ Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, po
 - **Prohlížeč fotek** (jen prohlížení, bez stažení): přes celou obrazovku na tmavém pozadí, šipky a klávesy ←/→, tah prstem, počítadlo „3 / 24“, Esc / křížek, bez externích knihoven (assets/js/event-photos.js, třídy `rap-photos*`, `rap-lightbox*`).
 - **Profil zákazníka:** u zaplacené rezervace proběhlé akce s fotkami odkaz „Fotky z akce →“ (přes osobní odkaz s tokenem).
 - Funkce Resandpay_Event_Photos (add, set_order, can_view, is_attendee, url, authorize, section, notify), administrace Resandpay_Admin_Event_Photos. Bez změny databáze.
+
+### R29 – Na webu jen celková kapacita, bez volných míst
+
+**Pozn.: Navrženo a schváleno 19. 11. 2026 ([Issue #47](https://github.com/ludektelecky/resandpay/issues/47)), implementováno ve verzi pluginu 0.31.0.**
+
+- U **akce** (Parametry akce → Termín a místo → Místo a kapacita) a u **služby** (Parametry služby → Termíny a místo → Počet míst na termín) volba **„Na webu nezobrazovat volná místa“** (meta `_rap_hide_free`, výchozí vypnuto). Termín služby přebírá volbu ze služby (platí i pro již vypsané termíny), v editoru termínu se volba nenabízí. Rozsah jen u jednotlivé akce a služby – globální výchozí stav v Nastavení se nezavádí.
+- Se zapnutou volbou se ve všech veřejných částech místo počtu volných / přihlášených míst ukáže celková kapacita **„Kapacita: N míst“**: výpis akcí (místo „Volná místa: X z N“), záhlaví detailu akce (údaj Kapacita), rezervační karta (bez teček po místech a bez „poslední místa“; uzávěrka zůstává), shortcode detailu (Kapacita místo „Volná místa X z N“), karta služby v přehledu (místo „Nejbližší: volno X z N“; počet termínů s volnem zůstává), výběr termínů služby (u časů bez „13 volných míst“, v záhlaví „max. N osob“).
+- **Plně obsazená akce / termín dál ukazuje „Obsazeno“** a další rezervaci nepustí (kontrola kapacity beze změny); obsazený termín služby se ve výběru nenabízí.
+- Externí akce a služby (kap. 3.11) se řídí svou volbou „Zobrazit celkovou kapacitu“. Administrace, Statistika, odbavení a e-maily (proměnná `{free}` v upozornění správci) beze změny.
+- Funkce Resandpay_Events::hides_free(), public_capacity(), save_hide_free_meta() (ukládá jen se značkou `rap_hide_free_field`, takže generátor ani jiné uložení volbu nepřepíše), hide_free_field(). Bez změny databáze.

@@ -4,6 +4,15 @@
 >
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
+## 0.31.0 – Skrytí volných míst na webu (19. 11. 2026)
+
+- **R29 – jen celková kapacita na webu** ([Issue #47](https://github.com/ludektelecky/resandpay/issues/47), schváleno a implementováno): u **akce** (Parametry akce → Termín a místo → Místo a kapacita) a u **služby** (Parametry služby → Termíny a místo → Počet míst na termín) nová volba **„Na webu nezobrazovat volná místa“**.
+  - Se zapnutou volbou web nikde neukazuje počet přihlášených ani volných míst – místo „Volná místa: 14 z 16“ se ukáže **„Kapacita: 16 míst“** (výpis akcí, detail akce, rezervační karta bez teček po místech a bez „poslední místa“, shortcode detailu); u služby ve výběru termínů zmizí „13 volných míst“ u časů (v záhlaví zůstane „max. 15 osob“), karta služby v přehledu ukáže kapacitu místo „Nejbližší: volno …“.
+  - **Plně obsazená akce dál ukazuje „Obsazeno“** a další rezervaci nepustí; kontrola kapacity se nemění.
+  - Termín služby přebírá volbu ze služby (platí i pro již vypsané termíny). Externí akce se řídí svou volbou „Zobrazit celkovou kapacitu“.
+  - Administrace, Statistika a e-maily (i `{free}` v upozornění správci) beze změny.
+- Výchozí stav vypnuto – stávající akce a služby beze změny. Bez změny databáze (nová meta `_rap_hide_free`). Testy: 885 kontrol + souběh
+
 ## 0.30.0 – Fotky z proběhlé akce a hláška „akce již proběhla“ (19. 11. 2026)
 
 - **R28 – fotky z proběhlé akce** ([Issue #45](https://github.com/ludektelecky/resandpay/issues/45), schváleno a implementováno):

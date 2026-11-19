@@ -2899,6 +2899,63 @@ foreach ( array( $phRun, $phNoEnd ) as $x ) {
 }
 update_option( Resandpay_Settings::OPTION, $phSaved, false );
 
+echo "== 0.31.0: skrytí volných míst na webu (#47)\n";
+$hfOld = rap_event( 'Bez skrytí', $now + 60 * $day, $now + 60 * $day + 2 * HOUR_IN_SECONDS, 16 );
+rap_t( false === Resandpay_Events::get( $hfOld )['hide_free'] && false !== strpos( Resandpay_Views::render_item( Resandpay_Events::get( $hfOld ) ), 'Volná místa: 16 z 16' ), 'výchozí stav beze změny: volná místa se zobrazují' );
+$hf = rap_event( 'Skrytá místa', $now + 60 * $day, $now + 60 * $day + 2 * HOUR_IN_SECONDS, 16, array( 'rap_hide_free_field' => '1', 'rap_hide_free' => '1' ) );
+Resandpay_Reservations::create( $hf, rap_person( 470 ), array( 'notify' => false ) );
+Resandpay_Reservations::create( $hf, rap_person( 471 ), array( 'notify' => false ) );
+$hfEv = Resandpay_Events::get( $hf );
+rap_t( true === $hfEv['hide_free'] && Resandpay_Events::hides_free( $hfEv ) && 16 === Resandpay_Events::public_capacity( $hfEv ) && 14 === Resandpay_Events::free_places( $hf ), 'volba uložena, obsazenost se počítá dál (14 volných)' );
+$hfI = Resandpay_Views::render_item( $hfEv );
+rap_t( false !== strpos( $hfI, 'Kapacita: 16 míst' ) && false === strpos( $hfI, 'Volná místa' ) && false === strpos( $hfI, '14' ) && false !== strpos( $hfI, 'Rezervovat' ), 'výpis: jen „Kapacita: 16 míst“, rezervovat lze' );
+$hfB = Resandpay_Frontend::render_booking( $hf, true );
+$hfP = Resandpay_Frontend::render_event_page( $hf, '' );
+$hfD = Resandpay_Frontend::render_details( $hf );
+rap_t( false !== strpos( $hfB, 'Kapacita: 16 míst' ) && false === strpos( $hfB, 'rap-seats__dots' ) && false === strpos( $hfB, 'volných' ) && false !== strpos( $hfB, '<form' ), 'rezervační karta: kapacita bez teček a volných míst, formulář zůstává' );
+rap_t( false !== strpos( $hfP, '16 míst' ) && false === strpos( $hfP, 'volných' ), 'detail akce: kapacita v údajích, bez volných míst' );
+rap_t( false !== strpos( $hfD, 'Kapacita' ) && false !== strpos( $hfD, '16 míst' ) && false === strpos( $hfD, '14 z 16' ) && false === strpos( $hfD, 'Volná místa' ), 'shortcode detailu: „Kapacita 16 míst“ místo „14 z 16“' );
+// Obsazená akce dál „Obsazeno“ a další rezervaci nepustí.
+$hfF = rap_event( 'Skrytá plná', $now + 60 * $day, $now + 60 * $day + 2 * HOUR_IN_SECONDS, 1, array( 'rap_hide_free_field' => '1', 'rap_hide_free' => '1' ) );
+Resandpay_Reservations::create( $hfF, rap_person( 472 ), array( 'notify' => false ) );
+$hfFI = Resandpay_Views::render_item( Resandpay_Events::get( $hfF ) );
+rap_t( false !== strpos( $hfFI, 'Obsazeno' ) && false === strpos( $hfFI, 'Rezervovat termín' ), 'obsazená akce: ve výpisu „Obsazeno“' );
+rap_t( false !== strpos( Resandpay_Frontend::render_booking( $hfF, true ), 'Obsazeno' ) && false !== strpos( Resandpay_Frontend::render_event_page( $hfF, '' ), 'Obsazeno' ), 'obsazená akce: karta i detail „Obsazeno“' );
+rap_t( is_wp_error( Resandpay_Reservations::create( $hfF, rap_person( 473 ), array( 'notify' => false ) ) ), 'obsazená akce: další rezervaci nepustí' );
+// Uložení bez pole (generátor, import) volbu nepřepíše; odškrtnutí ji vypne.
+update_post_meta( $hf, '_rap_capacity', 16 );
+Resandpay_Events::save_hide_free_meta( $hf, array() );
+rap_t( '1' === get_post_meta( $hf, '_rap_hide_free', true ), 'uložení bez pole volbu ponechá' );
+Resandpay_Events::save_hide_free_meta( $hf, array( 'rap_hide_free_field' => '1' ) );
+rap_t( false === Resandpay_Events::get( $hf )['hide_free'] && false !== strpos( Resandpay_Views::render_item( Resandpay_Events::get( $hf ) ), 'Volná místa: 14 z 16' ), 'odškrtnutí: volná místa se zase zobrazují' );
+// Externí akce se řídí svou volbou.
+$hfX = rap_event( 'Skrytá externí', $now + 60 * $day, $now + 61 * $day, 20, array( 'rap_booking' => 'external', 'rap_ext_url' => 'https://ext.example.com/h', 'rap_hide_free_field' => '1', 'rap_hide_free' => '1' ) );
+rap_t( ! Resandpay_Events::hides_free( Resandpay_Events::get( $hfX ) ) && 0 === Resandpay_Events::public_capacity( Resandpay_Events::get( $hfX ) ), 'externí akce: rozhoduje „Zobrazit celkovou kapacitu“' );
+// Služba: termíny přebírají volbu ze služby.
+$hfS = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::SERVICE, 'post_status' => 'publish', 'post_title' => 'Skupinová skrytá', 'post_content' => 'Lekce.' ) );
+Resandpay_Admin_Services::save_service_meta( $hfS, array( 'rap_duration' => 60, 'rap_pause' => 0, 'rap_capacity' => 12, 'rap_price' => '300', 'rap_currency' => 'CZK', 'rap_hide_free_field' => '1', 'rap_hide_free' => '1' ) );
+$hfSp = Resandpay_Services::preview( $hfS, array( 'weekdays' => array( 2 ), 'time_from' => '18:00', 'time_to' => '19:00', 'date_from' => '2027-06-01', 'date_to' => '2027-06-30' ) );
+Resandpay_Services::create_slots( $hfS, wp_list_pluck( $hfSp, 'start' ) );
+$hfSl = Resandpay_Services::slots( $hfS, date_create_immutable( '2027-06-01 00:00:00', $tzz ), date_create_immutable( '2027-07-01 00:00:00', $tzz ) );
+$hfS0 = reset( $hfSl );
+Resandpay_Reservations::create( $hfS0['id'], rap_person( 474 ), array( 'notify' => false ) );
+rap_t( Resandpay_Events::hides_free( Resandpay_Events::get( $hfS0['id'] ) ), 'termín služby přebírá volbu ze služby' );
+$_GET['rap_from'] = '2027-06-01';
+$hfSh = Resandpay_Views::render_slots( array( 'service' => $hfS, 'days' => 30 ) );
+unset( $_GET['rap_from'] );
+rap_t( false === strpos( $hfSh, 'volných míst' ) && false === strpos( $hfSh, 'volné místo' ) && false !== strpos( $hfSh, 'max. 12 osob' ) && false !== strpos( $hfSh, 'rap-slot' ), 'výběr termínů: bez volných míst u časů, v záhlaví „max. 12 osob“' );
+$hfSd = Resandpay_Frontend::render_details( $hfS0['id'] ) . Resandpay_Frontend::render_booking( $hfS0['id'], true );
+rap_t( false !== strpos( $hfSd, '12 míst' ) && false === strpos( $hfSd, '11 z 12' ) && false === strpos( $hfSd, 'volných' ), 'detail termínu služby: kapacita místo volných míst' );
+$hfL = Resandpay_Views::render_list( array( 'limit' => 200, 'category' => '' ) );
+rap_t( false === strpos( $hfL, 'Nejbližší: volno 11 z 12' ) && false === strpos( $hfL, 'Nejbližší: volno 12 z 12' ), 'karta služby ve výpisu bez „Nejbližší: volno …“' );
+foreach ( array( $hfOld, $hf, $hfF, $hfX ) as $x ) {
+	wp_delete_post( $x, true );
+}
+foreach ( $hfSl as $x ) {
+	wp_delete_post( $x['id'], true );
+}
+wp_delete_post( $hfS, true );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );

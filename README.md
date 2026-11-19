@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.30.0** · zadání: [`docs/zadani/`](docs/zadani/README.md) (odpovídá aktuální verzi pluginu) · rozvojové požadavky: [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) · změny: [DEVLOG](docs/DEVLOG.md)
+> **Aktuální verze pluginu: 0.31.0** · zadání: [`docs/zadani/`](docs/zadani/README.md) (odpovídá aktuální verzi pluginu) · rozvojové požadavky: [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) · změny: [DEVLOG](docs/DEVLOG.md)
 
 ### Název a označení
 
@@ -30,6 +30,7 @@ Technické identifikátory se nemění (slug a textdomain `reserveandpay`, před
 - Časté dotazy (FAQ) u akce i služby: otázka vždy vidět, odpověď rozbalovací (výchozí vše sbalené), termín bez vlastních dotazů přebírá dotazy služby; strukturovaná data FAQPage pro Google
 - Překrývání akcí je povoleno – systém pouze upozorní
 - Hlídání kapacity: jedna rezervace = jedno místo = vlastní variabilní symbol; atomická kontrola proti přeplnění
+- Volba „Na webu nezobrazovat volná místa“ u akce i služby: veřejnost vidí jen celkovou kapacitu („Kapacita: 16 míst“), ne počet přihlášených; plně obsazená akce dál „Obsazeno“
 
 ### Rezervace
 - Rezervační formulář v detailu akce / po výběru volného termínu

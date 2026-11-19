@@ -39,6 +39,7 @@ Akce (včetně individuálních termínů) se vede jako vlastní typ obsahu (CPT
 - Každá rezervace blokuje právě jedno místo – ve stavech „Čeká na platbu“, „Platba na místě“ i „Zaplaceno“; uvolní ho až expirace nebo zrušení rezervace.
 - Ověření volné kapacity a založení rezervace musí proběhnout atomicky (databázová transakce / zámek), aby při současném odeslání dvou rezervací na poslední místo nedošlo k přeplnění akce.
 - Počet volných míst se na webu zobrazuje vždy z evidence rezervací – nikdy se nepíše ručně do textu.
+- Volba „Na webu nezobrazovat volná místa“ (u akce, u služby pro všechny její termíny; od 0.31.0, kap. 15.1 R29): web místo volných míst ukáže jen celkovou kapacitu „Kapacita: N míst“ (výpis, detail, rezervační karta bez teček, výběr termínů služby bez počtu míst u časů). Obsazená akce dál „Obsazeno“; administrace a Statistika beze změny.
 - Při vyprodání se rezervační formulář skryje a zobrazí se „Obsazeno“ (čekací listina volitelně ve 2. etapě).
 
 ## 3.4 Služby a jejich termíny (masáže, skupinové lekce)
@@ -75,7 +76,7 @@ Masáže, pravidelné skupinové lekce a další služby se nerezervují výpoč
 
 - Na stránce služby je výběr „Volné termíny“: dny (např. „út 3. 11.“) a pod nimi volné časy jako tlačítka. Kliknutí na čas otevře detail termínu s popisem služby, místem, cenou a rezervačním formulářem; odkaz „← Jiný termín“ vede zpět. Stránkování po třech týdnech („Další termíny →“). Bez data v odkazu začíná výpis vždy dnem nejbližšího volného termínu (hledá se bez omezení dopředu); je-li to později než dnes, je nad výpisem věta „Nejbližší volný termín je po 4. 1. 2027 18:45 – dřívější termíny jsou obsazené.“ (druhá část jen tehdy, když dřívější termíny existují a jsou obsazené). Tlačítko „← Předchozí termíny“ vede nejvýše k dnešku. Odkaz s datem (rap_from, šipky) začíná tímto datem. Nemá-li služba žádný volný termín, výpis začíná dneškem s hláškou a výzvou ke kontaktu. Stejně bez omezení dopředu hledá nejbližší volný termín i karta služby v přehledu.
 - Obsazené, zrušené a prošlé termíny se nezobrazují. U skupinové lekce zůstává termín v nabídce, dokud jsou volná místa.
-- U služby s více místy ukazuje výběr u každého času počet volných míst („13 volných míst“) a v záhlaví kapacitu („max. 15 osob“); detail termínu ukazuje „Volná místa 13 z 15“. U masáže (1 místo) se počet míst neukazuje.
+- U služby s více místy ukazuje výběr u každého času počet volných míst („13 volných míst“) a v záhlaví kapacitu („max. 15 osob“); detail termínu ukazuje „Volná místa 13 z 15“. U masáže (1 místo) se počet míst neukazuje. Se zapnutou volbou „Na webu nezobrazovat volná místa“ (kap. 3.3) se u časů počet míst neukazuje a detail termínu ukáže „Kapacita 15 míst“.
 - Přehled akcí (stránka Kalendář akcí) ukazuje službu jako jednu souhrnnou kartu: nejbližší volný termín (den v týdnu, datum vždy s rokem, čas, délka, místo – např. „po 4. 1. 2027 18:45 · 60 min“, stejně jako u akcí), cena, počet volných termínů (u skupinové služby volná místa nejbližšího termínu, např. „volno 13 z 15“) a tlačítko „Vybrat termín →“ na stránku s volnými termíny. Karta se řadí podle data nejbližšího termínu spolu s akcemi; služba bez volných termínů se nezobrazí.
 - Měsíční kalendář jednotlivé termíny služeb nezobrazuje (zahltily by ho). Při filtru kategorie služby se nad kalendářem ukáže karta služby.
 

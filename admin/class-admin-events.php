@@ -193,6 +193,7 @@ class Resandpay_Admin_Events {
 						<a class="rap-hint" href="<?php echo esc_url( admin_url( 'post-new.php?post_type=' . Resandpay_Post_Types::LOCATION ) ); ?>" target="_blank"><?php esc_html_e( '+ nové místo', 'reserveandpay' ); ?></a></p>
 					<p id="rap_capacity_wrap"><label for="rap_capacity"><?php esc_html_e( 'Kapacita', 'reserveandpay' ); ?> *</label>
 						<input type="number" min="1" step="1" id="rap_capacity" name="rap_capacity" value="<?php echo esc_attr( $ev['capacity'] ?: '' ); ?>" class="small-text"></p>
+					<?php if ( ! $svc ) : ?><p class="rap-params__full"><?php Resandpay_Events::hide_free_field( $post->ID ); ?></p><?php endif; ?>
 				</td></tr>
 			<tr<?php echo Resandpay_Admin::tab( 'cena' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><?php esc_html_e( 'Cena a platba', 'reserveandpay' ); ?></th>
 				<td>
