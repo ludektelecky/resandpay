@@ -3125,6 +3125,84 @@ wp_delete_post( $etS, true );
 wp_delete_post( $etS2, true );
 update_option( Resandpay_Settings::OPTION, $etSaved, false );
 
+echo "== 0.34.0: vzhled katalogu, obrázek v detailu a pořadí materiálů (#55)\n";
+$mvSaved = get_option( Resandpay_Settings::OPTION );
+$mvD     = Resandpay_Settings::defaults();
+rap_t( 'medium' === $mvD['mat_card_size'] && '3-4' === $mvD['mat_card_ratio'] && 'manual' === $mvD['mat_catalog_order'] && 'small' === $mvD['mat_detail_image'], 'výchozí: střední karta 3 : 4, ruční řazení; nová instalace obrázek v detailu malý vlevo' );
+// Migrace DB 18: stávající web si ponechá obrázek ze šablony; uložená volba se nepřepíše.
+$mvOpt = $mvSaved;
+unset( $mvOpt['mat_detail_image'] );
+update_option( Resandpay_Settings::OPTION, $mvOpt, false );
+Resandpay_Install::keep_legacy_material_image();
+rap_t( 'theme' === Resandpay_Settings::get( 'mat_detail_image' ), 'migrace: stávající web – obrázek ze šablony (beze změny)' );
+Resandpay_Settings::update( array( 'mat_detail_image' => 'medium' ) );
+Resandpay_Install::keep_legacy_material_image();
+rap_t( 'medium' === Resandpay_Settings::get( 'mat_detail_image' ), 'migrace nepřepíše uloženou volbu' );
+update_option( Resandpay_Settings::OPTION, $mvSaved, false );
+Resandpay_Settings::update( array( 'mat_card_size' => 'medium', 'mat_card_ratio' => '3-4', 'mat_catalog_order' => 'manual' ) );
+// Tři materiály v jedné kategorii.
+$mvCat = wp_insert_term( 'Témata 55', Resandpay_Post_Types::CATEGORY );
+$mvCat = is_wp_error( $mvCat ) ? get_term_by( 'name', 'Témata 55', Resandpay_Post_Types::CATEGORY )->term_id : $mvCat['term_id'];
+$mvIds = array();
+foreach ( array( 'B materiál' => 2, 'A materiál' => 5, 'C materiál' => 1 ) as $mvT => $mvO ) {
+	$mvId = wp_insert_post( array( 'post_type' => Resandpay_Post_Types::MATERIAL, 'post_status' => 'publish', 'post_title' => $mvT, 'post_date' => wp_date( 'Y-m-d H:i:s', $now - ( 10 - count( $mvIds ) ) * $day ) ) );
+	Resandpay_Admin_Materials::save_meta( $mvId, array( 'rap_mat_access' => 'free', 'rap_mat_order' => (string) $mvO ) );
+	wp_set_object_terms( $mvId, array( (int) $mvCat ), Resandpay_Post_Types::CATEGORY );
+	$mvIds[ $mvT ] = $mvId;
+}
+rap_t( 5 === (int) get_post_field( 'menu_order', $mvIds['A materiál'] ), 'Pořadí v katalogu se uloží (menu_order)' );
+$mvTitles = function ( $html ) {
+	preg_match_all( '#rap-mat-card__title"><a [^>]*>([^<]+)</a>#u', $html, $m );
+	return implode( ',', $m[1] );
+};
+$mvCs = get_term( $mvCat )->slug;
+$_GET = array();
+rap_t( 'C materiál,B materiál,A materiál' === $mvTitles( Resandpay_Materials_Views::shortcode_catalog( array( 'category' => $mvCs, 'filter' => 'no' ) ) ), 'řazení ručně: podle pořadí (1, 2, 5)' );
+rap_t( 'A materiál,B materiál,C materiál' === $mvTitles( Resandpay_Materials_Views::shortcode_catalog( array( 'category' => $mvCs, 'filter' => 'no', 'orderby' => 'title' ) ) ), 'parametr orderby="title": podle názvu' );
+Resandpay_Settings::update( array( 'mat_catalog_order' => 'date' ) );
+rap_t( 'C materiál,A materiál,B materiál' === $mvTitles( Resandpay_Materials_Views::shortcode_catalog( array( 'category' => $mvCs, 'filter' => 'no' ) ) ), 'nastavení „od nejnovějšího“' );
+Resandpay_Settings::update( array( 'mat_catalog_order' => 'manual' ) );
+// Velikost a poměr karty.
+$mvG = Resandpay_Materials_Views::shortcode_catalog( array( 'category' => $mvCs, 'filter' => 'no' ) );
+rap_t( false !== strpos( $mvG, 'rap-mat-grid rap-mat-grid--medium rap-mat-grid--r3-4' ), 'výchozí karta: střední, 3 : 4' );
+Resandpay_Settings::update( array( 'mat_card_size' => 'large', 'mat_card_ratio' => '16-9' ) );
+rap_t( false !== strpos( Resandpay_Materials_Views::shortcode_catalog( array( 'category' => $mvCs, 'filter' => 'no' ) ), 'rap-mat-grid--large rap-mat-grid--r16-9' ), 'nastavení: velká karta 16 : 9' );
+rap_t( false !== strpos( Resandpay_Materials_Views::shortcode_catalog( array( 'category' => $mvCs, 'filter' => 'no', 'size' => 'small', 'ratio' => '1-1' ) ), 'rap-mat-grid--small rap-mat-grid--r1-1' ) && false !== strpos( Resandpay_Materials_Views::shortcode_card( array( 'id' => (string) $mvIds['A materiál'], 'size' => 'small' ) ), 'rap-mat-grid--small rap-mat-grid--r16-9 rap-mat-grid--single' ), 'parametry size a ratio přepíší nastavení (katalog i karta)' );
+rap_t( false !== strpos( Resandpay_Materials_Views::shortcode_catalog( array( 'category' => $mvCs, 'filter' => 'no', 'size' => 'obri' ) ), 'rap-mat-grid--large' ), 'neplatný parametr = nastavení' );
+Resandpay_Settings::update( array( 'mat_card_size' => 'medium', 'mat_card_ratio' => '3-4' ) );
+// Obrázek v detailu.
+$mvM   = $mvIds['A materiál'];
+$mvImg = $rap_img( 'obalka55' );
+set_post_thumbnail( $mvM, $mvImg );
+set_post_thumbnail( $mvIds['B materiál'], $mvImg );
+$mvQ = $GLOBALS['wp_query'];
+$mvScreen = $GLOBALS['current_screen'] ?? null; // Web, ne administrace (dřívější testy nastavují obrazovku).
+unset( $GLOBALS['current_screen'] );
+$GLOBALS['wp_query']     = new WP_Query( array( 'p' => $mvM, 'post_type' => Resandpay_Post_Types::MATERIAL ) );
+$GLOBALS['wp_the_query'] = $GLOBALS['wp_query'];
+$mvMat = Resandpay_Materials::get( $mvM );
+Resandpay_Settings::update( array( 'mat_detail_image' => 'small' ) );
+rap_t( false !== strpos( Resandpay_Materials_Views::detail_image( $mvMat ), 'rap-material__figure--small' ) && '' === get_the_post_thumbnail( $mvM ) && ! has_post_thumbnail( $mvM ), 'malý vlevo: obrázek vykreslí plugin, obrázek šablony se skryje' );
+Resandpay_Settings::update( array( 'mat_detail_image' => 'medium' ) );
+rap_t( false !== strpos( Resandpay_Materials_Views::detail_image( $mvMat ), 'rap-material__figure--medium' ), 'střední nad popisem' );
+rap_t( '' !== get_the_post_thumbnail( $mvIds['B materiál'] ), 'obrázek jiného materiálu (např. v kartě) se neskrývá' );
+Resandpay_Settings::update( array( 'mat_detail_image' => 'theme' ) );
+rap_t( '' === Resandpay_Materials_Views::detail_image( $mvMat ) && '' !== get_the_post_thumbnail( $mvM ) && has_post_thumbnail( $mvM ), 'ze šablony: plugin obrázek nevykreslí, šablona ano' );
+Resandpay_Settings::update( array( 'mat_detail_image' => 'none' ) );
+rap_t( '' === Resandpay_Materials_Views::detail_image( $mvMat ) && '' === get_the_post_thumbnail( $mvM ), 'nezobrazovat: obrázek nikde' );
+$GLOBALS['wp_query']     = $mvQ;
+$GLOBALS['wp_the_query'] = $mvQ;
+if ( $mvScreen ) {
+	$GLOBALS['current_screen'] = $mvScreen;
+}
+rap_t( false !== strpos( Resandpay_Materials_Views::card( $mvMat ), 'rap-mat-card__img' ), 'karta v katalogu má obrázek dál' );
+foreach ( $mvIds as $x ) {
+	wp_delete_post( $x, true );
+}
+wp_delete_attachment( $mvImg, true );
+wp_delete_term( (int) $mvCat, Resandpay_Post_Types::CATEGORY );
+update_option( Resandpay_Settings::OPTION, $mvSaved, false );
+
 update_option( 'rap_test_concurrency_event', rap_event( 'Souběh', $now + 20 * $day, $now + 20 * $day + HOUR_IN_SECONDS, 3 ) );
 
 printf( "\nVýsledek: %d PASS, %d FAIL\n", $GLOBALS['rap_pass'], $GLOBALS['rap_fail'] );

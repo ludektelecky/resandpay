@@ -16,6 +16,7 @@ class Resandpay_Admin_Materials {
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
 		add_filter( 'manage_' . Resandpay_Post_Types::MATERIAL . '_posts_columns', array( __CLASS__, 'columns' ) );
 		add_action( 'manage_' . Resandpay_Post_Types::MATERIAL . '_posts_custom_column', array( __CLASS__, 'column' ), 10, 2 );
+		add_filter( 'manage_edit-' . Resandpay_Post_Types::MATERIAL . '_sortable_columns', array( __CLASS__, 'sortable' ) );
 		add_action( 'admin_notices', array( __CLASS__, 'notices' ) );
 	}
 
@@ -174,6 +175,9 @@ class Resandpay_Admin_Materials {
 					?>
 				</td></tr>
 			<?php $avail = $mat['disabled'] ? 'disabled' : ( $mat['withdrawn'] ? 'withdrawn' : 'offer' ); ?>
+			<tr<?php echo Resandpay_Admin::tab( 'zakladni' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><label for="rap_mat_order"><?php esc_html_e( 'Pořadí v katalogu', 'reserveandpay' ); ?></label></th>
+				<td><input type="number" step="1" id="rap_mat_order" name="rap_mat_order" value="<?php echo (int) $post->menu_order; ?>" class="small-text">
+					<p class="description"><?php esc_html_e( 'Menší číslo = dřív v katalogu (při řazení „Ručně“ v Nastavení → Materiály ke stažení). Stejné pořadí (např. 0) = od nejnovějšího.', 'reserveandpay' ); ?></p></td></tr>
 			<tr<?php echo Resandpay_Admin::tab( 'zakladni' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>><th><?php esc_html_e( 'Dostupnost', 'reserveandpay' ); ?></th>
 				<td><label class="rap-inline"><input type="radio" name="rap_mat_availability" value="offer" <?php checked( $avail, 'offer' ); ?>> <?php esc_html_e( 'V nabídce', 'reserveandpay' ); ?></label><br>
 					<label class="rap-inline"><input type="radio" name="rap_mat_availability" value="withdrawn" <?php checked( $avail, 'withdrawn' ); ?>> <?php esc_html_e( 'Staženo z nabídky', 'reserveandpay' ); ?></label> – <span class="description"><?php esc_html_e( 'zmizí z katalogu a nelze ho objednat; kdo už ho má, stahuje dál.', 'reserveandpay' ); ?></span><br>
@@ -343,6 +347,14 @@ class Resandpay_Admin_Materials {
 		$kinds = Resandpay_Materials::kinds();
 		$kind  = sanitize_key( $in['rap_mat_kind'] ?? '' );
 		update_post_meta( $post_id, '_rap_mat_kind', isset( $kinds[ $kind ] ) ? $kind : array_key_first( $kinds ) );
+		if ( isset( $in['rap_mat_order'] ) ) { // Pořadí v katalogu (#55) = menu_order; přímo v DB, bez opakovaného save_post.
+			global $wpdb;
+			$order = max( -9999, min( 9999, (int) $in['rap_mat_order'] ) );
+			if ( (int) get_post_field( 'menu_order', $post_id ) !== $order ) {
+				$wpdb->update( $wpdb->posts, array( 'menu_order' => $order ), array( 'ID' => (int) $post_id ) );
+				clean_post_cache( $post_id );
+			}
+		}
 		// Přístup (#36): kdo smí materiál získat; placený / zdarma určuje cena. Starší formulář posílal rap_mat_access.
 		$prev = (string) get_post_meta( $post_id, '_rap_mat_audience', true );
 		if ( isset( $in['rap_mat_audience'] ) ) {
@@ -572,9 +584,16 @@ class Resandpay_Admin_Materials {
 				$out['rap_files']  = __( 'Souborů', 'reserveandpay' );
 				$out['rap_orders'] = __( 'Objednávky', 'reserveandpay' );
 				$out['rap_dl']     = __( 'Stažení (30 dní)', 'reserveandpay' );
+				$out['rap_order']  = __( 'Pořadí', 'reserveandpay' );
 			}
 		}
 		return $out;
+	}
+
+	/** Řazení seznamu podle pořadí v katalogu (#55). */
+	public static function sortable( $cols ) {
+		$cols['rap_order'] = 'menu_order';
+		return $cols;
 	}
 
 	public static function column( $col, $post_id ) {
@@ -597,6 +616,9 @@ class Resandpay_Admin_Materials {
 				} elseif ( $mat['withdrawn'] ) {
 					echo '<br><em>' . esc_html__( 'staženo z nabídky', 'reserveandpay' ) . '</em>';
 				}
+				break;
+			case 'rap_order':
+				echo (int) get_post_field( 'menu_order', $post_id );
 				break;
 			case 'rap_files':
 				echo (int) count( $mat['files'] ) + count( $mat['videos'] );

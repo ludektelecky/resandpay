@@ -368,6 +368,16 @@
 .rap-material { display: flex; flex-wrap: wrap; gap: 2.5rem; align-items: flex-start; }
 .rap-material__main { flex: 999 1 360px; min-width: 0; }
 .rap-material__main > :first-child { margin-top: 0; }
+/* Obrázek v detailu materiálu (#55) – malý vlevo / střední nad popisem; poměr podle karty. */
+.rap-material__figure { margin: 0 0 1.25rem; aspect-ratio: 3 / 4; overflow: hidden; background: var(--rap-bg-alt); }
+.rap-material__figure--r1-1 { aspect-ratio: 1 / 1; }
+.rap-material__figure--r16-9 { aspect-ratio: 16 / 9; }
+.rap-material__img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.rap-material__figure--small { float: left; width: min(240px, 42%); margin: .25rem 1.5rem 1rem 0; }
+.rap-material__figure--medium { width: 100%; max-width: 320px; } /* 3 : 4 – výška asi 430 px */
+.rap-material__figure--medium.rap-material__figure--r1-1 { max-width: 400px; }
+.rap-material__figure--medium.rap-material__figure--r16-9 { max-width: 480px; }
+.rap-material--img-small .rap-material__main::after { content: ""; display: block; clear: both; }
 .rap-mat-box { flex: 1 1 300px; max-width: 440px; position: sticky; top: 1.5rem; }
 .rap-mat-box .rap-paybox { flex-direction: column; align-items: stretch; }
 .rap-mat-box .rap-qr { align-self: center; }
@@ -384,10 +394,14 @@
 audio.rap-mat-player { background: transparent; }
 .rap-tag { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--rap-accent-2); border: 1px solid var(--rap-line); padding: 0 .4rem; margin-left: .3rem; vertical-align: middle; }
 .rap-materials__sep { flex-basis: 100%; height: 0; }
-.rap-mat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.75rem; }
-.rap-mat-grid--single { grid-template-columns: minmax(220px, 320px); }
+.rap-mat-grid { --rap-mat-card-min: 220px; --rap-mat-card-ratio: 3 / 4; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(var(--rap-mat-card-min), 100%), 1fr)); gap: 1.75rem; }
+.rap-mat-grid--small { --rap-mat-card-min: 180px; gap: 1.25rem; }
+.rap-mat-grid--large { --rap-mat-card-min: 300px; }
+.rap-mat-grid--r1-1 { --rap-mat-card-ratio: 1 / 1; }
+.rap-mat-grid--r16-9 { --rap-mat-card-ratio: 16 / 9; }
+.rap-mat-grid--single { grid-template-columns: minmax(min(var(--rap-mat-card-min), 100%), calc(var(--rap-mat-card-min) * 1.45)); }
 .rap-mat-card { display: flex; flex-direction: column; background: var(--rap-bg); border: 1px solid var(--rap-line); }
-.rap-mat-card__thumb { display: block; aspect-ratio: 3 / 4; overflow: hidden; background: var(--rap-bg-alt); }
+.rap-mat-card__thumb { display: block; aspect-ratio: var(--rap-mat-card-ratio, 3 / 4); overflow: hidden; background: var(--rap-bg-alt); }
 .rap-mat-card__img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .rap-mat-card__ph { display: block; width: 100%; height: 100%; background: radial-gradient(circle at 50% 55%, transparent 0 18%, rgba(140, 100, 35, .18) 18.5% 19%, transparent 19.5% 30%, rgba(140, 100, 35, .14) 30.5% 31%, transparent 31.5% 43%, rgba(140, 100, 35, .1) 43.5% 44%, transparent 44.5%), linear-gradient(160deg, var(--rap-bg-alt), var(--rap-bg)); }
 .rap-mat-card__body { padding: 1rem 1.1rem 1.2rem; display: flex; flex-direction: column; flex: 1; }

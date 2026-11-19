@@ -47,6 +47,9 @@ class Resandpay_Install {
 			if ( $from && $from < 17 ) {
 				self::keep_legacy_empty_texts();
 			}
+			if ( $from && $from < 18 ) {
+				self::keep_legacy_material_image();
+			}
 			update_option( 'resandpay_codes_backfill', 1, false );
 		}
 	}
@@ -137,6 +140,17 @@ class Resandpay_Install {
 		$add   = array_diff_key( self::LEGACY_EMPTY_TEXTS, $saved );
 		if ( $add ) {
 			Resandpay_Settings::update( $add );
+		}
+	}
+
+	/**
+	 * 0.34.0 (DB 18, #55): obrázek v detailu materiálu nově vykresluje plugin (výchozí „malý vlevo“).
+	 * Stávající web si ponechá obrázek ze šablony – jen když volba ještě není uložená.
+	 */
+	public static function keep_legacy_material_image() {
+		$saved = get_option( Resandpay_Settings::OPTION, array() );
+		if ( ! is_array( $saved ) || ! array_key_exists( 'mat_detail_image', $saved ) ) {
+			Resandpay_Settings::update( array( 'mat_detail_image' => 'theme' ) );
 		}
 	}
 
