@@ -4,6 +4,17 @@
 >
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
+## 0.34.0 – Vzhled katalogu materiálů, obrázek v detailu a pořadí (19. 11. 2026)
+
+- **R33 – vzhled katalogu a detailu materiálu** ([Issue #55](https://github.com/ludektelecky/resandpay/issues/55), schváleno a implementováno), Nastavení → Materiály ke stažení:
+  - **Katalog – velikost karty**: malá (≈ 180 px) · **střední** (220 px, výchozí – beze změny) · velká (≈ 300 px); parametr `size` v `[reserveandpay_materials]` a `[reserveandpay_material]`
+  - **Katalog – poměr obrázku**: **na výšku 3 : 4** (výchozí – beze změny, obálky e-booků) · čtverec 1 : 1 · na šířku 16 : 9 (videa); parametr `ratio`; CSS proměnné `--rap-mat-card-min`, `--rap-mat-card-ratio`
+  - **Katalog – řazení**: **ručně** (nové pole **„Pořadí v katalogu“** v editoru materiálu → Základní, menší číslo dřív, pak od nejnovějšího – výchozí) · od nejnovějšího · podle názvu; parametr `orderby="order|date|title"`; v seznamu Materiály sloupec „Pořadí“ (řaditelný)
+  - **Obrázek v detailu materiálu**: **malý vlevo** vedle popisu (max. 240 px) · **střední nad popisem** (podle poměru 320–480 px) · ze šablony webu (dosavadní chování) · nezobrazovat; při malém / středním obrázek vykreslí plugin a obrázek šablony (např. GeneratePress přes celou šířku) se u materiálu skryje
+- **Migrace (DB 18):** stávající weby mají obrázek v detailu dál **ze šablony webu** – po aktualizaci se nic nezmění; nové instalace „malý vlevo“.
+- ⚠ **Po aktualizaci:** pro menší obrázek v detailu zvolte v ResAndPay → Nastavení → Materiály ke stažení → „Obrázek v detailu materiálu“ malý vlevo nebo střední nad popisem; pořadí materiálů nastavte u každého materiálu („Pořadí v katalogu“).
+- Testy: 938 kontrol + souběh
+
 ## 0.33.0 – Upravitelné texty, když služba nemá volné termíny (19. 11. 2026)
 
 - **R32 – texty prázdných výpisů** ([Issue #53](https://github.com/ludektelecky/resandpay/issues/53), schváleno a implementováno):

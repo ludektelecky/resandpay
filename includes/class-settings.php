@@ -113,6 +113,11 @@ class Resandpay_Settings {
 			'mat_log_days'         => 365,
 			'mat_history_count'    => 5, // Počet posledních stažení v historii zákazníka (profil, Moje materiály).
 			'mat_my_page'          => 0,
+			// Vzhled katalogu a detailu materiálu (#55); stávající weby: obrázek v detailu ze šablony (migrace DB 18).
+			'mat_card_size'        => 'medium',
+			'mat_card_ratio'       => '3-4',
+			'mat_detail_image'     => 'small',
+			'mat_catalog_order'    => 'manual',
 			'mat_register_page'    => 0,
 			'mat_login_text'       => 'Materiály ke stažení jsou pro přihlášené. Přihlaste se, nebo si zdarma založte účet.',
 			'mat_roles_text'       => 'Tento materiál je jen pro členy.',

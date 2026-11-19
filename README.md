@@ -4,7 +4,7 @@
 
 Plugin pokrývá celý tok **akce → rezervace → platba**: vypsání akcí a termínů, rezervační formulář, platební pokyn s QR kódem (SPD) a automatickou kontrolu plateb z e-mailových avíz Raiffeisenbank – vše uvnitř WordPressu, bez externích služeb a bez rezervačních pluginů třetích stran.
 
-> **Aktuální verze pluginu: 0.33.0** · zadání: [`docs/zadani/`](docs/zadani/README.md) (odpovídá aktuální verzi pluginu) · rozvojové požadavky: [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) · změny: [DEVLOG](docs/DEVLOG.md)
+> **Aktuální verze pluginu: 0.34.0** · zadání: [`docs/zadani/`](docs/zadani/README.md) (odpovídá aktuální verzi pluginu) · rozvojové požadavky: [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) · změny: [DEVLOG](docs/DEVLOG.md)
 
 ### Název a označení
 
@@ -62,6 +62,7 @@ Technické identifikátory se nemění (slug a textdomain `reserveandpay`, před
 - Objednávka placeného materiálu stejným platebním tokem jako rezervace (VS, QR, kontrola plateb, kupóny) se souhlasem s okamžitým poskytnutím digitálního obsahu
 - Chráněná složka **RaP-Pf** (`wp-content/uploads/resandpay-protected/`) mimo Knihovnu médií, nahrávání po částech (i velká videa), podepsané časově omezené odkazy, HTTP Range, limit a log stažení
 - Katalog, detail s přehrávačem videa a audia, stránka „Moje materiály“
+- Vzhled katalogu (od 0.34.0): velikost karty malá / střední / velká, poměr obrázku 3 : 4 / 1 : 1 / 16 : 9, řazení ručně („Pořadí v katalogu“ u materiálu) / od nejnovějšího / podle názvu; obrázek v detailu materiálu malý vlevo / střední nad popisem / ze šablony / nezobrazovat (CSS proměnné `--rap-mat-card-min`, `--rap-mat-card-ratio`)
 - U videa a audia volba **„Jen přehrát“** (bez tlačítka Stáhnout, stažení server odmítne) a **vodoznak přes video** podle nastavení vodoznaku PDF (u audia „Licencováno pro: …“)
 - **Externí video z YouTube** v materiálu: tlačítko „Přehrát na YouTube“ jen pro zákazníky s přístupem, přes podepsaný odkaz s ověřením přístupu a zápisem přehrání do historie
 
@@ -274,8 +275,8 @@ V `docs/DEVLOG.md` je u verze, která po aktualizaci vyžaduje zásah, na začá
 | `[reserveandpay_faq id="AK-2026-0001"]` | Časté dotazy akce nebo služby (kód nebo ID); na stránce akce a pod termíny služby se vkládají automaticky |
 | `[reserveandpay_countdown id="AK-2026-0001"]` | Odpočet akce (kód akce; bez id aktuální akce) – do zahájení prodeje, konce slevy nebo ukončení prodeje podle zapnutí v Parametrech akce → Odpočet; v detailu akce a rezervační kartě se vkládá automaticky |
 | `[reserveandpay_upcoming limit="3" first_service="yes" category="" more="yes"]` | Krátký přehled pro úvodní stránku: na 1. místě nejbližší služba s volným termínem, pak nadcházející akce podle data, celkem max. `limit`; zrušené a probíhající akce vynechá; `more` = odkaz „Zobrazit všechny termíny →“ |
-| `[reserveandpay_materials category="" type="" filter="yes"]` | Katalog materiálů ke stažení s filtrem druhu a tématu |
-| `[reserveandpay_material id="MA-001"]` | Karta jednoho materiálu (kód, slug nebo ID) |
+| `[reserveandpay_materials category="" type="" filter="yes" size="" ratio="" orderby=""]` | Katalog materiálů ke stažení s filtrem druhu a tématu; `size="small|medium|large"`, `ratio="3-4|1-1|16-9"` a `orderby="order|date|title"` přepíší Nastavení → Materiály ke stažení (od 0.34.0) |
+| `[reserveandpay_material id="MA-001" size="" ratio=""]` | Karta jednoho materiálu (kód, slug nebo ID); velikost a poměr obrázku jako u katalogu |
 | `[reserveandpay_my_materials]` | Moje materiály – dostupné materiály, čekající platby, historie objednávek |
 | `[reserveandpay_checkin]` | Odbavení na místě na webu (od 0.25.0): hledání podle VS / QR kódu, zaplaceno hotově, QR kód k zaplacení, kontrola platby v bance, znovu poslat platební údaje, přehled dne; jen pro role z Nastavení → Rezervace → Odbavení na místě |
 | `[reserveandpay_stats]` | Statistika pro přihlášené s oprávněním (role v Nastavení): termíny akcí a služeb, od 0.22.0 i materiály (objednávky, tržby, stažení, graf), export CSV |

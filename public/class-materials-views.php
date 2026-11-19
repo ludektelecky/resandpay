@@ -19,6 +19,90 @@ class Resandpay_Materials_Views {
 		add_shortcode( 'reserveandpay_my_materials', array( __CLASS__, 'shortcode_my' ) );
 		add_filter( 'resandpay_enqueue_assets', array( __CLASS__, 'enqueue' ) );
 		add_filter( 'wp_robots', array( __CLASS__, 'robots' ) );
+		add_filter( 'post_thumbnail_html', array( __CLASS__, 'hide_theme_thumbnail' ), 10, 2 );
+		add_filter( 'has_post_thumbnail', array( __CLASS__, 'has_theme_thumbnail' ), 10, 2 );
+	}
+
+	/* Vzhled katalogu a detailu (#55) ---------------------------------------- */
+
+	public static function card_sizes() {
+		return array(
+			'small'  => __( 'Malá (asi 180 px)', 'reserveandpay' ),
+			'medium' => __( 'Střední (asi 220 px)', 'reserveandpay' ),
+			'large'  => __( 'Velká (asi 300 px)', 'reserveandpay' ),
+		);
+	}
+
+	public static function card_ratios() {
+		return array(
+			'3-4'  => __( 'Na výšku 3 : 4 (obálky e-booků a PDF)', 'reserveandpay' ),
+			'1-1'  => __( 'Čtverec 1 : 1', 'reserveandpay' ),
+			'16-9' => __( 'Na šířku 16 : 9 (videa)', 'reserveandpay' ),
+		);
+	}
+
+	public static function catalog_orders() {
+		return array(
+			'manual' => __( 'Ručně (Pořadí v katalogu, pak od nejnovějšího)', 'reserveandpay' ),
+			'date'   => __( 'Od nejnovějšího', 'reserveandpay' ),
+			'title'  => __( 'Podle názvu A–Z', 'reserveandpay' ),
+		);
+	}
+
+	public static function detail_images() {
+		return array(
+			'small'  => __( 'Malý vlevo vedle popisu', 'reserveandpay' ),
+			'medium' => __( 'Střední nad popisem', 'reserveandpay' ),
+			'theme'  => __( 'Ze šablony webu', 'reserveandpay' ),
+			'none'   => __( 'Nezobrazovat', 'reserveandpay' ),
+		);
+	}
+
+	/** Platná hodnota volby: parametr shortcodu, jinak nastavení, jinak výchozí. */
+	private static function pick( $value, $setting, array $allowed, $default ) {
+		$value = sanitize_key( (string) $value );
+		if ( isset( $allowed[ $value ] ) ) {
+			return $value;
+		}
+		$saved = (string) Resandpay_Settings::get( $setting );
+		return isset( $allowed[ $saved ] ) ? $saved : $default;
+	}
+
+	/** Třídy mřížky karet podle velikosti a poměru. */
+	public static function grid_classes( $size = '', $ratio = '' ) {
+		$size  = self::pick( $size, 'mat_card_size', self::card_sizes(), 'medium' );
+		$ratio = self::pick( $ratio, 'mat_card_ratio', self::card_ratios(), '3-4' );
+		return 'rap-mat-grid rap-mat-grid--' . $size . ' rap-mat-grid--r' . $ratio;
+	}
+
+	/** Režim obrázku v detailu materiálu (small | medium | theme | none). */
+	public static function detail_image_mode() {
+		return self::pick( '', 'mat_detail_image', self::detail_images(), 'theme' );
+	}
+
+	/** Je to obrázek hlavního materiálu na jeho stránce, který má plugin místo šablony vykreslit sám? */
+	private static function own_thumbnail( $post_id ) {
+		return ! is_admin() && is_singular( Resandpay_Post_Types::MATERIAL ) && (int) $post_id === (int) get_queried_object_id() && 'theme' !== self::detail_image_mode();
+	}
+
+	public static function hide_theme_thumbnail( $html, $post_id ) {
+		return self::own_thumbnail( $post_id ) ? '' : $html;
+	}
+
+	public static function has_theme_thumbnail( $has, $post ) {
+		$id = $post instanceof WP_Post ? $post->ID : ( $post ? (int) $post : get_the_ID() );
+		return $has && self::own_thumbnail( $id ) ? false : $has;
+	}
+
+	/** Obrázek v detailu materiálu vykreslený pluginem (malý vlevo / střední nad popisem). */
+	public static function detail_image( array $mat ) {
+		$mode = self::detail_image_mode();
+		if ( ! $mat['thumb_id'] || in_array( $mode, array( 'theme', 'none' ), true ) ) {
+			return '';
+		}
+		$ratio = self::pick( '', 'mat_card_ratio', self::card_ratios(), '3-4' );
+		$img   = wp_get_attachment_image( $mat['thumb_id'], 'medium_large', false, array( 'class' => 'rap-material__img' ) );
+		return $img ? '<figure class="rap-material__figure rap-material__figure--' . esc_attr( $mode ) . ' rap-material__figure--r' . esc_attr( $ratio ) . '">' . $img . '</figure>' : '';
 	}
 
 	public static function enqueue( $on ) {
@@ -183,7 +267,8 @@ class Resandpay_Materials_Views {
 			return $content;
 		}
 		$head = '<p class="rap-eyebrow">' . esc_html( $mat['kind_label'] ) . ( $mat['code'] ? ' · ' . esc_html( $mat['code'] ) : '' ) . '</p>';
-		return '<div class="rap-material">' . '<div class="rap-material__main">' . $head . $content . '</div>' . self::render_box( $mat ) . '</div>';
+		$fig  = self::detail_image( $mat ); // Obrázek pluginu místo obrázku šablony (#55).
+		return '<div class="rap-material' . ( $fig ? ' rap-material--img-' . esc_attr( self::detail_image_mode() ) : '' ) . '">' . '<div class="rap-material__main">' . $head . $fig . $content . '</div>' . self::render_box( $mat ) . '</div>';
 	}
 
 	/** Štítek ceny / přístupu. */
@@ -535,6 +620,9 @@ class Resandpay_Materials_Views {
 				'access'   => '',
 				'filter'   => 'yes',
 				'limit'    => 0,
+				'size'     => '',
+				'ratio'    => '',
+				'orderby'  => '',
 			),
 			$atts,
 			'reserveandpay_materials'
@@ -545,11 +633,10 @@ class Resandpay_Materials_Views {
 			'post_type'      => Resandpay_Post_Types::MATERIAL,
 			'post_status'    => 'publish',
 			'posts_per_page' => (int) $a['limit'] > 0 ? (int) $a['limit'] : -1,
-			'orderby'        => array(
-				'menu_order' => 'ASC',
-				'date'       => 'DESC',
-			),
 		);
+		// Řazení (#55): ručně (Pořadí v katalogu, pak nejnovější) / od nejnovějšího / podle názvu.
+		$order = self::pick( 'order' === $a['orderby'] ? 'manual' : $a['orderby'], 'mat_catalog_order', self::catalog_orders(), 'manual' );
+		$args['orderby'] = 'title' === $order ? array( 'title' => 'ASC' ) : ( 'date' === $order ? array( 'date' => 'DESC' ) : array( 'menu_order' => 'ASC', 'date' => 'DESC' ) );
 		if ( $cat ) {
 			$args['tax_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery
 				array(
@@ -599,7 +686,7 @@ class Resandpay_Materials_Views {
 		if ( ! $items ) {
 			return $out . '<p class="rap-notice">' . esc_html__( 'Zatím tu nejsou žádné materiály.', 'reserveandpay' ) . '</p></div>';
 		}
-		$out .= '<div class="rap-mat-grid">';
+		$out .= '<div class="' . esc_attr( self::grid_classes( $a['size'], $a['ratio'] ) ) . '">';
 		foreach ( $items as $mat ) {
 			$out .= self::card( $mat );
 		}
@@ -608,10 +695,18 @@ class Resandpay_Materials_Views {
 
 	/** [reserveandpay_material id="MA-001"] – karta jednoho materiálu (kód, slug nebo ID). */
 	public static function shortcode_card( $atts ) {
-		$a  = shortcode_atts( array( 'id' => '' ), $atts, 'reserveandpay_material' );
+		$a  = shortcode_atts(
+			array(
+				'id'    => '',
+				'size'  => '',
+				'ratio' => '',
+			),
+			$atts,
+			'reserveandpay_material'
+		);
 		$id = self::resolve( $a['id'] );
 		$m  = $id ? Resandpay_Materials::get( $id ) : null;
-		return $m && 'publish' === $m['status'] && empty( $m['disabled'] ) ? '<div class="rap-materials rap-mat-grid rap-mat-grid--single">' . self::card( $m ) . '</div>' : '';
+		return $m && 'publish' === $m['status'] && empty( $m['disabled'] ) ? '<div class="rap-materials ' . esc_attr( self::grid_classes( $a['size'], $a['ratio'] ) ) . ' rap-mat-grid--single">' . self::card( $m ) . '</div>' : '';
 	}
 
 	/** Kód (MA-001), slug nebo ID → ID materiálu. */

@@ -19,7 +19,7 @@ Vývoj probíhá na webu slehkouhlavou.cz (WordPress 7.1, PHP 8.5, MySQL 8.4, Ac
 
 ## 15.1 Kniha rozvoje
 
-> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R32 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
+> Od 14. 11. 2026 se nové rozvojové požadavky vedou v [GitHub Issues](https://github.com/ludektelecky/resandpay/issues) (štítek `rozvoj`). Požadavky R1–R33 níže mají v Issues svůj záznam; podrobná specifikace zůstává zde.
 
 Funkce navržené k dalšímu rozvoji pluginu. Položka se po schválení podrobného zadání přesune do příslušné kapitoly a do tabulky stavu realizace.
 
@@ -461,3 +461,13 @@ Nové tabulky: resandpay_grants (ruční zpřístupnění: uživatel, od, do, po
 - **Služba** → Parametry služby → Web a shortcody → „Text bez termínů“: vlastní text pro **nevypsané** a **obsazené** (meta `_rap_slots_none_text`, `_rap_slots_full_text`); prázdné = text z Nastavení (v poli šedě).
 - Proměnné `{service}` (název služby) a `{contact}` (Nastavení → E-mail v kontaktech, vloží se jako odkaz mailto). Povolené HTML přes `Resandpay_Settings::kses_text()`: `a` (href, target, rel; protokoly https, mailto, tel), `strong`, `b`, `em`, `i`, `br`; ostatní značky a atributy se odstraní.
 - **Migrace DB 17** (`Resandpay_Install::keep_legacy_empty_texts()`, vzor `keep_legacy_brand()`): stávajícím webům se doplní dosavadní texty napevno z kódu (u služby ve všech třech případech „V tomto období nejsou volné termíny. Zkuste další týdny, nebo mi napište – rádi se domluvíme.“, u výpisu „Momentálně nejsou vypsané žádné termíny. Sledujte novinky – brzy přibudou.“); uložené hodnoty se nepřepíší.
+
+### R33 – Vzhled katalogu materiálů, obrázek v detailu a pořadí
+
+**Pozn.: Navrženo a schváleno 19. 11. 2026 ([Issue #55](https://github.com/ludektelecky/resandpay/issues/55)), implementováno ve verzi pluginu 0.34.0.** Rozhodnutí: velikost karty malá / střední / velká (bez počtu v řadě); poměry 3 : 4, 1 : 1, 16 : 9; obrázek v detailu malý vlevo / střední nad popisem; pořadí číslem.
+
+- **Nastavení → Materiály ke stažení:** `mat_card_size` (small ≈ 180 px · medium 220 px, výchozí · large ≈ 300 px – nejmenší šířka karty v mřížce), `mat_card_ratio` (3-4 výchozí · 1-1 · 16-9), `mat_catalog_order` (manual výchozí = menu_order vzestupně, pak datum sestupně · date · title), `mat_detail_image` (small · medium · theme · none).
+- **Shortcody:** `[reserveandpay_materials]` parametry `size`, `ratio`, `orderby="order|date|title"`; `[reserveandpay_material]` parametry `size`, `ratio`. Neplatná hodnota = nastavení. Mřížka má třídy `rap-mat-grid--small|medium|large` a `rap-mat-grid--r3-4|r1-1|r16-9`, CSS proměnné `--rap-mat-card-min` a `--rap-mat-card-ratio` (vlastní úpravy v Nastavení → Vzhled → Vlastní CSS).
+- **Pořadí:** editor materiálu → Základní → „Pořadí v katalogu“ (celé číslo, ukládá se do `menu_order`, výchozí 0); seznam Materiály – sloupec „Pořadí“, řaditelný.
+- **Obrázek v detailu:** při small / medium plugin vykreslí náhledový obrázek ve svém rozložení (`figure.rap-material__figure--small|medium`, poměr podle `mat_card_ratio`, ořez na střed): malý vlevo s obtékáním textu (max. 240 px, na úzkém displeji 42 % šířky), střední nad popisem (3 : 4 max. 320 px, 1 : 1 max. 400 px, 16 : 9 max. 480 px). Obrázek šablony u hlavního materiálu jeho stránky skryjí filtry `post_thumbnail_html` a `has_post_thumbnail` (jen na webu, ne v administraci; obrázky jiných materiálů, např. v kartách, beze změny). Theme = dosavadní chování, none = bez obrázku.
+- **Migrace DB 18** (`Resandpay_Install::keep_legacy_material_image()`): stávajícím webům se uloží `mat_detail_image = theme` (jen když volba ještě není uložená); nové instalace mají „malý vlevo“.
