@@ -193,7 +193,7 @@ class Resandpay_PDF {
 					__( 'Částka', 'reserveandpay' )            => Resandpay_Events::format_price( $r['amount'], $r['currency'] ),
 					__( 'Variabilní symbol', 'reserveandpay' ) => $r['vs'],
 					__( 'Číslo účtu', 'reserveandpay' )        => $s['bank_account'],
-					__( 'IBAN', 'reserveandpay' )              => $s['iban'],
+					__( 'IBAN', 'reserveandpay' )              => Resandpay_QR::iban_display( $s ),
 					__( 'Zaplaceno', 'reserveandpay' )         => $r['paid_at'] ? wp_date( 'j. n. Y', Resandpay_Events::ts( $r['paid_at'] ) ) : '',
 				);
 			} else {

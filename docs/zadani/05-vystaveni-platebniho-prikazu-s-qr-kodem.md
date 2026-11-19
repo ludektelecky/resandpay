@@ -6,7 +6,7 @@ Pro generování QR kódu se použije český bankovní standard SPD (Short Paym
 
 | **Klíč SPD** | **Význam** | **Hodnota v našem případě** |
 |---|---|---|
-| ACC | IBAN účtu (povinné) | IBAN účtu pro příjem plateb u Raiffeisenbank: CZ7155000000001234567890 (z nastavení pluginu; bez IBAN se QR negeneruje) |
+| ACC | IBAN účtu (povinné) | IBAN účtu pro příjem plateb u Raiffeisenbank: CZ7155000000001234567890 (z nastavení pluginu; IBAN zadaný jen jako 20 číslic bez „CZ“ se doplní, chybějící nebo neplatný IBAN se dopočítá z českého čísla účtu „[předčíslí-]číslo/banka“; když nejde sestavit platný IBAN, QR se negeneruje a nastavení na to upozorní – od 0.29.1) |
 | AM | Částka | Cena za jedno místo (kap. 3.2) |
 | CC | Měna | CZK |
 | X-VS | Variabilní symbol (max. 10 číslic) | Unikátní identifikátor rezervace – viz 5.3 |

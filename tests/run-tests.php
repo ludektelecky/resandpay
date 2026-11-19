@@ -87,7 +87,7 @@ Resandpay_Settings::update(
 		'test_email'        => 'tester@example.com',
 		'company_name'      => 'Testovací provozovatel',
 		'bank_account'      => '123456789/2700',
-		'iban'              => 'CZ6527000000000123456789',
+		'iban'              => 'CZ0827000000000123456789',
 		'due_mode'          => 'booking',
 		'due_days'          => 7,
 		'due_offset'        => -1,
@@ -432,7 +432,7 @@ rap_t( $sl5 && $sl5[0]['cash'] && 'event' === $sl5[0]['due_mode'] && 0 === $sl5[
 
 echo "== 0.3.3: odbavení na místě\n";
 rap_t( (int) $rC['id'] === (int) Resandpay_Reservations::find_by_vs_input( $rC['vs'] )['id'], 'vyhledání podle VS' );
-rap_t( (int) $rC['id'] === (int) Resandpay_Reservations::find_by_vs_input( 'SPD*1.0*ACC:CZ6527000000000123456789*AM:500.00*CC:CZK*X-VS:' . $rC['vs'] . '*MSG:test' )['id'], 'vyhledání z textu QR platby (X-VS)' );
+rap_t( (int) $rC['id'] === (int) Resandpay_Reservations::find_by_vs_input( 'SPD*1.0*ACC:CZ0827000000000123456789*AM:500.00*CC:CZK*X-VS:' . $rC['vs'] . '*MSG:test' )['id'], 'vyhledání z textu QR platby (X-VS)' );
 rap_t( (int) $rC['id'] === (int) Resandpay_Reservations::find_by_vs_input( ' ' . chunk_split( $rC['vs'], 4, ' ' ) )['id'], 'VS s mezerami' );
 rap_t( null === Resandpay_Reservations::find_by_vs_input( '999' ) && null === Resandpay_Reservations::find_by_vs_input( 'abc' ), 'neexistující VS nic nenajde' );
 $_GET = array( 'page' => 'reserveandpay-checkin', 'day' => wp_date( 'Y-m-d', $now + 12 * $day ), 'vs' => $rC['vs'] );
@@ -499,7 +499,7 @@ foreach ( array_slice( explode( '*', $spd ), 2 ) as $kv ) {
 	list( $k, $v ) = explode( ':', $kv, 2 );
 	$fld[ $k ]     = $v;
 }
-rap_t( 0 === strpos( $spd, 'SPD*1.0*ACC:CZ6527000000000123456789*' ), 'SPD začíná hlavičkou a IBAN z nastavení' );
+rap_t( 0 === strpos( $spd, 'SPD*1.0*ACC:CZ0827000000000123456789*' ), 'SPD začíná hlavičkou a IBAN z nastavení' );
 rap_t( '500.00' === $fld['AM'] && 'CZK' === $fld['CC'] && $qr['vs'] === $fld['X-VS'], 'částka, měna a VS' );
 rap_t( wp_date( 'Ymd', Resandpay_Events::ts( $qr['due_at'] ) ) === $fld['DT'], 'datum splatnosti DT = splatnost rezervace' );
 rap_t( 0 === strpos( $fld['MSG'], Resandpay_Codes::get( $qe ) . ' Zofie Rehakova' ) && mb_strlen( $fld['MSG'] ) <= 60 && false === strpos( $fld['MSG'], '*' ), 'MSG: kód akce + jméno bez diakritiky, bez „*“, max. 60 znaků (' . $fld['MSG'] . ')' );
@@ -515,9 +515,22 @@ file_put_contents( sys_get_temp_dir() . '/rap-qr-test.txt', $spd );
 rap_t( Resandpay_QR::applicable( $qr ) && ! Resandpay_QR::applicable( array_merge( $qr, array( 'status' => 'paid' ) ) ), 'QR jen u nezaplacené rezervace' );
 rap_t( '' === Resandpay_QR::spd( array_merge( $qr, array( 'currency' => 'EUR' ) ) ), 'jiná měna než CZK → bez SPD (EUR ve fázi 2)' );
 $iban = Resandpay_Settings::get( 'iban' );
+$acct = Resandpay_Settings::get( 'bank_account' );
+rap_t( Resandpay_QR::valid_iban( 'CZ08 2700 0000 0001 2345 6789' ) && ! Resandpay_QR::valid_iban( 'CZ09 2700 0000 0001 2345 6789' ) && ! Resandpay_QR::valid_iban( '27000000000123456789' ), 'IBAN: kontrola formátu a kontrolních číslic (mod 97)' );
+rap_t( 'CZ0827000000000123456789' === Resandpay_QR::iban_from_account( '123456789/2700' ) && 'CZ6508000000192000145399' === Resandpay_QR::iban_from_account( '19-2000145399/0800' ) && '' === Resandpay_QR::iban_from_account( 'abc' ), 'IBAN dopočítaný z čísla účtu (i s předčíslím)' );
+rap_t( 'CZ0827000000000123456789' === Resandpay_QR::normalize_iban( '2700 0000 0001 2345 6789' ), 'IBAN zadaný bez „CZ“ a kontrolních číslic se doplní' );
+// Chyba z jiného webu: IBAN uložený jen jako 20 číslic (bez CZ) → QR se tiše negeneroval.
+Resandpay_Settings::update( array( 'iban' => '27000000000123456789' ) );
+rap_t( 0 === strpos( Resandpay_QR::spd( $qr ), 'SPD*1.0*ACC:CZ0827000000000123456789*' ) && Resandpay_QR::applicable( $qr ), 'IBAN bez „CZ“ v nastavení → QR se přesto vytvoří' );
+$m_qr = Resandpay_Mailer::build( 'received', $qr );
+rap_t( '' !== $m_qr['qr_png'] && false !== strpos( $m_qr['html'], 'cid:rap-qr' ) && false !== strpos( $m_qr['html'], 'CZ0827000000000123456789' ), 'e-mail: QR kód a opravený IBAN' );
 Resandpay_Settings::update( array( 'iban' => '' ) );
-rap_t( '' === Resandpay_QR::spd( $qr ), 'bez IBAN v nastavení se QR negeneruje' );
-Resandpay_Settings::update( array( 'iban' => $iban ) );
+rap_t( 0 === strpos( Resandpay_QR::spd( $qr ), 'SPD*1.0*ACC:CZ0827000000000123456789*' ), 'bez IBAN se IBAN dopočítá z čísla účtu' );
+Resandpay_Settings::update( array( 'iban' => 'CZ09 2700 0000 0001 2345 6789' ) );
+rap_t( 0 === strpos( Resandpay_QR::spd( $qr ), 'SPD*1.0*ACC:CZ0827000000000123456789*' ), 'neplatný IBAN → použije se IBAN z čísla účtu' );
+Resandpay_Settings::update( array( 'iban' => '', 'bank_account' => '' ) );
+rap_t( '' === Resandpay_QR::spd( $qr ), 'bez IBAN i čísla účtu se QR negeneruje' );
+Resandpay_Settings::update( array( 'iban' => $iban, 'bank_account' => $acct ) );
 
 echo "== E4: platební pokyn (PDF)\n";
 $pdf = Resandpay_PDF::render( $qr );
@@ -535,7 +548,7 @@ rap_t( false !== strpos( $bp['html'], '<!doctype html>' ) && false !== strpos( $
 rap_t( false !== strpos( $bp['html'], 'src="cid:rap-qr"' ) && "\x89PNG" === substr( $bp['qr_png'], 0, 4 ), 'QR kód vložený do e-mailu (cid:rap-qr)' );
 rap_t( 0 === strpos( $bp['pdf'], '%PDF-' ) && 'platebni-pokyn-' . $qr2['proforma_no'] . '.pdf' === $bp['pdf_name'], 'PDF platebního pokynu jako příloha' );
 rap_t( false !== strpos( $bp['html'], esc_url( Resandpay_PDF::url( $qr2 ) ) ) && false !== strpos( $bp['text'], Resandpay_PDF::url( $qr2 ) ), 'odkaz ke stažení PDF v HTML i textové verzi' );
-rap_t( false !== strpos( $bp['text'], 'Variabilní symbol: ' . $qr2['vs'] ) && false !== strpos( $bp['text'], 'IBAN: CZ6527' ) && false === strpos( $bp['text'], '<' ), 'textová verze obsahuje platební údaje' );
+rap_t( false !== strpos( $bp['text'], 'Variabilní symbol: ' . $qr2['vs'] ) && false !== strpos( $bp['text'], 'IBAN: CZ0827' ) && false === strpos( $bp['text'], '<' ), 'textová verze obsahuje platební údaje' );
 rap_t( 1 === substr_count( $bp['html'], '123456789/2700' ), 'výchozí text neopakuje platební údaje (jen v rámečku)' );
 $bc = Resandpay_Mailer::build( 'received_cash', array_merge( $qr2, array( 'pay_choice' => 'cash', 'status' => 'onsite' ) ) );
 rap_t( false !== strpos( $bc['html'], 'Platba předem převodem' ) && false !== strpos( $bc['html'], 'cid:rap-qr' ) && false === strpos( $bc['text'], 'Splatnost:' ), 'u hotovosti: QR pro platbu předem, bez splatnosti' );

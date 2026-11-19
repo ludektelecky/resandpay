@@ -4,6 +4,15 @@
 >
 > Změny, které po aktualizaci vyžadují zásah, jsou u verze uvedeny řádkem **„⚠ Po aktualizaci:“**. Pravidla číslování verzí: README → Aktualizace.
 
+## 0.29.1 – Oprava: chybějící QR kód při IBAN bez „CZ“ (19. 11. 2026)
+
+- **Chyba:** na jiném webu se v e-mailech ani v platebním pokynu (PDF) negeneroval QR kód. Příčina: IBAN byl v nastavení zadaný jen jako 20 číslic bez „CZ“ a kontrolních číslic, plugin ho vyhodnotil jako neplatný a QR tiše vynechal.
+- IBAN se nově **kontroluje včetně kontrolních číslic** (mod 97); IBAN zadaný bez „CZ“ se při uložení nastavení **doplní**, chybějící nebo neplatný IBAN se pro QR platbu **dopočítá z čísla účtu** (`[předčíslí-]číslo/banka`). V e-mailu a PDF se zobrazuje opravený IBAN.
+- Při uložení nastavení se neplatný IBAN ohlásí (a uvede se IBAN dopočítaný z čísla účtu).
+- Vzorový IBAN v testech opraven na platný `CZ08 2700 0000 0001 2345 6789` (k účtu 123456789/2700).
+- ⚠ **Po aktualizaci:** stávající weby s IBAN bez „CZ“ začnou QR generovat samy; doporučujeme v ResAndPay → Nastavení → Provozovatel IBAN zkontrolovat a nastavení jednou uložit (IBAN se opraví i v uložené hodnotě).
+- Bez změny databáze. Testy: 824 kontrol + souběh
+
 ## 0.29.0 – Historie stažení materiálů u zákazníka (14. 11. 2026)
 
 - **R27 – historie stažení** ([Issue #41](https://github.com/ludektelecky/resandpay/issues/41), schváleno a implementováno): v **profilu zákazníka** a v **Moje materiály** je u každého materiálu „**Staženo 3× · naposledy 12. 11. 2026 14:05**“ a rozbalovací historie (datum, soubor, stažení / přehrání).
